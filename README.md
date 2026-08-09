@@ -80,9 +80,9 @@ Yêu cầu: Python 3.11+, Node.js 18+.
 cd backend
 python -m venv venv
 source venv/bin/activate       # Windows: venv\Scripts\activate
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 
-cp ../.env.example ../.env
+cp .env.example .env
 # Mở .env ở thư mục gốc, dán GEMINI_API_KEY lấy miễn phí tại https://aistudio.google.com/apikey
 
 uvicorn app.main:app --reload
