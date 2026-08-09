@@ -32,7 +32,9 @@ def _build_generator_prompt(chunks: List[RetrievedChunk], num_questions: int) ->
     )
     return (
         f"Dựa CHỈ trên các đoạn trích tài liệu dưới đây, hãy soạn {num_questions} câu hỏi "
-        "trắc nghiệm (mỗi câu 4 lựa chọn, chỉ 1 đáp án đúng) để kiểm tra kiến thức người học.\n\n"
+        "trắc nghiệm (mỗi câu 4 lựa chọn, chỉ 1 đáp án đúng) để kiểm tra kiến thức người học. "
+        "Viết câu hỏi, các lựa chọn và giải thích bằng đúng ngôn ngữ của đoạn trích tài liệu "
+        "dưới đây (ví dụ tài liệu tiếng Anh thì soạn câu hỏi bằng tiếng Anh).\n\n"
         f"Đoạn trích tài liệu:\n{context}\n\n"
         "Trả lời DUY NHẤT bằng JSON, là một mảng object gồm các trường: "
         '"question" (string), "options" (mảng 4 chuỗi), "correct_answer" (string, khớp đúng '

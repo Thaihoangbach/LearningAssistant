@@ -54,7 +54,9 @@ def _build_context(chunks: List[RetrievedChunk]) -> str:
 def _build_generator_prompt(question: str, context: str) -> str:
     return (
         "Bạn là trợ lý học tập. CHỈ trả lời dựa trên đoạn trích tài liệu dưới đây.\n"
-        "Nếu đoạn trích không chứa câu trả lời, hãy nói rõ là không có thông tin.\n\n"
+        "Nếu đoạn trích không chứa câu trả lời, hãy nói rõ là không có thông tin.\n"
+        "Trả lời bằng đúng ngôn ngữ của câu hỏi (nếu câu hỏi bằng tiếng Anh thì trả lời "
+        "bằng tiếng Anh, kể cả khi đoạn trích tài liệu là ngôn ngữ khác).\n\n"
         f"Đoạn trích tài liệu:\n{context}\n\n"
         f"Câu hỏi: {question}\n\n"
         "Trả lời ngắn gọn, chính xác, chỉ dựa trên đoạn trích trên:"
