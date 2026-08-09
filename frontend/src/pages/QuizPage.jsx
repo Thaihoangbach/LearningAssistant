@@ -62,7 +62,7 @@ export default function QuizPage() {
                 <option value="">-- Chọn tài liệu --</option>
                 {documents.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.file_name}
+                    {d.course_name ? `${d.course_name} — ${d.file_name}` : d.file_name}
                   </option>
                 ))}
               </Select>

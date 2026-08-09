@@ -171,8 +171,10 @@ export default function DashboardPage() {
                 {recentDocuments.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{d.file_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{d.course_name || "Chưa gán môn"}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{d.course_name || d.file_name}</p>
+                      {d.course_name && (
+                        <p className="truncate text-xs text-muted-foreground">{d.file_name}</p>
+                      )}
                     </div>
                     <StatusBadge status={d.status} reason={d.error_reason} />
                   </li>

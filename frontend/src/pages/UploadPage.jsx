@@ -112,8 +112,10 @@ export default function UploadPage() {
               {documents.map((d) => (
                 <li key={d.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{d.file_name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{d.course_name || "chưa gán môn"}</p>
+                    <p className="truncate text-sm font-medium text-foreground">{d.course_name || d.file_name}</p>
+                    {d.course_name && (
+                      <p className="truncate text-xs text-muted-foreground">{d.file_name}</p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <StatusBadge status={d.status} reason={d.error_reason} />

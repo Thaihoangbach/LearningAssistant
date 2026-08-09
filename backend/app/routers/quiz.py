@@ -4,6 +4,7 @@ CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install fastapi sqlalchemy`
 """
 
 import json
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -56,13 +57,16 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     if not items:
         raise HTTPException(500, "Không sinh được câu hỏi nào xác minh được từ tài liệu.")
 
-    topic = None
-    if req.topic_name:
-        topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == req.topic_name).first()
-        if not topic:
-            topic = Topic(user_id=req.user_id, name=req.topic_name, course_name=doc.course_name)
-            db.add(topic)
-            db.commit()
+    # Chủ đề luôn được gán (fallback về tên tài liệu nếu người dùng bỏ trống) để mọi quiz
+    # đều tính được vào mastery (F4) — trước đây bỏ trống thì mastery không cập nhật mà
+    # không hề báo cho người dùng biết.
+    topic_name = req.topic_name.strip() if req.topic_name and req.topic_name.strip() else os.path.splitext(doc.file_name)[0]
+
+    topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == topic_name).first()
+    if not topic:
+        topic = Topic(user_id=req.user_id, name=topic_name, course_name=doc.course_name)
+        db.add(topic)
+        db.commit()
 
     quiz = Quiz(user_id=req.user_id, document_id=doc.id)
     db.add(quiz)
@@ -72,7 +76,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
         db.add(
             QuizItem(
                 quiz_id=quiz.id,
-                topic_id=topic.id if topic else None,
+                topic_id=topic.id,
                 question=item.question,
                 options=json.dumps(item.options, ensure_ascii=False),
                 correct_answer=item.correct_answer,
