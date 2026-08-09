@@ -1,47 +1,95 @@
-# EduTutor — F1 + F2 + F3 + F4 (một phần)
+# EduTutor
 
-Nền tảng hỗ trợ học tập cá nhân hóa dùng LLM + RAG, theo đúng thiết kế trong `PRD-nen-tang-ho-tro-hoc-tap-ca-nhan-hoa.md` và `architecture-diagrams.md`.
+Nền tảng hỗ trợ học tập cá nhân hóa dùng LLM + RAG: tải tài liệu học tập (PDF/DOCX), hỏi đáp có trích dẫn nguồn, tự sinh quiz trắc nghiệm để tự kiểm tra, và theo dõi mức độ thành thạo (mastery) theo từng chủ đề.
 
-Đã triển khai: **F1** (quản lý tài liệu), **F2** (hỏi đáp RAG có trích dẫn + verifier), **F3** (sinh Quiz trắc nghiệm có verifier từng câu), và phần lõi của **F4** (công thức tính mastery rule-based + cập nhật khi nộp bài quiz). Chưa làm: giao diện dashboard tổng hợp mastery theo chủ đề, Flashcard, F5 (lập kế hoạch học tập).
+## Mục lục
 
-## ⚠️ Tình trạng kiểm thử — đọc trước khi tin tưởng code này
+- [Tổng quan](#tổng-quan)
+- [Kiến trúc & công nghệ](#kiến-trúc--công-nghệ)
+- [Cấu trúc dự án](#cấu-trúc-dự-án)
+- [Cài đặt](#cài-đặt)
+- [Sử dụng](#sử-dụng)
+- [API tóm tắt](#api-tóm-tắt)
+- [Chạy test](#chạy-test)
+- [Chưa làm / hướng phát triển tiếp](#chưa-làm--hướng-phát-triển-tiếp)
 
-Sandbox dùng để viết code này **không có kết nối mạng**, nên không cài được các thư viện cần thiết (`fastapi`, `sentence-transformers`, `faiss-cpu`, `google-generativeai`...). Vì vậy:
+## Tổng quan
 
-| Module | Trạng thái |
+Tính năng đã triển khai:
+
+| Tính năng | Mô tả |
 | --- | --- |
-| `app/ingestion/chunker.py` | ✅ **Đã viết test và chạy thật, pass 6/6** (`tests/test_chunker.py`) — chỉ dùng thư viện chuẩn Python |
-| `app/ingestion/parser.py` (nhánh DOCX) | ✅ **Đã viết test và chạy thật, pass** — dùng `python-docx` (có sẵn trong sandbox) |
-| `app/ingestion/parser.py` (nhánh PDF) | ⚠️ Có implementation, **chưa test tích hợp được** (không tạo được PDF fixture hợp lệ mà không cần thêm thư viện). **Cần bạn tự test với file PDF thật trước khi tin tưởng.** |
-| `app/llm/rag.py` (logic generator + verifier F2) | ✅ **Đã viết test và chạy thật, pass 5/5** (`tests/test_rag.py`) — dùng fake LLM client, không cần gọi API thật |
-| `app/llm/quiz_generator.py` (logic generator + verifier F3) | ✅ **Đã viết test và chạy thật, pass 7/7** (`tests/test_quiz_generator.py`) — dùng fake LLM client |
-| `app/mastery.py` (công thức tính mastery F4) | ✅ **Đã viết test và chạy thật, pass 6/6** (`tests/test_mastery.py`) — thuần Python, không phụ thuộc gì |
-| `app/ingestion/embedder.py`, `app/vectorstore/faiss_store.py`, `app/llm/gemini_client.py` | ❌ **Chưa chạy được** — cần `pip install` các thư viện tương ứng và (với Gemini) một API key thật |
-| `app/routers/*.py`, `app/main.py`, `app/models.py`, `app/database.py` | ❌ **Chưa chạy được** — cần `pip install fastapi sqlalchemy ...` |
-| `frontend/` | ❌ **Chưa chạy được** — cần `npm install` |
+| **Quản lý tài liệu** | Tải lên PDF/DOCX theo môn học, xử lý nền (parse → chunk → embed → lưu vector), theo dõi trạng thái "đang xử lý" / "sẵn sàng" / "lỗi", xoá tài liệu. |
+| **Hỏi đáp RAG** | Đặt câu hỏi về nội dung tài liệu đã tải; câu trả lời đi kèm trích dẫn nguồn (tên tài liệu + vị trí). Có bước verifier để đảm bảo không "bịa" câu trả lời khi nội dung không có trong tài liệu. Lưu lại lịch sử hội thoại, xem lại hoặc tạo cuộc hội thoại mới. |
+| **Quiz tự kiểm tra** | Tự sinh 5 câu hỏi trắc nghiệm (có thể gắn theo chủ đề) từ nội dung tài liệu, mỗi câu đã qua verifier để đảm bảo đáp án đúng và giải thích khớp với tài liệu nguồn. |
+| **Mastery theo chủ đề** | Chấm điểm mức độ thành thạo (0–1) theo công thức rule-based có trọng số suy giảm theo thời gian (recency-weighted, half-life 14 ngày) mỗi khi nộp bài quiz. Dashboard tổng quan hiển thị điểm mastery, số tài liệu, số quiz, tỉ lệ đúng. |
 
-**Tổng cộng 28/28 test đã viết đều pass thật** — nhưng đó là các test cho phần logic thuần túy (chunking, RAG orchestration, quiz orchestration, mastery, parse DOCX). Toàn bộ phần cần thư viện ngoài (embedding thật, FAISS thật, Gemini thật, FastAPI server thật, React build thật) **bạn cần tự cài đặt và chạy thử ở máy local** — đừng coi đây là "đã hoàn thành và chạy được", mà là "logic cốt lõi đã được kiểm chứng, phần còn lại đã viết sẵn và cần bạn xác nhận chạy được ở môi trường có mạng".
+Chưa làm: Flashcard, lập kế hoạch học tập (study plan), đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton).
 
-## Cài đặt (chạy ở máy có mạng)
+## Kiến trúc & công nghệ
+
+**Backend:** Python, FastAPI, SQLAlchemy (SQLite), sentence-transformers (embedding local), FAISS (vector store theo từng user), Google Gemini API (LLM, free tier).
+
+**Frontend:** React 18 + Vite, React Router, Tailwind CSS, lucide-react.
+
+Pipeline RAG là generator + verifier hai bước cố định (không phải multi-agent tự quyết định hành động): generator sinh câu trả lời/câu hỏi dựa trên chunk truy hồi được, verifier kiểm tra lại tính đúng đắn/căn cứ trước khi trả về.
+
+## Cấu trúc dự án
+
+```
+backend/
+  app/
+    models.py, database.py        # SQLite qua SQLAlchemy
+    ingestion/
+      parser.py                   # PDF/DOCX -> sections
+      chunker.py                  # sections -> chunks
+      embedder.py                 # chunks -> vector (sentence-transformers, local)
+      pipeline.py                 # nối parser -> chunker -> embedder -> vector store
+    vectorstore/
+      faiss_store.py              # FAISS local, mỗi user 1 index riêng
+    llm/
+      rag.py                      # hỏi đáp — generator + verifier
+      quiz_generator.py           # sinh quiz — generator + verifier từng câu
+      gemini_client.py            # client gọi Gemini API thật
+    mastery.py                    # công thức tính mastery rule-based
+    routers/
+      documents.py                 # upload, list, xoá tài liệu
+      chat.py                      # hỏi đáp RAG + lịch sử hội thoại
+      quiz.py                      # sinh quiz, nộp bài, cập nhật mastery
+      mastery.py                   # đọc dữ liệu mastery cho dashboard
+    main.py
+  tests/                          # unittest, xem mục Chạy test
+frontend/
+  src/
+    api.js                        # gọi API backend
+    pages/
+      DashboardPage.jsx           # tổng quan mastery + tài liệu gần đây
+      UploadPage.jsx               # quản lý tài liệu
+      ChatPage.jsx                 # hỏi đáp + sidebar lịch sử hội thoại
+      QuizPage.jsx                 # làm quiz
+    components/                   # UI dùng chung (Button, Card, ...)
+```
+
+## Cài đặt
+
+Yêu cầu: Python 3.11+, Node.js 18+.
 
 ### 1. Backend
 
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate       # Windows: venv\Scripts\activate
+pip install -r ../requirements.txt
 
-cp .env.example .env
-# Mở .env, dán GEMINI_API_KEY lấy miễn phí tại https://aistudio.google.com/apikey
+cp ../.env.example ../.env
+# Mở .env ở thư mục gốc, dán GEMINI_API_KEY lấy miễn phí tại https://aistudio.google.com/apikey
 
-# Chạy lại toàn bộ test (bao gồm cả phần chưa chạy được trong sandbox)
-python3 -m unittest discover -s tests -v
-
-# Chạy server
 uvicorn app.main:app --reload
 # API chạy ở http://localhost:8000, xem docs tự động ở http://localhost:8000/docs
 ```
+
+> Lưu ý: model Gemini mặc định cấu hình trong `backend/app/llm/gemini_client.py` (hiện là `gemini-3.1-flash-lite`). Google thường xuyên thay đổi chính sách/khả dụng của model theo free tier — nếu gặp lỗi `429 ResourceExhausted` với `limit: 0`, model đó có thể đã bị deprecate; kiểm tra model còn free tier tại [trang rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) và đổi lại tên model trong file trên.
 
 ### 2. Frontend
 
@@ -52,50 +100,42 @@ npm run dev
 # Mở http://localhost:5173
 ```
 
-### 3. Thử luồng end-to-end
+## Sử dụng
 
-1. Vào trang **Tài liệu**, tải lên 1 file PDF hoặc DOCX + nhập tên môn học.
-2. Đợi trạng thái chuyển từ "đang xử lý" → "sẵn sàng" (lần đầu sẽ chậm hơn vì phải tải model embedding về máy).
-3. Sang trang **Hỏi đáp**, hỏi một câu liên quan đến nội dung tài liệu vừa tải — câu trả lời sẽ kèm nguồn trích (tên tài liệu + vị trí).
-4. Thử hỏi một câu **không có trong tài liệu** — hệ thống phải trả lời "Nội dung này chưa có trong tài liệu bạn đã tải lên" thay vì bịa câu trả lời.
-5. Sang trang **Quiz**, chọn tài liệu đã sẵn sàng, nhập tên chủ đề (tuỳ chọn), bấm "Tạo quiz" — hệ thống sinh 5 câu hỏi trắc nghiệm đã qua verifier. Trả lời từng câu để xem đáp án đúng/sai kèm giải thích.
+1. Vào trang **Tài liệu**, tải lên 1 file PDF hoặc DOCX + nhập tên môn học. Đợi trạng thái chuyển từ "đang xử lý" → "sẵn sàng" (lần đầu sẽ chậm hơn vì phải tải model embedding về máy).
+2. Sang trang **Hỏi đáp**, hỏi một câu liên quan đến nội dung tài liệu vừa tải — câu trả lời sẽ kèm nguồn trích (tên tài liệu + vị trí). Bấm "Cuộc hội thoại mới" ở sidebar để bắt đầu hội thoại khác, hoặc chọn lại một hội thoại cũ trong danh sách để xem lại.
+3. Thử hỏi một câu **không có trong tài liệu** — hệ thống phải trả lời "Nội dung này chưa có trong tài liệu bạn đã tải lên" thay vì bịa câu trả lời.
+4. Sang trang **Quiz**, chọn tài liệu đã sẵn sàng, nhập tên chủ đề (tuỳ chọn), bấm "Tạo quiz" — hệ thống sinh 5 câu hỏi trắc nghiệm đã qua verifier. Trả lời từng câu để xem đáp án đúng/sai kèm giải thích; điểm mastery của chủ đề đó sẽ được cập nhật.
+5. Vào trang **Tổng quan** để xem điểm mastery theo từng chủ đề, số tài liệu/quiz, và tỉ lệ trả lời đúng.
 
-## Cấu trúc dự án
+## API tóm tắt
 
-```
-backend/
-  app/
-    models.py, database.py       # SQLite qua SQLAlchemy
-    ingestion/
-      parser.py                   # PDF/DOCX -> sections (đã test nhánh DOCX)
-      chunker.py                  # sections -> chunks (đã test đầy đủ)
-      embedder.py                 # chunks -> vector (sentence-transformers, local)
-      pipeline.py                 # nối parser -> chunker -> embedder -> vector store
-    vectorstore/
-      faiss_store.py              # FAISS local, mỗi user 1 index riêng
-    llm/
-      rag.py                      # F2 — generator + verifier hỏi đáp (đã test đầy đủ)
-      quiz_generator.py            # F3 — generator + verifier từng câu quiz (đã test đầy đủ)
-      gemini_client.py            # implementation thật gọi Gemini API
-    mastery.py                     # F4 — công thức mastery rule-based (đã test đầy đủ)
-    routers/
-      documents.py                 # F1 — upload, list, xử lý nền
-      chat.py                       # F2 — hỏi đáp RAG
-      quiz.py                       # F3 — sinh quiz, nộp bài, trigger cập nhật mastery (F4)
-    main.py
-  tests/
-    test_chunker.py, test_parser.py, test_rag.py,
-    test_quiz_generator.py, test_mastery.py        # 28 test, tất cả pass
-frontend/
-  src/
-    api.js
-    pages/UploadPage.jsx, ChatPage.jsx, QuizPage.jsx
+| Method & Path | Mô tả |
+| --- | --- |
+| `POST /documents` | Tải lên tài liệu (multipart), xử lý nền |
+| `GET /documents` | Liệt kê tài liệu theo `user_id` |
+| `DELETE /documents/{id}` | Xoá tài liệu + dữ liệu vector liên quan |
+| `POST /chat/ask` | Đặt câu hỏi RAG, tự tạo hội thoại mới nếu chưa có `conversation_id` |
+| `GET /chat/conversations` | Liệt kê hội thoại theo `user_id`, kèm preview câu hỏi đầu tiên |
+| `GET /chat/conversations/{id}` | Lấy toàn bộ tin nhắn của một hội thoại |
+| `POST /quiz/generate` | Sinh quiz trắc nghiệm từ một tài liệu |
+| `POST /quiz/submit` | Nộp đáp án 1 câu, trả kết quả + cập nhật mastery |
+| `GET /mastery` | Tổng quan mastery theo chủ đề + số liệu thống kê |
+
+Xem chi tiết request/response tại `http://localhost:8000/docs` (Swagger UI tự sinh) khi backend đang chạy.
+
+## Chạy test
+
+```bash
+cd backend
+python -m unittest discover -s tests -v
 ```
 
-## Bước tiếp theo (chưa làm)
+Các test hiện có (`test_chunker.py`, `test_parser.py`, `test_rag.py`, `test_quiz_generator.py`, `test_mastery.py`) kiểm tra phần logic thuần Python (chunking, RAG orchestration, quiz orchestration, công thức mastery, parse DOCX) bằng fake LLM client — không cần mạng hay API key thật. Phần cần thư viện ngoài/kết nối thật (embedding, FAISS, Gemini API, router FastAPI, build frontend) chưa có test tự động, cần tự chạy thử thủ công như hướng dẫn ở mục Sử dụng.
 
-- **Dashboard tiến độ (phần còn lại của F4)** — hiện `MasteryScore` đã được tính và lưu mỗi khi nộp quiz, nhưng chưa có trang frontend hiển thị tổng quan theo chủ đề. Cần thêm route `GET /mastery?user_id=...` và trang `MasteryDashboard.jsx`.
-- **Flashcard (phần còn lại của F3)** — có thể tái dùng gần như nguyên `quiz_generator.py`, chỉ đổi prompt/output shape (front/back thay vì question/options).
-- **F5** — Lập kế hoạch học tập, phụ thuộc dữ liệu `MasteryScore` đã có sẵn từ F4.
+## Chưa làm / hướng phát triển tiếp
 
-Mỗi bước nên tiếp tục theo TDD: viết test cho phần logic thuần túy trước (giống `chunker.py`/`rag.py`/`quiz_generator.py`/`mastery.py`), phần cần thư viện ngoài (router, model) viết sau và tự chạy thử ở máy có mạng.
+- **Flashcard** — có thể tái dùng gần như nguyên `quiz_generator.py`, chỉ đổi prompt/output shape (front/back thay vì question/options).
+- **Lập kế hoạch học tập (study plan)** — phụ thuộc dữ liệu `MasteryScore` đã có sẵn.
+- **Đăng nhập/đa người dùng thật** — hiện `user_id` cố định `demo-user` ở frontend (`frontend/src/api.js`), chưa có xác thực.
+- **Xoá/đổi tên cuộc hội thoại** trong lịch sử hỏi đáp.
