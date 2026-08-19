@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8001}:8000"
+    env_file:
+      - .env
+    volumes:
+      - edututor_data:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  # File upload, SQLite DB, và FAISS index nằm hết trong đây — volume riêng
+  # (khác vòng đời container) nên `docker compose down`/rebuild image không
+  # xoá mất dữ liệu người dùng đã upload.
+  edututor_data:

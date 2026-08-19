@@ -85,6 +85,18 @@ class TestGenerateQuiz(unittest.TestCase):
         self.assertIn("Đoạn B", prompt)
         self.assertIn("7", prompt)
 
+    def test_difficulty_instruction_included_when_provided(self):
+        llm = FakeLLMClient(scripted_responses=["[]"])
+        generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=3, difficulty="beginner")
+        prompt = llm.prompts_received[0]
+        self.assertIn("định nghĩa/khái niệm cơ bản", prompt)
+
+    def test_no_difficulty_produces_prompt_without_instruction(self):
+        llm = FakeLLMClient(scripted_responses=["[]"])
+        generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=3)
+        prompt = llm.prompts_received[0]
+        self.assertNotIn("định nghĩa/khái niệm cơ bản", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

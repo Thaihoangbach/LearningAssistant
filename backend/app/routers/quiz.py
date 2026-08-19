@@ -24,51 +24,72 @@ router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 class GenerateQuizRequest(BaseModel):
     user_id: str
-    document_id: str
+    document_id: str | None = None
+    document_ids: list[str] | None = None  # TC13 — sinh quiz tổng hợp từ nhiều tài liệu/chương
     topic_name: str | None = None
     num_questions: int = 5
+    difficulty: str | None = None  # "beginner" | "advanced" | None — xem app/llm/quiz_generator.py
 
 
 @router.post("/generate")
 def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
-    doc = (
+    requested_ids = req.document_ids or ([req.document_id] if req.document_id else [])
+    if not requested_ids:
+        raise HTTPException(400, "Cần cung cấp document_id hoặc document_ids.")
+
+    docs = (
         db.query(Document)
-        .filter(Document.id == req.document_id, Document.user_id == req.user_id, Document.status == "sẵn sàng")
-        .first()
+        .filter(Document.id.in_(requested_ids), Document.user_id == req.user_id, Document.status == "sẵn sàng")
+        .all()
     )
-    if not doc:
+    if not docs:
         raise HTTPException(400, "Tài liệu không tồn tại hoặc chưa sẵn sàng.")
 
-    # Lấy toàn bộ chunk thuộc tài liệu này bằng một câu hỏi tổng quát làm query truy hồi.
+    # Lấy chunk từ TỪNG tài liệu bằng một câu hỏi tổng quát làm query truy hồi, để quiz
+    # tổng hợp (TC13) không bị dồn hết câu hỏi vào một tài liệu/chương duy nhất.
     # Đơn giản hoá cho MVP: retrieval theo tên tài liệu, chưa tối ưu lấy "đại diện" nội dung.
-    query_vector = embed_query(doc.file_name)
     store = UserVectorStore(user_id=req.user_id)
-    results = store.search(query_vector, top_k=10, document_ids={doc.id})
-
-    retrieved_chunks = [
-        RetrievedChunk(text=c.text, document_name=c.document_name, position_ref=c.position_ref, score=score)
-        for c, score in results
-    ]
+    retrieved_chunks: list[RetrievedChunk] = []
+    for doc in docs:
+        query_vector = embed_query(doc.file_name)
+        results = store.search(query_vector, top_k=10, document_ids={doc.id})
+        retrieved_chunks.extend(
+            RetrievedChunk(text=c.text, document_name=c.document_name, position_ref=c.position_ref, score=score)
+            for c, score in results
+        )
     if not retrieved_chunks:
-        raise HTTPException(400, "Không tìm thấy nội dung để sinh quiz từ tài liệu này.")
+        raise HTTPException(400, "Không tìm thấy nội dung để sinh quiz từ (các) tài liệu này.")
 
     llm_client = GeminiClient()
-    items = generate_quiz(chunks=retrieved_chunks, llm_client=llm_client, num_questions=req.num_questions)
+    items = generate_quiz(
+        chunks=retrieved_chunks,
+        llm_client=llm_client,
+        num_questions=req.num_questions,
+        difficulty=req.difficulty,
+    )
     if not items:
         raise HTTPException(500, "Không sinh được câu hỏi nào xác minh được từ tài liệu.")
 
-    # Chủ đề luôn được gán (fallback về tên tài liệu nếu người dùng bỏ trống) để mọi quiz
-    # đều tính được vào mastery (F4) — trước đây bỏ trống thì mastery không cập nhật mà
-    # không hề báo cho người dùng biết.
-    topic_name = req.topic_name.strip() if req.topic_name and req.topic_name.strip() else os.path.splitext(doc.file_name)[0]
+    # Chủ đề luôn được gán (fallback về tên tài liệu/môn học nếu người dùng bỏ trống) để
+    # mọi quiz đều tính được vào mastery (F4) — trước đây bỏ trống thì mastery không cập
+    # nhật mà không hề báo cho người dùng biết.
+    if req.topic_name and req.topic_name.strip():
+        topic_name = req.topic_name.strip()
+    elif len(docs) == 1:
+        topic_name = os.path.splitext(docs[0].file_name)[0]
+    else:
+        topic_name = docs[0].course_name or "Ôn tập tổng hợp"
 
     topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == topic_name).first()
     if not topic:
-        topic = Topic(user_id=req.user_id, name=topic_name, course_name=doc.course_name)
+        topic = Topic(user_id=req.user_id, name=topic_name, course_name=docs[0].course_name)
         db.add(topic)
         db.commit()
 
-    quiz = Quiz(user_id=req.user_id, document_id=doc.id)
+    # Quiz.document_id giữ 1 FK (không đổi schema) — với quiz đa tài liệu, lưu tài liệu
+    # đầu tiên làm tham chiếu chính; nguồn thật của TỪNG câu hỏi vẫn đúng qua
+    # QuizItem.source_document/source_position (lấy từ chunk tương ứng).
+    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id)
     db.add(quiz)
     db.commit()
 

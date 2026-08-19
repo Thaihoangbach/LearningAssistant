@@ -1,6 +1,6 @@
-"""SQLAlchemy models — phạm vi F1 + F2 + F3 + F4 (chưa gồm F5 StudyPlan).
-
-Đối chiếu đúng ERD trong architecture-diagrams.md mục 6.
+"""SQLAlchemy models — phạm vi F1-F4 (quản lý tài liệu, hỏi đáp, quiz,
+mastery) cộng Flashcard. Kế hoạch học tập (F5) không có bảng riêng — tính
+trực tiếp từ Topic/MasteryScore mỗi lần gọi, xem app/study_planner.py.
 
 CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install sqlalchemy`.
 """
@@ -50,6 +50,11 @@ class Document(Base):
     status = Column(String, default="đang xử lý")  # đang xử lý | sẵn sàng | lỗi
     error_reason = Column(Text, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+    # Versioning: khi upload lại cùng file_name+course_name, bản cũ được đánh
+    # dấu is_latest=False thay vì xoá, để hỏi đáp/quiz chỉ dùng bản mới nhất
+    # (xem app/routers/documents.py) nhưng vẫn giữ lịch sử.
+    version = Column(Integer, default=1)
+    is_latest = Column(Boolean, default=True)
 
     user = relationship("User", back_populates="documents")
 
@@ -116,6 +121,33 @@ class QuizItem(Base):
     source_position = Column(String, nullable=True)
 
     quiz = relationship("Quiz", back_populates="items")
+
+
+class FlashcardSet(Base):
+    """Cùng cấu trúc với Quiz/QuizItem — chỉ đổi output shape sang front/back."""
+
+    __tablename__ = "flashcard_sets"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    document_id = Column(String, ForeignKey("documents.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    items = relationship("FlashcardItem", back_populates="flashcard_set")
+
+
+class FlashcardItem(Base):
+    __tablename__ = "flashcard_items"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    flashcard_set_id = Column(String, ForeignKey("flashcard_sets.id"), nullable=False)
+    topic_id = Column(String, ForeignKey("topics.id"), nullable=True)
+    front = Column(Text, nullable=False)
+    back = Column(Text, nullable=False)
+    source_document = Column(String, nullable=True)
+    source_position = Column(String, nullable=True)
+
+    flashcard_set = relationship("FlashcardSet", back_populates="items")
 
 
 class Attempt(Base):

@@ -58,6 +58,16 @@ class TestComputeMastery(unittest.TestCase):
         self.assertEqual(classify_mastery(0.5), "trung bình")
         self.assertEqual(classify_mastery(0.2), "yếu")
 
+    def test_naive_attempted_at_does_not_crash_against_aware_default_now(self):
+        # attempted_at NAIVE mô phỏng đúng dữ liệu đọc từ DB thật (SQLAlchemy
+        # DateTime + SQLite mất tzinfo khi round-trip), trong khi compute_mastery()
+        # không truyền now= sẽ dùng default AWARE bên trong — trộn hai kiểu này
+        # từng làm crash /quiz/submit thật (TypeError: naive vs aware).
+        naive_now = datetime.utcnow()
+        attempts = [Attempt(is_correct=True, attempted_at=naive_now - timedelta(days=1))]
+        score = compute_mastery(attempts)
+        self.assertIsNotNone(score)
+
 
 if __name__ == "__main__":
     unittest.main()

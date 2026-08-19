@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.database import init_db
-from app.routers import chat, documents, mastery, quiz
+from app.routers import chat, documents, flashcard, mastery, quiz, study_plan
 
 app = FastAPI(title="EduTutor API", version="0.1.0")
 
@@ -28,6 +28,8 @@ app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(quiz.router)
 app.include_router(mastery.router)
+app.include_router(flashcard.router)
+app.include_router(study_plan.router)
 
 
 @app.exception_handler(Exception)

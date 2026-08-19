@@ -12,19 +12,15 @@ có mạng). Cần cài đặt và chạy thử ở máy local trước khi tin 
 
 import os
 import pickle
-from dataclasses import dataclass
 from typing import List
 
 import numpy as np
 
+from app.vectorstore.bm25_index import Bm25Index
+from app.vectorstore.hybrid import reciprocal_rank_fusion
+from app.vectorstore.types import IndexedChunk
 
-@dataclass
-class IndexedChunk:
-    chunk_id: str
-    document_id: str
-    document_name: str
-    position_ref: str
-    text: str
+__all__ = ["IndexedChunk", "UserVectorStore"]
 
 
 class UserVectorStore:
@@ -86,6 +82,39 @@ class UserVectorStore:
             if len(results) >= top_k:
                 break
         return results
+
+    def hybrid_search(self, query: str, query_embedding: np.ndarray, candidate_pool: int = 20, document_ids=None):
+        """Gộp dense retrieval (cosine similarity) + BM25 (lexical) qua
+        Reciprocal Rank Fusion — trả về TỐI ĐA candidate_pool ứng viên đã lọc
+        theo document_ids, CHƯA rerank. Dùng app/retrieval/reranker.py để
+        rerank và cắt về top_k cuối cùng (xem app/retrieval/pipeline.py).
+
+        Fuse trên TOÀN BỘ corpus của user rồi mới lọc document_ids — cùng
+        cách tiếp cận với search() ở trên (đơn giản, chấp nhận được ở quy mô
+        MVP mỗi user có index riêng, không quá lớn)."""
+        if self._index is None or self._index.ntotal == 0:
+            return []
+
+        dense_k = min(candidate_pool, self._index.ntotal)
+        _, indices = self._index.search(query_embedding.reshape(1, -1), dense_k)
+        dense_ranked_ids = [self._metadata[idx].chunk_id for idx in indices[0] if idx != -1]
+
+        bm25_index = Bm25Index(self._metadata)
+        bm25_results = bm25_index.search(query, top_k=candidate_pool)
+        bm25_ranked_ids = [chunk.chunk_id for chunk, _ in bm25_results]
+
+        fused_scores = reciprocal_rank_fusion([dense_ranked_ids, bm25_ranked_ids])
+        chunks_by_id = {c.chunk_id: c for c in self._metadata}
+
+        candidates = []
+        for chunk_id, _ in sorted(fused_scores.items(), key=lambda item: item[1], reverse=True):
+            chunk = chunks_by_id[chunk_id]
+            if document_ids is not None and chunk.document_id not in document_ids:
+                continue
+            candidates.append(chunk)
+            if len(candidates) >= candidate_pool:
+                break
+        return candidates
 
     def remove_document(self, document_id: str):
         """Xoá toàn bộ chunk thuộc một document khỏi index, dựng lại index từ các vector còn lại.

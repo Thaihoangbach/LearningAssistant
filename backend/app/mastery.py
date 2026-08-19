@@ -23,8 +23,15 @@ class Attempt:
     attempted_at: datetime
 
 
+def _to_naive_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=None) if value.tzinfo is not None else value
+
+
 def _recency_weight(attempted_at: datetime, now: datetime) -> float:
-    age_days = max((now - attempted_at).total_seconds() / 86400.0, 0.0)
+    # Attempt.attempted_at đọc từ DB luôn là naive (SQLAlchemy DateTime + SQLite
+    # không giữ tzinfo khi round-trip), trong khi `now` mặc định ở dưới là aware
+    # — chuẩn hoá cả hai về naive trước khi trừ để không crash khi trộn hai kiểu.
+    age_days = max((_to_naive_utc(now) - _to_naive_utc(attempted_at)).total_seconds() / 86400.0, 0.0)
     return 0.5 ** (age_days / HALF_LIFE_DAYS)
 
 

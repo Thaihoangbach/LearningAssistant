@@ -64,12 +64,33 @@ async def upload_document(
         os.remove(saved_path)
         raise HTTPException(400, f"File vượt quá {MAX_FILE_MB}MB.")
 
+    # Versioning (TC20) — upload lại cùng file_name+course_name thì đánh dấu bản
+    # cũ is_latest=False thay vì ghi đè/xoá, để hỏi đáp/quiz chỉ dùng bản mới
+    # nhất (xem app/routers/chat.py, app/routers/quiz.py) nhưng vẫn giữ lịch sử.
+    previous_latest = (
+        db.query(Document)
+        .filter(
+            Document.user_id == user_id,
+            Document.file_name == file.filename,
+            Document.course_name == course_name,
+            Document.is_latest == True,
+        )
+        .first()
+    )
+    version = 1
+    if previous_latest:
+        previous_latest.is_latest = False
+        version = previous_latest.version + 1
+        db.add(previous_latest)
+
     doc = Document(
         id=document_id,
         user_id=user_id,
         file_name=file.filename,
         course_name=course_name,
         status="đang xử lý",
+        version=version,
+        is_latest=True,
     )
     db.add(doc)
     db.commit()
@@ -92,6 +113,8 @@ def list_documents(user_id: str, db: Session = Depends(get_db)):
             "status": d.status,
             "error_reason": d.error_reason,
             "uploaded_at": d.uploaded_at.isoformat(),
+            "version": d.version,
+            "is_latest": d.is_latest,
         }
         for d in docs
     ]
