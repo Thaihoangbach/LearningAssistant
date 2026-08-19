@@ -1,6 +1,6 @@
 # Architecture Diagrams - EduTutor
 
-**Sản phẩm:** Trợ lý học tập cá nhân hoá dùng LLM + RAG (xem [`PRD.md`](./PRD.md))
+**Sản phẩm:** Trợ lý học tập cá nhân hoá dùng LLM + RAG 
 
 Các sơ đồ dưới đây vẽ lại kiến trúc thật đang chạy, lấy trực tiếp từ code trong `backend/app/` - không phải kiến trúc dự kiến ban đầu. Tên biến môi trường, tên bảng, tên hàm trong ghi chú đều khớp với code hiện tại.
 
