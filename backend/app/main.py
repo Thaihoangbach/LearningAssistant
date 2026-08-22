@@ -13,13 +13,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.database import init_db
-from app.routers import chat, documents, flashcard, mastery, profile, quiz, study_plan
+from app.routers import chat, documents, flashcard, mastery
+import os, profile, quiz, study_plan
 
 app = FastAPI(title="EduTutor API", version="0.1.0")
 
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=[
+        "http://localhost:5173",
+        os.getenv("FRONTEND_URL", ""),
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
