@@ -21,14 +21,15 @@ Tính năng đã triển khai:
 | Tính năng | Mô tả |
 | --- | --- |
 | **Quản lý tài liệu** | Tải lên PDF/DOCX theo môn học, xử lý nền (parse → chunk → embed → lưu vector), theo dõi trạng thái "đang xử lý" / "sẵn sàng" / "lỗi", xoá tài liệu. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới (versioning) — hỏi đáp chỉ dùng bản mới nhất, bản cũ vẫn giữ lại. |
-| **Hỏi đáp RAG** | Đặt câu hỏi về nội dung tài liệu đã tải; câu trả lời đi kèm trích dẫn nguồn (tên tài liệu + vị trí), tổng hợp/nêu rõ khác biệt khi thông tin đến từ nhiều nguồn. Hiểu được câu hỏi tiếp nối dựa trên vài lượt hội thoại gần nhất (vd: "vậy tại sao *nó* không cần RNN?"), diễn đạt lại đơn giản hơn khi người dùng nói chưa hiểu, và có thể điều chỉnh độ sâu câu trả lời theo trình độ khai báo (`level`). Có bước verifier để đảm bảo không "bịa" câu trả lời khi nội dung không có trong tài liệu, và bước guardrail để chặn prompt injection/jailbreak, yêu cầu làm bài hộ, cùng câu hỏi ngoài phạm vi học tập trước khi trả lời. Lưu lại lịch sử hội thoại, xem lại hoặc tạo cuộc hội thoại mới. |
+| **Hỏi đáp RAG** | Đặt câu hỏi về nội dung tài liệu đã tải; câu trả lời đi kèm trích dẫn nguồn (tên tài liệu + vị trí), tổng hợp/nêu rõ khác biệt khi thông tin đến từ nhiều nguồn. Hiểu được câu hỏi tiếp nối dựa trên vài lượt hội thoại gần nhất (vd: "vậy tại sao *nó* không cần RNN?"), diễn đạt lại đơn giản hơn khi người dùng nói chưa hiểu, và điều chỉnh độ sâu câu trả lời theo trình độ (`level`) — khai báo tường minh hoặc lấy lại từ Learning Profile nếu không truyền. Có bước verifier để đảm bảo không "bịa" câu trả lời khi nội dung không có trong tài liệu, và bước guardrail để chặn prompt injection/jailbreak, yêu cầu làm bài hộ, cùng câu hỏi ngoài phạm vi học tập trước khi trả lời. Lưu lại lịch sử hội thoại, xem lại hoặc tạo cuộc hội thoại mới. |
 | **Gợi ý học tiếp theo** | Hỏi kiểu "tôi nên học gì tiếp theo?" sẽ được nhận diện và trả lời ngay từ dữ liệu mastery đã có (chủ đề điểm thấp nhất), không cần gọi LLM. |
 | **Quiz tự kiểm tra** | Sinh câu hỏi trắc nghiệm (có thể gắn theo chủ đề, chọn độ khó, gộp nhiều tài liệu thành 1 quiz tổng hợp) từ nội dung tài liệu, mỗi câu đã qua verifier để đảm bảo đáp án đúng và giải thích khớp với tài liệu nguồn. |
 | **Flashcard** | Sinh flashcard (mặt trước/mặt sau) từ tài liệu, cùng kỹ thuật generator + verifier với quiz. |
 | **Kế hoạch học tập** | Lập lịch ôn tập theo số ngày còn lại tới hạn, ưu tiên chủ đề điểm thấp/chưa học trước — tính lại từ dữ liệu mastery hiện có mỗi lần gọi, tự động phản ánh tiến độ mới nhất. |
 | **Mastery theo chủ đề** | Chấm điểm mức độ thành thạo (0–1) theo công thức rule-based có trọng số suy giảm theo thời gian (recency-weighted, half-life 14 ngày) mỗi khi nộp bài quiz. Dashboard tổng quan hiển thị điểm mastery, số tài liệu, số quiz, tỉ lệ đúng. |
+| **Hồ sơ học tập (Learning Profile)** | Lưu `preferred_level` (trình độ) dùng chung giữa hỏi đáp và sinh quiz — chỉ cần khai báo `level`/`difficulty` một lần, các lượt sau tự áp dụng lại nếu không truyền tham số mới; truyền tường minh lại thì ghi đè preference. Nếu chưa từng khai báo, hệ thống tự suy trình độ từ điểm mastery trung bình hiện có (mastery yếu → beginner, tốt → advanced). Có `learning_goal` (mục tiêu học tập, dạng text tự do) — được lọc injection ngay khi lưu (`contains_hard_block_pattern`), sau đó đưa vào prompt sinh câu trả lời như bối cảnh tham khảo (không phải chỉ dẫn). `GET /profile` trả cả `weak_topics`/`mastered_topics` suy từ mastery hiện có. |
 
-Chưa làm: cá nhân hoá theo mục tiêu học tập dài hạn (deadline/kế hoạch tự sinh theo goal), gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế, đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton).
+Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế, đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton).
 
 ## Kiến trúc & công nghệ
 
@@ -60,6 +61,7 @@ backend/
       gemini_client.py            # client gọi Gemini API thật
     mastery.py                    # công thức tính mastery rule-based
     study_planner.py              # lập kế hoạch học tập — rule-based, tính lại mỗi lần gọi
+    learning_profile.py           # logic thuần: level nào áp dụng, có nên ghi đè preference không
     routers/
       documents.py                 # upload (có versioning), list, xoá tài liệu
       chat.py                      # hỏi đáp RAG + gợi ý học tiếp theo + lịch sử hội thoại
@@ -67,6 +69,7 @@ backend/
       flashcard.py                 # sinh flashcard từ tài liệu
       mastery.py                   # đọc dữ liệu mastery cho dashboard
       study_plan.py                 # trả kế hoạch học tập theo số ngày còn lại
+      profile.py                   # xem/cập nhật Learning Profile (preferred_level, learning_goal)
     main.py
   tests/                          # unittest, xem mục Chạy test
 frontend/
@@ -143,14 +146,16 @@ npm run dev
 | `POST /documents` | Tải lên tài liệu (multipart), xử lý nền. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới. |
 | `GET /documents` | Liệt kê tài liệu theo `user_id` (kèm `version`, `is_latest`) |
 | `DELETE /documents/{id}` | Xoá tài liệu + dữ liệu vector liên quan |
-| `POST /chat/ask` | Đặt câu hỏi RAG (tuỳ chọn `level`: beginner/advanced), tự tạo hội thoại mới nếu chưa có `conversation_id`. Câu hỏi kiểu "nên học gì tiếp theo?" được trả lời trực tiếp từ dữ liệu mastery, không qua RAG. |
+| `POST /chat/ask` | Đặt câu hỏi RAG (tuỳ chọn `level`: beginner/advanced — không truyền thì lấy lại `preferred_level` đã lưu trong Learning Profile), tự tạo hội thoại mới nếu chưa có `conversation_id`. Câu hỏi kiểu "nên học gì tiếp theo?" được trả lời trực tiếp từ dữ liệu mastery, không qua RAG. |
 | `GET /chat/conversations` | Liệt kê hội thoại theo `user_id`, kèm preview câu hỏi đầu tiên |
 | `GET /chat/conversations/{id}` | Lấy toàn bộ tin nhắn của một hội thoại |
-| `POST /quiz/generate` | Sinh quiz trắc nghiệm từ 1 tài liệu (`document_id`) hoặc nhiều tài liệu (`document_ids`), tuỳ chọn `difficulty` |
+| `POST /quiz/generate` | Sinh quiz trắc nghiệm từ 1 tài liệu (`document_id`) hoặc nhiều tài liệu (`document_ids`), tuỳ chọn `difficulty` (cùng cơ chế fallback về Learning Profile như `/chat/ask`) |
 | `POST /quiz/submit` | Nộp đáp án 1 câu, trả kết quả + cập nhật mastery |
 | `POST /flashcard/generate` | Sinh flashcard (front/back) từ một tài liệu |
 | `GET /mastery` | Tổng quan mastery theo chủ đề + số liệu thống kê |
 | `GET /study-plan` | Kế hoạch ôn tập theo `days` còn lại, ưu tiên chủ đề yếu/chưa học |
+| `GET /profile` | Xem Learning Profile: `preferred_level`, `learning_goal`, và `weak_topics` suy ra từ mastery hiện có |
+| `PUT /profile` | Cập nhật thủ công `preferred_level` và/hoặc `learning_goal` |
 
 Xem chi tiết request/response tại `http://localhost:8001/docs` (Swagger UI tự sinh) khi backend đang chạy.
 
@@ -161,13 +166,13 @@ cd backend
 python -m unittest discover -s tests -v
 ```
 
-Các test hiện có (`test_chunker.py`, `test_parser.py`, `test_rag.py`, `test_quiz_generator.py`, `test_flashcard_generator.py`, `test_mastery.py`, `test_guardrail.py`, `test_recommendation.py`, `test_study_planner.py`) kiểm tra phần logic thuần Python (chunking, RAG orchestration, quiz/flashcard orchestration, công thức mastery, parse DOCX, guardrail, gợi ý học tiếp theo, lập kế hoạch học tập) bằng fake LLM client — không cần mạng hay API key thật. Phần cần thư viện ngoài/kết nối thật (embedding, FAISS, Gemini API, build frontend) chưa có test tự động, cần tự chạy thử thủ công như hướng dẫn ở mục Sử dụng.
+Các test hiện có (`test_chunker.py`, `test_parser.py`, `test_rag.py`, `test_quiz_generator.py`, `test_flashcard_generator.py`, `test_mastery.py`, `test_guardrail.py`, `test_recommendation.py`, `test_study_planner.py`, `test_learning_profile.py`) kiểm tra phần logic thuần Python (chunking, RAG orchestration, quiz/flashcard orchestration, công thức mastery, parse DOCX, guardrail, gợi ý học tiếp theo, lập kế hoạch học tập, Learning Profile) bằng fake LLM client — không cần mạng hay API key thật. Phần cần thư viện ngoài/kết nối thật (embedding, FAISS, Gemini API, build frontend) chưa có test tự động, cần tự chạy thử thủ công như hướng dẫn ở mục Sử dụng.
 
-> **Lưu ý khi cập nhật lên phiên bản này:** `models.py` vừa thêm cột mới (`Document.version`, `Document.is_latest`) và bảng mới (`flashcard_sets`, `flashcard_items`). Dự án chưa có công cụ migration (Alembic) — nếu đã có sẵn `backend/data/edututor.db` từ trước, cần xoá file này (hoặc tự thêm cột) để `init_db()` tạo lại schema đúng, nếu không `/documents` và `/chat/ask` sẽ lỗi "no such column".
+> **Lưu ý khi cập nhật lên phiên bản này:** `models.py` vừa thêm cột mới (`Document.version`, `Document.is_latest`) và bảng mới (`flashcard_sets`, `flashcard_items`). Dự án chưa có công cụ migration (Alembic) — nếu đã có sẵn `backend/data/edututor.db` từ trước, cần xoá file này (hoặc tự thêm cột) để `init_db()` tạo lại schema đúng, nếu không `/documents` và `/chat/ask` sẽ lỗi "no such column". Riêng bảng `learning_profiles` (Learning Profile) là bảng **hoàn toàn mới**, không cần xoá DB cũ — `init_db()` tự thêm bảng còn thiếu vào DB hiện có mà không đụng tới các bảng khác.
 
 ## Đánh giá chất lượng (Golden Set)
 
-[`docs/eval/golden_set.yaml`](docs/eval/golden_set.yaml) là bộ 60 case đánh giá toàn vòng đời hệ thống (Document → Retrieval → Generation → Personalization → Assessment → Recommendation → Planning → Analytics → Safety), mỗi case gắn `implementation_status` đối chiếu với code thật (đã làm được / làm một phần / chưa làm). Xem [`docs/eval/README.md`](docs/eval/README.md) để biết cách dùng, phát hiện quan trọng nhất (indirect prompt injection qua nội dung tài liệu chưa được chặn), và khi nào nên dùng RAGAS so với LLM-as-judge tự viết cho từng nhóm case.
+[`eval/golden_set.jsonl`](eval/golden_set.jsonl) là bộ 54 case đánh giá trải trên 8 nhóm (RAG QA, Personalization, Safety, Assessment, Recommendation, Study Planner, Flashcard, Analytics), mỗi case gắn `assertion` và `watched_failure_mode` để chấm tự động. Xem [`eval/report.md`](eval/report.md) để biết kết quả đầy đủ trên cấu hình đang chạy thật (Hybrid + Reranker): điểm mạnh nhất là các nhóm rule-based (Safety, Recommendation, Planner — đều 100%), điểm yếu rõ nhất là Personalization (đo được ~13% ở thời điểm chạy báo cáo này — xem `app/learning_profile.py` và `_LEVEL_INSTRUCTIONS` trong `app/llm/rag.py` cho các cải tiến đã thêm sau đó, chưa có lượt đánh giá lại để xác nhận tác động), cùng phân tích lỗi chi tiết và so sánh với cấu hình dense-only.
 
 ## Chưa làm / hướng phát triển tiếp
 
@@ -177,4 +182,5 @@ Các test hiện có (`test_chunker.py`, `test_parser.py`, `test_rag.py`, `test_
 - **Xử lý "một phần căn cứ"** — verifier hiện chỉ CÓ/KHÔNG nhị phân; câu trả lời có bằng chứng một phần bị từ chối toàn bộ thay vì nêu rõ phần nào đã xác minh được.
 - **Đăng nhập/đa người dùng thật** — hiện `user_id` cố định `demo-user` ở frontend (`frontend/src/api.js`), chưa có xác thực.
 - **Xoá/đổi tên cuộc hội thoại** trong lịch sử hỏi đáp.
-- **Trình độ/độ khó (`level`, `difficulty`) hiện truyền tường minh mỗi request**, chưa lưu thành hồ sơ người học (Learning Profile) để tự động áp dụng.
+- **Việc suy trình độ từ mastery trung bình còn thô** — chỉ một ngưỡng cố định (yếu → beginner, tốt → advanced, còn lại không đoán), chưa tính đến xu hướng tiến bộ theo thời gian hay khác biệt giữa các môn học.
+- **Chưa re-run Golden Set để đo tác động thật của các cải tiến cá nhân hóa** (siết prompt, tăng `top_k`, Learning Profile) — điểm Personalization ~13% ở `eval/report.md` là số đo TRƯỚC các thay đổi này, chưa có số liệu thật sau khi cải tiến.

@@ -84,6 +84,18 @@ class GuardrailResult:
     message: str | None = None
 
 
+def contains_hard_block_pattern(text: str) -> bool:
+    """Kiểm tra rule-based thuần (không gọi LLM) xem `text` có khớp pattern
+    injection/jailbreak rõ ràng hay không. Tách thành hàm public để tái dùng
+    ở nơi khác ngoài câu hỏi hỏi đáp — cụ thể là app/routers/profile.py dùng
+    hàm này chặn `learning_goal` chứa injection ngay khi lưu, vì trường này
+    được đọc lại và đưa vào prompt ở NHIỀU lượt hỏi đáp sau đó (xem
+    app/llm/rag.py), khác với `question` chỉ dùng một lần rồi thôi — một
+    payload injection lọt qua ở đây sẽ tồn tại dai dẳng nếu không chặn từ
+    lúc ghi."""
+    return bool(_HARD_BLOCK_RE.search(text))
+
+
 def _build_gatekeeper_prompt(question: str) -> str:
     return (
         "Bạn là bộ lọc an toàn cho một trợ lý học tập chỉ trả lời câu hỏi về nội "
@@ -101,7 +113,7 @@ def check_question(question: str, llm_client: LLMClient) -> GuardrailResult:
     if _ASSIGNMENT_NOUN_RE.search(question) and _DO_IT_FOR_ME_RE.search(question):
         return GuardrailResult(blocked=True, message=ACADEMIC_INTEGRITY_MESSAGE)
 
-    if _HARD_BLOCK_RE.search(question):
+    if contains_hard_block_pattern(question):
         return GuardrailResult(blocked=True, message=BLOCKED_MESSAGE)
 
     if _SOFT_TRIGGER_RE.search(question):

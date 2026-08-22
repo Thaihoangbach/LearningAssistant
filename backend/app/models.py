@@ -177,3 +177,31 @@ class MasteryScore(Base):
     topic_id = Column(String, ForeignKey("topics.id"), nullable=False)
     score = Column(Float, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LearningProfile(Base):
+    """Hồ sơ cá nhân hóa DÀI HẠN theo user — Giai đoạn 1 trong hướng phát
+    triển (docs/thesis, Chương 8), lấp khoảng trống đã đo được: Personalization
+    chỉ đạt 0.13/1.00 trên Golden Set một phần vì `level` phải khai báo lại
+    tường minh mỗi request, không có nơi nào "nhớ" trình độ người học.
+
+    Đây là dữ liệu cá nhân hóa TĨNH (người dùng tự khai báo), khác hẳn dữ liệu
+    tiến độ suy ra được từ Attempt/MasteryScore (cá nhân hóa ĐỘNG, xem
+    app/mastery.py) — hai loại này cố tình tách riêng theo đúng thiết kế đã
+    mô tả ở architecture-diagrams.md, không gộp vào một bảng.
+
+    `learning_goal` hiện chỉ lưu và trả về qua GET/PUT /profile để hiển thị,
+    CHƯA được đưa vào prompt của generator (app/llm/rag.py) — đây là input tự
+    do do người dùng nhập, đưa thẳng vào prompt mỗi câu hỏi mà không qua
+    guardrail (guardrail chỉ chạy trên trường `question`) sẽ mở một đường
+    prompt injection dai dẳng qua nhiều lượt hỏi. Cần thêm bước kiểm soát
+    trước khi nối trường này vào ngữ cảnh sinh câu trả lời.
+    """
+
+    __tablename__ = "learning_profiles"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, unique=True)
+    preferred_level = Column(String, nullable=True)  # "beginner" | "advanced" | None
+    learning_goal = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow)

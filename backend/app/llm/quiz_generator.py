@@ -31,11 +31,18 @@ class QuizItem:
 _DIFFICULTY_INSTRUCTIONS = {
     "beginner": (
         "Ưu tiên câu hỏi kiểm tra định nghĩa/khái niệm cơ bản, không yêu cầu suy "
-        "luận nhiều bước."
+        "luận nhiều bước. Phần giải thích đáp án phải viết bằng ngôn ngữ đơn "
+        "giản, giải nghĩa rõ mọi thuật ngữ chuyên môn xuất hiện trong câu hỏi "
+        "hoặc đáp án. Các lựa chọn sai (distractor) nên là hiểu lầm phổ biến dễ "
+        "nhận ra, không đánh đố bằng chi tiết kỹ thuật nhỏ."
     ),
     "advanced": (
         "Ưu tiên câu hỏi yêu cầu phân tích, so sánh, hoặc áp dụng kiến thức vào "
-        "tình huống mới — không chỉ hỏi lại định nghĩa."
+        "tình huống mới — không chỉ hỏi lại định nghĩa. Câu hỏi không được trùng "
+        "dạng với câu hỏi kiểm tra định nghĩa/khái niệm cơ bản ở mức beginner: "
+        "đề bài nên đặt vào một tình huống hoặc ví dụ cụ thể, và các lựa chọn "
+        "sai (distractor) phải là kết quả của một sai lầm kỹ thuật hợp lý, "
+        "không phải đáp án hiển nhiên sai ai cũng loại được ngay."
     ),
 }
 

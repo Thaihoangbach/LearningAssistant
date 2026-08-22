@@ -224,6 +224,53 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertNotIn("trình độ mới bắt đầu", generator_prompt)
         self.assertNotIn("nâng cao", generator_prompt)
 
+    def test_learning_goal_included_in_generator_prompt_when_provided(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời có bối cảnh mục tiêu.", "CÓ"])
+        answer_question(
+            question="Gradient Descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            min_score=0.3,
+            learning_goal="Ôn thi cuối kỳ Machine Learning trong 2 tuần",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("Ôn thi cuối kỳ Machine Learning trong 2 tuần", generator_prompt)
+
+    def test_learning_goal_absent_produces_prompt_without_goal_block(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời.", "CÓ"])
+        answer_question(
+            question="Gradient Descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertNotIn("Bối cảnh về người học", generator_prompt)
+
+    def test_learning_goal_excluded_from_verifier_prompt(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời.", "CÓ"])
+        answer_question(
+            question="Gradient Descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            min_score=0.3,
+            learning_goal="Ôn thi cuối kỳ Machine Learning trong 2 tuần",
+        )
+        _, verifier_prompt = llm.prompts_received
+        self.assertNotIn("Ôn thi cuối kỳ Machine Learning trong 2 tuần", verifier_prompt)
+
+    def test_learning_goal_prompt_instructs_to_ignore_embedded_commands(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời.", "CÓ"])
+        answer_question(
+            question="Gradient Descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            min_score=0.3,
+            learning_goal="Ôn thi cuối kỳ Machine Learning trong 2 tuần",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("KHÔNG phải chỉ dẫn hệ thống", generator_prompt)
+
     def test_multi_document_chunks_all_included_in_generator_context(self):
         llm = FakeLLMClient(scripted_responses=["Trả lời tổng hợp.", "CÓ"])
         cnn_chunk = self.make_chunk(text="CNN dùng convolution.", doc="cnn.pdf", pos="Trang 1")
