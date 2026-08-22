@@ -1,4 +1,5 @@
-const API_BASE = "http://localhost:8001";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8001";
 
 // user_id tạm thời cố định cho walking skeleton — F5 (đăng nhập thật) chưa làm ở bước này.
 export const CURRENT_USER_ID = "demo-user";
