@@ -1,8 +1,9 @@
 """Entrypoint FastAPI — walking skeleton F1 + F2.
 
 Chạy: uvicorn app.main:app --reload
-CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install -r requirements.txt`.
 """
+
+import os
 
 from dotenv import load_dotenv
 
@@ -13,23 +14,54 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.database import init_db
-from app.routers import chat, documents, flashcard, mastery
-import os, profile, quiz, study_plan
+from app.routers import (
+    chat,
+    documents,
+    flashcard,
+    mastery,
+    profile,
+    quiz,
+    study_plan,
+)
 
-app = FastAPI(title="EduTutor API", version="0.1.0")
+app = FastAPI(
+    title="EduTutor API",
+    version="0.1.0",
+)
 
+# ============================================================
+# CORS
+# ============================================================
 
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173",
+)
+
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    FRONTEND_URL,
+]
+
+ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        origin
+        for origin in ALLOWED_ORIGINS
+        if origin
+    )
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        os.getenv("FRONTEND_URL", ""),
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ============================================================
+# Routers
+# ============================================================
 
 app.include_router(documents.router)
 app.include_router(chat.router)
@@ -39,21 +71,31 @@ app.include_router(flashcard.router)
 app.include_router(study_plan.router)
 app.include_router(profile.router)
 
+# ============================================================
+# Exception handler
+# ============================================================
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception):
-    # Starlette's CORSMiddleware chỉ gắn header CORS vào response bình thường,
-    # KHÔNG gắn được vào response mà ServerErrorMiddleware tự tạo khi exception
-    # thoát khỏi toàn bộ middleware stack. Không có handler này, mọi lỗi 500
-    # (vd. thiếu GEMINI_API_KEY) sẽ bị trình duyệt chặn vì thiếu CORS header
-    # và JS chỉ thấy "Failed to fetch" thay vì thông báo lỗi thật.
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+async def unhandled_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
+# ============================================================
+# Startup
+# ============================================================
 
 @app.on_event("startup")
 def on_startup():
     init_db()
 
+# ============================================================
+# Health
+# ============================================================
 
 @app.get("/health")
 def health():
