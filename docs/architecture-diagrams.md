@@ -23,7 +23,7 @@ Các sơ đồ dưới đây vẽ lại kiến trúc thật đang chạy, lấy 
 | Vector store | FAISS `IndexFlatIP` local, 1 index riêng cho mỗi user | inner product trên vector đã L2-normalize = cosine similarity |
 | Full-text/lexical search | BM25 (`rank_bm25`), build lại từ đầu mỗi lần gọi `hybrid_search()` | chấp nhận được vì mỗi user có corpus nhỏ; tokenizer chỉ tách `\w+` + lowercase, chưa word-segmentation tiếng Việt thật |
 | Fusion | Reciprocal Rank Fusion (k=60) | không cần chuẩn hoá thang điểm giữa cosine và BM25 |
-| Embedding | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2`, chạy local | miễn phí, không giới hạn, để dành quota Gemini cho generator/verifier |
+| Embedding | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, chạy local | miễn phí, không giới hạn, để dành quota Gemini cho generator/verifier; đổi từ bản mpnet-base-v2 (768 chiều) sang MiniLM-L12 (384 chiều) sau khi gặp lỗi hết RAM khi deploy trên gói free của Render (giới hạn 512MB) |
 | Rerank | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`, chạy local | chấm điểm liên quan trực tiếp (query, chunk); điểm chuẩn hoá qua sigmoid về (0,1) |
 | LLM | Google Gemini API (`gemini-3.1-flash-lite`, free tier) | có retry backoff khi gặp lỗi 429 |
 | File storage | đĩa cục bộ (`backend/data/uploads`) | không dùng object storage ngoài |
@@ -41,7 +41,7 @@ Các sơ đồ dưới đây vẽ lại kiến trúc thật đang chạy, lấy 
 | 5 | Agent/pipeline hỏi đáp | guardrail, phân loại ý định, generator + verifier | flowchart |
 | 6 | Hybrid retrieval | lọc theo user trước, 2 nhánh truy hồi song song, RRF, rerank | flowchart |
 | 7 | Sinh quiz/flashcard + mastery | generator sinh hàng loạt, verify từng item, cập nhật mastery | flowchart |
-| 8a | Bản đồ dữ liệu | 11 bảng gom thành 3 cụm | flowchart |
+| 8a | Bản đồ dữ liệu | 12 bảng gom thành 3 cụm | flowchart |
 | 8b | Schema chi tiết | trường, kiểu dữ liệu, khoá | ER |
 | 9 | Vòng đời tài liệu | trạng thái nghiệp vụ, versioning | state |
 | 10 | Triển khai | cái gì chạy ở đâu | flowchart |
@@ -511,13 +511,14 @@ flowchart TB
 
 ## 8a. Bản đồ dữ liệu
 
-11 bảng gom thành 3 cụm.
+12 bảng gom thành 3 cụm.
 
 ```mermaid
 flowchart TB
-    subgraph cum1["Cụm 1 - Người dùng và tài liệu"]
+    subgraph cum1["Cụm 1 - Người dùng, tài liệu, và hồ sơ cá nhân hóa"]
         USER["USER<br/>Hiện chỉ 1 user cố định (demo-user)"]
         DOCUMENT["DOCUMENT<br/>Versioning qua version + is_latest"]
+        PROFILE["LEARNING_PROFILE<br/>preferred_level + learning_goal, cá nhân hóa TĨNH<br/>tách biệt với tiến độ suy ra ở Cụm 3"]
     end
 
     subgraph cum2["Cụm 2 - Hội thoại và tri thức đã sinh"]
@@ -536,6 +537,7 @@ flowchart TB
     end
 
     USER -->|"tải lên nhiều"| DOCUMENT
+    USER -->|"có 1"| PROFILE
     USER -->|"có nhiều"| CONV
     CONV -->|"chứa nhiều"| MSG
     USER -->|"làm nhiều"| QUIZ
@@ -553,6 +555,8 @@ flowchart TB
 
 Không có bảng "chunk có trạng thái duyệt" - chunk (vector + text) sống trong FAISS/pickle, không phải bảng SQL riêng, không mang cờ duyệt nào. Việc không bịa được đảm bảo ở bước verifier khi trả lời (sơ đồ 5), không phải ở việc kiểm soát dữ liệu đầu vào.
 
+`LEARNING_PROFILE` là bảng cá nhân hóa dài hạn duy nhất trong hệ thống - `preferred_level` và `learning_goal` do người dùng tự khai báo (qua `level`/`difficulty` mỗi lượt, hoặc `PUT /profile`), khác hẳn `weak_topics`/`mastered_topics` mà `GET /profile` trả về (suy ra từ `MASTERY_SCORE` ngay lúc gọi, không lưu trùng trong bảng này). `learning_goal` được lọc injection bằng `contains_hard_block_pattern()` (dùng lại pattern của guardrail câu hỏi, `app/llm/guardrail.py`) ngay khi ghi, vì trường này được đọc lại và đưa vào prompt ở nhiều lượt hỏi đáp sau đó chứ không dùng một lần rồi thôi như câu hỏi.
+
 ---
 
 ## 8b. Schema chi tiết
@@ -562,6 +566,7 @@ Trường, kiểu dữ liệu và khoá của từng bảng SQL, lấy trực ti
 ```mermaid
 erDiagram
     USER ||--o{ DOCUMENT : "tải lên"
+    USER ||--o| LEARNING_PROFILE : "có tối đa 1"
     USER ||--o{ CONVERSATION : "có"
     CONVERSATION ||--o{ MESSAGE : "chứa"
     USER ||--o{ QUIZ : "làm"
@@ -669,6 +674,14 @@ erDiagram
         string user_id FK
         string topic_id FK
         float score "0 đến 1, cache, ghi đè mỗi khi có Attempt mới"
+        datetime updated_at
+    }
+
+    LEARNING_PROFILE {
+        string id PK
+        string user_id FK UK "unique, tối đa 1 profile/user"
+        string preferred_level "beginner, advanced, hoặc rỗng"
+        text learning_goal "tuỳ chọn, đã lọc injection khi ghi"
         datetime updated_at
     }
 ```

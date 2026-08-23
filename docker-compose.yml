@@ -7,6 +7,10 @@ services:
       - "${BACKEND_PORT:-8001}:8000"
     env_file:
       - .env
+    environment:
+      # Cache model embedding/reranker vào volume bền vững thay vì layer
+      # ghi tạm của container — tránh tải lại model (~1GB+) mỗi lần rebuild.
+      - HF_HOME=/app/backend/data/hf_cache
     volumes:
       - edututor_data:/app/backend/data
     restart: unless-stopped

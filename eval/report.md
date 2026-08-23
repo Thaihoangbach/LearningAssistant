@@ -67,6 +67,8 @@ Cấu hình THẬT đọc trực tiếp từ code, không phải giá trị mẫ
 | Top-K (cuối cùng) | 5 |
 | LLM temperature | Không set tường minh (mặc định API) |
 
+> **Ghi chú (sau khi báo cáo này được viết):** model embedding trong bảng trên (`paraphrase-multilingual-mpnet-base-v2`) là cấu hình THẬT tại thời điểm chạy Golden Set và tạo ra các số liệu trong báo cáo này — giữ nguyên, không chỉnh sửa lại cho khớp code hiện tại. Sau đó, khi triển khai thử trên gói free của Render (giới hạn RAM 512MB), model này gây lỗi hết bộ nhớ nên đã được đổi sang bản nhẹ hơn `paraphrase-multilingual-MiniLM-L12-v2` (384 chiều thay vì 768). Golden Set **chưa được chạy lại** với model mới — mọi số liệu trong báo cáo này chỉ phản ánh đúng cấu hình cũ, không suy diễn sang cấu hình hiện tại.
+
 ## 4. Evaluation Metrics
 
 Không dùng một metric chung cho mọi module — mỗi nhóm có bộ tiêu chí riêng, chấm bằng rule-based (khi đo được chính xác) hoặc LLM-as-judge (khi cần đánh giá nội dung):

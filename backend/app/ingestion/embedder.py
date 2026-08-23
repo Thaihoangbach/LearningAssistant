@@ -15,7 +15,7 @@ from typing import List
 
 import numpy as np
 
-MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 
 
 @lru_cache(maxsize=1)
