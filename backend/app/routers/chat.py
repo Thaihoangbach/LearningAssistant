@@ -122,7 +122,8 @@ class AskRequest(BaseModel):
     course_name: str | None = None
     conversation_id: str | None = None
     top_k: int = 5
-    min_score: float = 0.3
+    # Xem giải thích ngưỡng thấp này ở app/llm/rag.py::answer_question
+    min_score: float = 0.02
     level: str | None = None  # "beginner" | "advanced" | None — xem app/llm/rag.py
 
 

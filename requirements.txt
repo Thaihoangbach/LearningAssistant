@@ -1,3 +1,10 @@
+# Ép cài bản torch CPU-only (không kéo theo cuda-toolkit/triton/nvidia-*)
+# TRƯỚC sentence-transformers, vì container chạy CPU-only (không GPU) — bản
+# torch mặc định trên PyPI có kèm CUDA nặng thêm hàng GB không dùng tới,
+# từng là nguyên nhân chính gây OOM 512MB trên Render free tier.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9

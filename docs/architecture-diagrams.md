@@ -316,7 +316,7 @@ flowchart TD
         NODOCS{"Có tài liệu nào sẵn sàng?"}
         NODOCSERR(["Lỗi 400 - chưa có tài liệu nào sẵn sàng"])
         RETRIEVE["Hybrid retrieval + rerank (xem sơ đồ 6)"]
-        THRESH{"Có chunk nào đạt min_score, mặc định 0.3?"}
+        THRESH{"Có chunk nào đạt min_score, mặc định 0.02?"}
         NOCTX(["'Nội dung này chưa có trong tài liệu bạn đã tải lên.'"])
     end
 
@@ -401,7 +401,7 @@ flowchart TB
         TOPK["Cắt về top_k cuối cùng, mặc định 5"]
     end
 
-    THRESH{"Điểm cao nhất >= min_score, mặc định 0.3?"}
+    THRESH{"Điểm cao nhất >= min_score, mặc định 0.02?"}
     CTX(["Context gửi cho generator (sơ đồ 5)"])
     NONE(["Không đủ căn cứ, agent trả NO_CONTEXT_MESSAGE"])
 

@@ -232,7 +232,15 @@ def answer_question(
     question: str,
     retrieved_chunks: List[RetrievedChunk],
     llm_client: LLMClient,
-    min_score: float = 0.3,
+    # Điểm reranker KHÔNG đáng tin để tự quyết "có liên quan hay không": test
+    # thực tế cho thấy câu hỏi hợp lệ diễn đạt kiểu hội thoại ("giải thích X
+    # cho người mới học") có thể chấm dưới 0.05, trong khi câu hỏi ngoài phạm
+    # vi tài liệu ("GPT-4 có dùng Transformer không") lại chấm > 0.4 — ngưỡng
+    # cũ 0.3 vừa chặn nhầm câu hợp lệ vừa không chặn được câu ngoài phạm vi.
+    # Ngưỡng thấp này chỉ còn tác dụng lọc trường hợp cực đoan (toàn bộ kho
+    # tài liệu không liên quan gì tới câu hỏi) để đỡ tốn lượt gọi LLM; việc
+    # phán đoán đúng/sai thật sự giao hẳn cho verifier (2 lượt gọi bên dưới).
+    min_score: float = 0.02,
     conversation_history: Optional[List[ConversationTurn]] = None,
     level: Optional[str] = None,
     learning_goal: Optional[str] = None,

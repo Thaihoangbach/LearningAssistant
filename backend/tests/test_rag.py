@@ -34,17 +34,36 @@ class TestAnswerQuestion(unittest.TestCase):
         return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
 
     def test_no_relevant_chunk_returns_no_context_message_without_calling_llm(self):
+        """Ngưỡng chỉ còn lọc trường hợp cực đoan (điểm gần 0, dưới cả
+        min_score mặc định rất thấp) — không phải trường hợp câu hỏi hợp lệ
+        bị chấm điểm thấp do reranker chưa quen kiểu diễn đạt hội thoại."""
         llm = FakeLLMClient(scripted_responses=[])
         result = answer_question(
             question="RAG là gì?",
-            retrieved_chunks=[self.make_chunk(score=0.1)],
+            retrieved_chunks=[self.make_chunk(score=0.001)],
             llm_client=llm,
-            min_score=0.3,
+            min_score=0.02,
         )
         self.assertEqual(result.answer, NO_CONTEXT_MESSAGE)
         self.assertFalse(result.is_grounded)
         self.assertEqual(result.sources, [])
         self.assertEqual(len(llm.prompts_received), 0)
+
+    def test_low_but_nonzero_score_chunk_still_reaches_llm(self):
+        """Fix cho lỗi thực tế: câu hỏi hợp lệ diễn đạt kiểu hội thoại (VD:
+        "giải thích attention cho người mới học") khiến cross-encoder chấm
+        chunk đúng chỉ 0.048 — với ngưỡng cũ 0.3 sẽ bị chặn trước khi tới LLM
+        dù nội dung đúng đã nằm trong candidate. Với min_score mặc định mới
+        (thấp), chunk này phải được gửi cho generator+verifier quyết định,
+        thay vì bị từ chối oan bởi con số điểm không đáng tin."""
+        llm = FakeLLMClient(scripted_responses=["Câu trả lời dựa trên tài liệu.", "CÓ"])
+        result = answer_question(
+            question="giải thích attention cho người mới học",
+            retrieved_chunks=[self.make_chunk(score=0.048)],
+            llm_client=llm,
+        )
+        self.assertEqual(len(llm.prompts_received), 2)
+        self.assertTrue(result.is_grounded)
 
     def test_grounded_answer_returned_when_verifier_confirms(self):
         llm = FakeLLMClient(scripted_responses=["Đây là câu trả lời dựa trên tài liệu.", "CÓ"])

@@ -7,11 +7,16 @@ xác hơn ở bước cuối cùng khi chỉ còn một nhóm nhỏ ứng viên 
 để rerank() test được bằng fake reranker, không cần tải model thật —
 xem tests/test_reranker.py.
 
-Điểm trả về được chuẩn hoá qua sigmoid về khoảng (0, 1) để tương thích với
-ngưỡng `min_score` đã dùng cho cosine similarity trước đây (app/llm/rag.py) —
-ý nghĩa ngưỡng đổi từ "độ giống ngữ nghĩa thô" sang "xác suất ước lượng chunk
-liên quan tới câu hỏi", nhưng vẫn dùng chung một thang [0, 1] nên KHÔNG cần
-đổi giá trị mặc định min_score=0.3 ở nơi gọi.
+Điểm trả về được chuẩn hoá qua sigmoid về khoảng (0, 1).
+
+LƯU Ý quan trọng rút ra từ test thực tế: điểm này KHÔNG đáng tin để dùng làm
+ngưỡng "có liên quan hay không" một mình, vì cross-encoder được huấn luyện
+trên câu hỏi factoid ngắn (kiểu MS MARCO) nên chấm rất thấp cho câu hỏi diễn
+đạt tự nhiên/hội thoại dù nội dung đúng vẫn nằm trong ứng viên, và ngược lại
+có thể chấm cao cho câu hỏi ngoài phạm vi tài liệu nhưng còn liên quan chủ đề.
+Vì vậy `min_score` ở app/llm/rag.py::answer_question chỉ nên đặt rất thấp
+(lọc trường hợp cực đoan để đỡ tốn lượt gọi LLM), còn việc phán đoán đúng/sai
+thật sự giao cho bước verifier (LLM) phía sau, không giao cho điểm số này.
 """
 
 import math
