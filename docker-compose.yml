@@ -11,6 +11,10 @@ services:
       # Cache model embedding/reranker vào volume bền vững thay vì layer
       # ghi tạm của container — tránh tải lại model (~1GB+) mỗi lần rebuild.
       - HF_HOME=/app/backend/data/hf_cache
+      # Cơ chế tải "Xet" mới của Hugging Face hay bị tụt băng thông/treo trên
+      # một số mạng (quan sát thực tế: 1.8MB/s -> 150KB/s -> "struggling" rồi
+      # đứng yên) — tắt để quay về tải qua HTTP thường, ổn định hơn.
+      - HF_HUB_DISABLE_XET=1
     volumes:
       - edututor_data:/app/backend/data
     restart: unless-stopped
