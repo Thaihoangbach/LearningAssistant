@@ -5,7 +5,6 @@ CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install fastapi sqlalchemy`
 
 import json
 import os
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -13,52 +12,16 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
-from app.learning_profile import (
-    infer_level_from_mastery,
-    resolve_effective_level,
-    should_update_preference,
-)
+from app.learner_context import build_learner_context
 from app.llm.gemini_client import GeminiClient
 from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
 from app.mastery import Attempt as MasteryAttempt, compute_mastery
-from app.models import Attempt, Document, LearningProfile, MasteryScore, Quiz, QuizItem, Topic
+from app.memory.service import record_event
+from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
 from app.vectorstore.faiss_store import UserVectorStore
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
-
-
-def _compute_avg_mastery(db: Session, user_id: str) -> float | None:
-    """Cùng công thức với app/routers/mastery.py::get_mastery — xem giải thích
-    ở app/routers/chat.py::_compute_avg_mastery (duplicate có chủ đích, theo
-    đúng quy ước mỗi router tự chứa logic của mình trong dự án này)."""
-    scores = [s.score for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()]
-    return sum(scores) / len(scores) if scores else None
-
-
-def _resolve_quiz_difficulty(db: Session, user_id: str, requested_difficulty: str | None) -> str | None:
-    """Cùng Learning Profile với /chat/ask (app/routers/chat.py) — độ khó quiz
-    và trình độ hỏi đáp đều đọc/ghi chung trường `preferred_level`, vì cùng
-    biểu diễn một khái niệm: trình độ người học tự nhận. Không truyền
-    `difficulty` thì dùng preference đã lưu từ lần hỏi đáp hoặc sinh quiz gần
-    nhất trước đó, hoặc suy từ mastery trung bình nếu chưa từng khai báo gì."""
-    profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
-    stored_level = profile.preferred_level if profile else None
-
-    if should_update_preference(requested_difficulty):
-        if profile:
-            profile.preferred_level = requested_difficulty
-            profile.updated_at = datetime.utcnow()
-        else:
-            profile = LearningProfile(user_id=user_id, preferred_level=requested_difficulty)
-            db.add(profile)
-        db.commit()
-
-    inferred_level = None
-    if not requested_difficulty and not stored_level:
-        inferred_level = infer_level_from_mastery(_compute_avg_mastery(db, user_id))
-
-    return resolve_effective_level(requested_difficulty, stored_level, inferred_level)
 
 
 class GenerateQuizRequest(BaseModel):
@@ -99,7 +62,10 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh quiz từ (các) tài liệu này.")
 
-    effective_difficulty = _resolve_quiz_difficulty(db, req.user_id, req.difficulty)
+    # KHÔNG truyền `query` — sinh quiz không cần truy hồi ký ức theo câu hỏi,
+    # tránh tốn một lượt embed vô ích.
+    learner = build_learner_context(db, req.user_id, requested_level=req.difficulty)
+    effective_difficulty = learner.effective_level
 
     llm_client = GeminiClient()
     items = generate_quiz(
@@ -209,6 +175,25 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
             else:
                 db.add(MasteryScore(user_id=req.user_id, topic_id=quiz_item.topic_id, score=new_score))
             db.commit()
+
+    # Ký ức episodic — làm sai một câu quiz là tín hiệu mạnh nhất về chỗ người
+    # học đang hổng, nên importance của "quiz_wrong" cao nhất bảng
+    # (app/memory/scoring.py). Nội dung dựng bằng template, không gọi LLM.
+    question_preview = quiz_item.question.strip()
+    if len(question_preview) > 120:
+        question_preview = question_preview[:120].rstrip() + "…"
+
+    record_event(
+        db,
+        user_id=req.user_id,
+        event_type="quiz_right" if is_correct else "quiz_wrong",
+        content=(
+            f"Trả lời {'đúng' if is_correct else 'sai'} câu quiz: \"{question_preview}\""
+            + (f" (đáp án đúng: {quiz_item.correct_answer})" if not is_correct else "")
+        ),
+        topic_id=quiz_item.topic_id,
+        source_ref=quiz_item.source_position,
+    )
 
     return {
         "is_correct": is_correct,
