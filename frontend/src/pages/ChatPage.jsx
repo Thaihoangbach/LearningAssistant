@@ -4,7 +4,11 @@ import { askQuestion, getConversation, listConversations } from "../api";
 import { Card } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import Select from "../components/ui/Select";
 import EmptyState from "../components/ui/EmptyState";
+import AnswerWithCitations from "../components/AnswerWithCitations";
+import CitationPanel from "../components/CitationPanel";
+import SearchReport from "../components/SearchReport";
 import { cn } from "../lib/cn";
 
 function formatDate(isoString) {
@@ -21,8 +25,10 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message }) {
+function MessageBubble({ message, onOpenSource }) {
   const isUser = message.role === "user";
+  const sources = message.sources || [];
+
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[85%] flex-col gap-1.5", isUser && "items-end")}>
@@ -34,14 +40,38 @@ function MessageBubble({ message }) {
               : "rounded-bl-sm bg-muted text-foreground"
           )}
         >
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <AnswerWithCitations
+              answer={message.content}
+              sources={sources}
+              onOpenSource={(i) => onOpenSource(sources[i])}
+            />
+          )}
         </div>
-        {!isUser && message.sources && message.sources.length > 0 && (
+
+        {!isUser && message.searchReport && (
+          <SearchReport
+            report={message.searchReport}
+            // Đoạn gần đúng chưa qua bước tính câu chống đỡ (nó không chống đỡ
+            // câu trả lời nào cả) nên truyền danh sách rỗng để panel không tô sáng.
+            onOpenNearMiss={(n) => onOpenSource({ ...n, supporting_sentences: [] })}
+          />
+        )}
+
+        {!isUser && sources.length > 0 && (
           <ul className="flex flex-col gap-1 pl-1">
-            {message.sources.map((s, j) => (
-              <li key={j} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <BookOpen className="h-3 w-3 shrink-0" aria-hidden="true" />
-                {s.document_name} — {s.position_ref}
+            {sources.map((s, j) => (
+              <li key={j}>
+                <button
+                  type="button"
+                  onClick={() => onOpenSource(s)}
+                  className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <BookOpen className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  [{j + 1}] {s.document_name} — {s.position_ref}
+                </button>
               </li>
             ))}
           </ul>
@@ -90,6 +120,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [level, setLevel] = useState(""); // "" = để backend tự quyết theo hồ sơ
+  const [openSource, setOpenSource] = useState(null);
 
   const [conversations, setConversations] = useState([]);
   const [listError, setListError] = useState(null);
@@ -144,7 +176,7 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const result = await askQuestion(question, conversationId);
+      const result = await askQuestion(question, conversationId, level);
       setConversationId(result.conversation_id);
       setMessages((m) => [
         ...m,
@@ -153,6 +185,9 @@ export default function ChatPage() {
           content: result.answer,
           isGrounded: result.is_grounded,
           sources: result.sources,
+          // Chỉ giữ báo cáo tìm kiếm khi hệ thống TỪ CHỐI — lúc trả lời được
+          // thì báo cáo không mang thông tin gì người dùng cần.
+          searchReport: result.abstained ? result.search_report : null,
         },
       ]);
       if (isNewConversation) {
@@ -195,7 +230,7 @@ export default function ChatPage() {
           ) : (
             <div className="flex flex-col gap-4">
               {messages.map((m, i) => (
-                <MessageBubble key={i} message={m} />
+                <MessageBubble key={i} message={m} onOpenSource={setOpenSource} />
               ))}
               {loading && (
                 <div className="flex justify-start">
@@ -207,6 +242,16 @@ export default function ChatPage() {
         </div>
 
         <form onSubmit={handleAsk} className="flex items-center gap-2 border-t border-border p-3 sm:p-4">
+          <Select
+            aria-label="Trình độ trả lời"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            className="w-36 shrink-0"
+          >
+            <option value="">Tự động</option>
+            <option value="beginner">Người mới</option>
+            <option value="advanced">Nâng cao</option>
+          </Select>
           <Input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -218,6 +263,8 @@ export default function ChatPage() {
           </Button>
         </form>
       </Card>
+
+      <CitationPanel source={openSource} onClose={() => setOpenSource(null)} />
     </div>
   );
 }

@@ -221,8 +221,21 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             role="assistant",
             content=result.answer,
             is_grounded=result.is_grounded,
+            # Lưu ĐỦ trường để mở lại hội thoại cũ vẫn bấm được vào citation và
+            # thấy nguyên văn đoạn trích — nếu chỉ lưu tên tài liệu và vị trí
+            # thì panel đoạn trích sẽ rỗng khi xem lại lịch sử.
             cited_sources=json.dumps(
-                [{"document_name": s.document_name, "position_ref": s.position_ref} for s in result.sources],
+                [
+                    {
+                        "document_name": s.document_name,
+                        "position_ref": s.position_ref,
+                        "chunk_id": s.chunk_id,
+                        "document_id": s.document_id,
+                        "text": s.text,
+                        "supporting_sentences": supporting_sentences(result.answer, s.text),
+                    }
+                    for s in result.sources
+                ],
                 ensure_ascii=False,
             ),
         )
