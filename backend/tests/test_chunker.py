@@ -56,5 +56,54 @@ class TestChunkSections(unittest.TestCase):
         self.assertIsInstance(chunks[0], Chunk)
 
 
+class TestSentenceBoundaries(unittest.TestCase):
+    def test_chunks_do_not_cut_mid_sentence(self):
+        text = " ".join(f"Đây là câu số {i} trong đoạn văn thử nghiệm." for i in range(30))
+        chunks = chunk_sections([("Trang 1", text)], max_chars=200, overlap_chars=50)
+        self.assertGreater(len(chunks), 1)
+        for c in chunks:
+            # mỗi chunk phải kết thúc bằng dấu câu, không cụt giữa chừng
+            self.assertTrue(c.text.rstrip().endswith("."), f"chunk cụt: {c.text!r}")
+
+    def test_single_sentence_longer_than_max_is_hard_split(self):
+        text = "A" * 250
+        chunks = chunk_sections([("Trang 1", text)], max_chars=100, overlap_chars=20)
+        self.assertGreater(len(chunks), 1)
+        for c in chunks:
+            self.assertLessEqual(len(c.text), 100)
+
+
+class TestSectionBridging(unittest.TestCase):
+    def _long(self, marker):
+        return " ".join(f"Câu {marker}{i} có nội dung đủ dài để vượt ngưỡng." for i in range(12))
+
+    def test_bridge_chunk_spans_two_sections(self):
+        sections = [("Trang 1", self._long("A")), ("Trang 2", self._long("B"))]
+        chunks = chunk_sections(sections, max_chars=300, overlap_chars=100)
+        bridges = [c for c in chunks if "–" in c.position_ref]
+        self.assertEqual(len(bridges), 1)
+        # chunk bắc cầu phải chứa nội dung của CẢ HAI trang
+        self.assertIn("A", bridges[0].text)
+        self.assertIn("B", bridges[0].text)
+
+    def test_bridge_position_ref_names_both_sections(self):
+        sections = [("Trang 1", self._long("A")), ("Trang 2", self._long("B"))]
+        chunks = chunk_sections(sections, max_chars=300, overlap_chars=100)
+        bridge = next(c for c in chunks if "–" in c.position_ref)
+        self.assertEqual(bridge.position_ref, "Trang 1–Trang 2")
+
+    def test_short_sections_are_not_bridged(self):
+        # section ngắn hơn cửa sổ chồng lấn thì đã nằm trọn trong chunk của
+        # chính nó, bắc cầu chỉ tạo nhiễu
+        sections = [("Trang 1", "Ngắn."), ("Trang 2", "Cũng ngắn.")]
+        chunks = chunk_sections(sections, max_chars=800, overlap_chars=100)
+        self.assertEqual([c.position_ref for c in chunks], ["Trang 1", "Trang 2"])
+
+    def test_bridging_can_be_disabled(self):
+        sections = [("Trang 1", self._long("A")), ("Trang 2", self._long("B"))]
+        chunks = chunk_sections(sections, max_chars=300, overlap_chars=100, bridge_sections=False)
+        self.assertEqual([c for c in chunks if "–" in c.position_ref], [])
+
+
 if __name__ == "__main__":
     unittest.main()
