@@ -205,3 +205,33 @@ class LearningProfile(Base):
     preferred_level = Column(String, nullable=True)  # "beginner" | "advanced" | None
     learning_goal = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MemoryEvent(Base):
+    """Ký ức EPISODIC — từng sự kiện học tập rời rạc, xuyên phiên làm việc.
+
+    Khác với LearningProfile (cá nhân hoá TĨNH, người dùng tự khai) và
+    MasteryScore (cá nhân hoá ĐỘNG dạng tổng hợp, một điểm số cho mỗi chủ đề),
+    bảng này giữ lại TỪNG sự kiện cụ thể: đã hỏi câu gì, sai câu quiz nào, quên
+    thẻ nào. Nhờ vậy hệ thống nhắc lại được đúng chi tiết ("lần trước bạn nhầm
+    giữa X và Y") thay vì chỉ biết "chủ đề này điểm thấp".
+
+    `importance` gán lúc ghi bằng bảng tra cứu tĩnh trong
+    app/memory/scoring.py, không gọi LLM.
+
+    `last_accessed_at`/`access_count` hiện CHỈ để quan sát và hiển thị ở trang
+    Memory — chưa đưa vào công thức chấm điểm truy hồi.
+    """
+
+    __tablename__ = "memory_events"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    event_type = Column(String, nullable=False)
+    topic_id = Column(String, ForeignKey("topics.id"), nullable=True)
+    content = Column(Text, nullable=False)
+    importance = Column(Float, nullable=False)
+    source_ref = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_accessed_at = Column(DateTime, nullable=True)
+    access_count = Column(Integer, default=0)
