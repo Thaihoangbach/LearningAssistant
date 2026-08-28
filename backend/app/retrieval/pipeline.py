@@ -16,10 +16,14 @@ from typing import List, Optional, Set
 
 from app.ingestion.embedder import embed_query
 from app.llm.rag import RetrievedChunk
+from app.retrieval.keywords import extract_keywords
 from app.retrieval.reranker import CrossEncoderReranker, RerankerClient, rerank
 from app.vectorstore.faiss_store import UserVectorStore
 
 DEFAULT_CANDIDATE_POOL = 20
+
+# Lượt truy hồi MỞ RỘNG (spec mục 4.1) — chỉ chạy khi lượt gắt đã trượt.
+WIDE_TOP_K_MULTIPLIER = 3
 
 
 def retrieve_chunks(
@@ -28,9 +32,19 @@ def retrieve_chunks(
     top_k: int = 5,
     document_ids: Optional[Set[str]] = None,
     reranker: Optional[RerankerClient] = None,
+    mode: str = "strict",
 ) -> List[RetrievedChunk]:
     store = UserVectorStore(user_id=user_id)
     query_embedding = embed_query(query)
+
+    # Chế độ mở rộng: lấy nhiều ứng viên hơn và tra BM25 bằng từ khoá đã bóc,
+    # để bắt trường hợp thuật ngữ nằm sâu mà truy hồi ngữ nghĩa bỏ sót. Vector
+    # vẫn dùng câu hỏi GỐC — bóc từ khoá chỉ phục vụ nhánh từ vựng.
+    if mode == "wide":
+        top_k = top_k * WIDE_TOP_K_MULTIPLIER
+        lexical_query = extract_keywords(query)
+    else:
+        lexical_query = query
 
     if os.environ.get("EDUTUTOR_RETRIEVAL_MODE") == "dense_only":
         results = store.search(query_embedding, top_k=top_k, document_ids=document_ids)
@@ -48,7 +62,7 @@ def retrieve_chunks(
 
     reranker = reranker or CrossEncoderReranker()
     candidates = store.hybrid_search(
-        query=query,
+        query=lexical_query,
         query_embedding=query_embedding,
         candidate_pool=max(DEFAULT_CANDIDATE_POOL, top_k * 3),
         document_ids=document_ids,
