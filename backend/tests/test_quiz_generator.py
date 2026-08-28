@@ -98,5 +98,23 @@ class TestGenerateQuiz(unittest.TestCase):
         self.assertNotIn("định nghĩa/khái niệm cơ bản", prompt)
 
 
+class TestIntermediateDifficulty(unittest.TestCase):
+    def test_intermediate_instruction_is_included_in_prompt(self):
+        llm = FakeLLMClient(scripted_responses=["[]"])
+        generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=3, difficulty="intermediate")
+        prompt = llm.prompts_received[0]
+        self.assertIn("vận dụng", prompt)
+
+    def test_three_difficulty_levels_give_three_distinct_instructions(self):
+        from app.llm.quiz_generator import _DIFFICULTY_INSTRUCTIONS
+
+        texts = {
+            _DIFFICULTY_INSTRUCTIONS["beginner"],
+            _DIFFICULTY_INSTRUCTIONS["intermediate"],
+            _DIFFICULTY_INSTRUCTIONS["advanced"],
+        }
+        self.assertEqual(len(texts), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
