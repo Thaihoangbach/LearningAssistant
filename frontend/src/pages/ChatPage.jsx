@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BookOpen, History, MessageCircle, Plus, Send } from "lucide-react";
-import { askQuestion, getConversation, listConversations } from "../api";
+import { BookmarkPlus, BookOpen, History, Lightbulb, MessageCircle, Plus, Send } from "lucide-react";
+import {
+  askQuestion,
+  getConversation,
+  listConversations,
+  saveFlashcardFromAnswer,
+} from "../api";
 import { Card } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
-import Select from "../components/ui/Select";
 import EmptyState from "../components/ui/EmptyState";
 import AnswerWithCitations from "../components/AnswerWithCitations";
 import CitationPanel from "../components/CitationPanel";
@@ -26,7 +30,7 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message, onOpenSource }) {
+function MessageBubble({ message, onOpenSource, onAskAgain, onSaveCard }) {
   const isUser = message.role === "user";
   const sources = message.sources || [];
 
@@ -58,7 +62,33 @@ function MessageBubble({ message, onOpenSource }) {
             // Đoạn gần đúng chưa qua bước tính câu chống đỡ (nó không chống đỡ
             // câu trả lời nào cả) nên truyền danh sách rỗng để panel không tô sáng.
             onOpenNearMiss={(n) => onOpenSource({ ...n, supporting_sentences: [] })}
+            onAskTopic={(t) => onAskAgain(`${t} là gì?`)}
           />
+        )}
+
+        {!isUser && message.isGrounded && (
+          <div className="flex flex-wrap items-center gap-3 pl-1">
+            {/* Cách người học thật sự nghĩ là "chỗ này khó quá", chứ không phải
+                "tôi là trình độ beginner" — nên đây là một nút, không phải một
+                ô chọn trình độ. Câu này khớp _SIMPLIFY_REQUEST_RE ở backend. */}
+            <button
+              type="button"
+              onClick={() => onAskAgain(`Tôi chưa hiểu, giải thích đơn giản hơn giúp tôi: ${message.forQuestion || ""}`)}
+              className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+              Giải thích dễ hiểu hơn
+            </button>
+            <button
+              type="button"
+              onClick={() => onSaveCard(message)}
+              disabled={message.saved}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors enabled:cursor-pointer enabled:hover:text-primary disabled:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <BookmarkPlus className="h-3.5 w-3.5" aria-hidden="true" />
+              {message.saved ? "Đã lưu thành thẻ" : "Lưu thành thẻ ôn tập"}
+            </button>
+          </div>
         )}
 
         {!isUser && sources.length > 0 && (
@@ -121,7 +151,9 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [level, setLevel] = useState(""); // "" = để backend tự quyết theo hồ sơ
+  // Không có ô chọn trình độ ở đây nữa: người học nghĩ "chỗ này khó quá", chứ
+  // không nghĩ "tôi là trình độ nâng cao". Trình độ được backend suy từ kết quả
+  // làm bài (app/learner_context.py), còn muốn cố định thì đặt ở trang Hồ sơ.
   const [openSource, setOpenSource] = useState(null);
 
   const [conversations, setConversations] = useState([]);
@@ -178,18 +210,34 @@ export default function ChatPage() {
     setMessages([]);
   };
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    if (!question.trim()) return;
+  const handleSaveCard = async (index, message) => {
+    const firstSource = (message.sources || [])[0];
+    try {
+      await saveFlashcardFromAnswer({
+        // Mặt trước là câu hỏi, mặt sau là câu trả lời — đúng thứ người học
+        // muốn nhớ lại về sau.
+        front: message.forQuestion || "Câu hỏi đã lưu",
+        back: message.content,
+        sourceDocument: firstSource?.document_name,
+        sourcePosition: firstSource?.position_ref,
+      });
+      setMessages((m) => m.map((msg, i) => (i === index ? { ...msg, saved: true } : msg)));
+    } catch (e) {
+      setMessages((m) => [...m, { role: "assistant", content: `Lỗi: ${e.message}`, isGrounded: false }]);
+    }
+  };
+
+  const handleAskText = async (text) => {
+    const trimmed = (text || "").trim();
+    if (!trimmed) return;
 
     const isNewConversation = conversationId === null;
-    const userMessage = { role: "user", content: question };
-    setMessages((m) => [...m, userMessage]);
+    setMessages((m) => [...m, { role: "user", content: trimmed }]);
     setQuestion("");
     setLoading(true);
 
     try {
-      const result = await askQuestion(question, conversationId, level);
+      const result = await askQuestion(trimmed, conversationId);
       setConversationId(result.conversation_id);
       setMessages((m) => [
         ...m,
@@ -198,6 +246,9 @@ export default function ChatPage() {
           content: result.answer,
           isGrounded: result.is_grounded,
           sources: result.sources,
+          // Giữ lại câu hỏi đã sinh ra câu trả lời này, để nút "lưu thành thẻ"
+          // dùng nó làm mặt trước và nút "giải thích dễ hiểu hơn" hỏi lại đúng ý.
+          forQuestion: trimmed,
           // Chỉ giữ báo cáo tìm kiếm khi hệ thống TỪ CHỐI — lúc trả lời được
           // thì báo cáo không mang thông tin gì người dùng cần.
           searchReport: result.abstained ? result.search_report : null,
@@ -211,6 +262,11 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAsk = (e) => {
+    e.preventDefault();
+    handleAskText(question);
   };
 
   return (
@@ -243,7 +299,13 @@ export default function ChatPage() {
           ) : (
             <div className="flex flex-col gap-4">
               {messages.map((m, i) => (
-                <MessageBubble key={i} message={m} onOpenSource={setOpenSource} />
+                <MessageBubble
+                  key={i}
+                  message={m}
+                  onOpenSource={setOpenSource}
+                  onAskAgain={handleAskText}
+                  onSaveCard={(msg) => handleSaveCard(i, msg)}
+                />
               ))}
               {loading && (
                 <div className="flex justify-start">
@@ -255,16 +317,6 @@ export default function ChatPage() {
         </div>
 
         <form onSubmit={handleAsk} className="flex items-center gap-2 border-t border-border p-3 sm:p-4">
-          <Select
-            aria-label="Trình độ trả lời"
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="w-36 shrink-0"
-          >
-            <option value="">Tự động</option>
-            <option value="beginner">Người mới</option>
-            <option value="advanced">Nâng cao</option>
-          </Select>
           <Input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.citation import supporting_sentences
+from app.citation import _content_words, supporting_sentences
 from app.database import get_db
 from app.flashcard_service import count_due
 from app.learner_context import build_learner_context
@@ -19,7 +19,15 @@ from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation, is_recommendation_request
 from app.memory.service import record_event
-from app.models import Conversation, Document, MasteryScore, MemoryEvent, Message, Topic
+from app.models import (
+    Conversation,
+    Document,
+    DocumentTopic,
+    MasteryScore,
+    MemoryEvent,
+    Message,
+    Topic,
+)
 from app.qa_pipeline import answer_with_fallback
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
@@ -38,6 +46,9 @@ MAX_HISTORY_TURNS = 3
 # cũ nhưng giữ lại nhiều đoạn liên quan hơn cho generator có đủ chất liệu
 # phân biệt độ sâu beginner/advanced.
 LEVEL_TOP_K_BOOST = 3
+
+# Số chủ đề gợi ý kèm theo khi hệ thống từ chối trả lời.
+MAX_SUGGESTED_TOPICS = 4
 
 
 def _load_conversation_history(db: Session, conversation_id: str) -> list[ConversationTurn]:
@@ -201,11 +212,35 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             # để truy hồi; bổ sung từ khoá của các lượt trước vào truy vấn.
             retrieval_query = build_retrieval_query(req.question, history)
 
+            def _suggest_topics(question: str) -> list[str]:
+                """Chủ đề tài liệu THỰC SỰ có, gần câu hỏi nhất — để lời từ chối
+                không phải ngõ cụt. Xếp hạng bằng độ trùng từ nội dung nên
+                không tốn lượt gọi mô hình nào."""
+                rows = (
+                    db.query(DocumentTopic)
+                    .filter(
+                        DocumentTopic.user_id == req.user_id,
+                        DocumentTopic.document_id.in_(document_ids),
+                    )
+                    .all()
+                )
+                if not rows:
+                    return []
+
+                question_words = _content_words(question)
+                scored = sorted(
+                    rows,
+                    key=lambda r: len(_content_words(r.title) & question_words),
+                    reverse=True,
+                )
+                return [r.title for r in scored[:MAX_SUGGESTED_TOPICS]]
+
             qa_result = answer_with_fallback(
                 question=req.question,
                 retrieval_query=retrieval_query,
                 llm_client=llm_client,
                 retrieve_fn=_retrieve,
+                suggest_topics_fn=_suggest_topics,
                 searched_documents=[{"id": d.id, "file_name": d.file_name} for d in ready_docs],
                 top_k=effective_top_k,
                 min_score=req.min_score,
@@ -290,6 +325,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                     }
                     for n in qa_result.search_report.near_misses
                 ],
+                "suggested_topics": qa_result.search_report.suggested_topics,
             }
             if qa_result and qa_result.search_report
             else None

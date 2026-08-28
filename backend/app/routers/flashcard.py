@@ -100,6 +100,73 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
     }
 
 
+class SaveFlashcardRequest(BaseModel):
+    user_id: str
+    front: str
+    back: str
+    source_document: str | None = None
+    source_position: str | None = None
+    topic_name: str | None = None
+
+
+# Bộ chứa các thẻ người dùng tự lưu từ câu trả lời hỏi đáp, tách khỏi các bộ
+# sinh tự động từ tài liệu.
+SAVED_SET_DOCUMENT_ID = "saved-from-answers"
+
+
+@router.post("/save")
+def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
+    """Biến một câu trả lời hỏi đáp thành thẻ ôn tập.
+
+    Đây là mắt nối giữa hỏi đáp và vòng ôn tập: trước đây một câu trả lời hay
+    chỉ trôi vào lịch sử chat rồi mất, dù nó chính là thứ người học muốn nhớ.
+    Thẻ lưu theo đường này vào thẳng hàng đợi ôn tập vì chưa có lượt ôn nào."""
+    if not req.front.strip() or not req.back.strip():
+        raise HTTPException(400, "Thẻ phải có cả mặt trước và mặt sau.")
+
+    fset = (
+        db.query(FlashcardSet)
+        .filter(
+            FlashcardSet.user_id == req.user_id,
+            FlashcardSet.document_id == SAVED_SET_DOCUMENT_ID,
+        )
+        .first()
+    )
+    if not fset:
+        fset = FlashcardSet(user_id=req.user_id, document_id=SAVED_SET_DOCUMENT_ID)
+        db.add(fset)
+        db.commit()
+
+    topic_id = None
+    if req.topic_name and req.topic_name.strip():
+        name = req.topic_name.strip()
+        topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == name).first()
+        if not topic:
+            topic = Topic(user_id=req.user_id, name=name)
+            db.add(topic)
+            db.commit()
+        topic_id = topic.id
+
+    item = FlashcardItem(
+        flashcard_set_id=fset.id,
+        topic_id=topic_id,
+        front=req.front.strip(),
+        back=req.back.strip(),
+        source_document=req.source_document,
+        source_position=req.source_position,
+    )
+    db.add(item)
+    db.commit()
+
+    return {
+        "id": item.id,
+        "front": item.front,
+        "back": item.back,
+        "source_document": item.source_document,
+        "source_position": item.source_position,
+    }
+
+
 @router.get("/due")
 def list_due(user_id: str, limit: int = 20, db: Session = Depends(get_db)):
     """Thẻ cần ôn hôm nay — chưa từng ôn hoặc đã tới hạn."""

@@ -31,6 +31,9 @@ class SearchReport:
     passes_run: int
     searched_documents: List[dict] = field(default_factory=list)
     near_misses: List[NearMiss] = field(default_factory=list)
+    # Chủ đề tài liệu THỰC SỰ có, gần với câu hỏi nhất — để lời từ chối không
+    # còn là ngõ cụt. Chỉ điền khi hệ thống từ chối.
+    suggested_topics: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -90,6 +93,7 @@ def answer_with_fallback(
     min_score: float = 0.02,
     max_near_misses: int = MAX_NEAR_MISSES,
     retrieval_query: Optional[str] = None,
+    suggest_topics_fn: Optional[Callable[[str], List[str]]] = None,
     **answer_kwargs,
 ) -> QAResult:
     """Chạy lượt truy hồi gắt trước; chỉ khi nó trượt mới chạy lượt mở rộng.
@@ -132,6 +136,10 @@ def answer_with_fallback(
                 ),
             )
 
+    # Chỉ gợi ý chủ đề khi đã chắc chắn từ chối — tra cứu này chạm DB nên
+    # không đáng làm ở nhánh trả lời được.
+    suggested_topics = suggest_topics_fn(question) if suggest_topics_fn else []
+
     return QAResult(
         answer=_abstention_message(passes_run, len(searched_documents)),
         is_grounded=False,
@@ -141,5 +149,6 @@ def answer_with_fallback(
             passes_run=passes_run,
             searched_documents=searched_documents,
             near_misses=_to_near_misses(seen_chunks, max_near_misses),
+            suggested_topics=suggested_topics,
         ),
     )

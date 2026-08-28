@@ -119,6 +119,29 @@ export async function generateFlashcards(documentId, topicName, numCards = 10) {
   return res.json();
 }
 
+export async function saveFlashcardFromAnswer({
+  front,
+  back,
+  sourceDocument,
+  sourcePosition,
+  topicName,
+}) {
+  const res = await fetch(`${API_BASE}/flashcard/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: CURRENT_USER_ID,
+      front,
+      back,
+      source_document: sourceDocument ?? null,
+      source_position: sourcePosition ?? null,
+      topic_name: topicName ?? null,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function listDueFlashcards(limit = 20) {
   const res = await fetch(
     `${API_BASE}/flashcard/due?user_id=${CURRENT_USER_ID}&limit=${limit}`

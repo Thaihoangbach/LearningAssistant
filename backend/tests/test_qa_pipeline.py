@@ -142,6 +142,48 @@ class TestAnswerWithFallback(unittest.TestCase):
         )
         self.assertEqual(seen_queries, ["Hỏi gì đó?"])
 
+    def test_abstention_suggests_topics_that_do_exist(self):
+        def retrieve(query, top_k, mode):
+            return []
+
+        llm = FakeLLMClient([])
+        result = answer_with_fallback(
+            question="Vision Transformer là gì?",
+            llm_client=llm,
+            retrieve_fn=retrieve,
+            searched_documents=DOCS,
+            suggest_topics_fn=lambda q: ["Kiến trúc Transformer", "Cơ chế chú ý"],
+        )
+        self.assertTrue(result.abstained)
+        self.assertEqual(
+            result.search_report.suggested_topics, ["Kiến trúc Transformer", "Cơ chế chú ý"]
+        )
+
+    def test_topic_suggestion_is_not_called_when_answer_succeeds(self):
+        calls = []
+
+        def retrieve(query, top_k, mode):
+            return [_chunk()]
+
+        llm = FakeLLMClient(["Trả lời. [1]", "CÓ"])
+        answer_with_fallback(
+            question="Hỏi?",
+            llm_client=llm,
+            retrieve_fn=retrieve,
+            searched_documents=DOCS,
+            suggest_topics_fn=lambda q: calls.append(q) or [],
+        )
+        self.assertEqual(calls, [])
+
+    def test_suggested_topics_empty_without_suggester(self):
+        def retrieve(query, top_k, mode):
+            return []
+
+        result = answer_with_fallback(
+            question="Hỏi?", llm_client=FakeLLMClient([]), retrieve_fn=retrieve, searched_documents=DOCS
+        )
+        self.assertEqual(result.search_report.suggested_topics, [])
+
     def test_no_chunks_at_all_skips_llm_entirely(self):
         def retrieve(query, top_k, mode):
             return []
