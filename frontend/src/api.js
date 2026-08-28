@@ -65,6 +65,14 @@ export async function getMastery() {
   return res.json();
 }
 
+export async function getMistakes(limit = 20) {
+  const res = await fetch(
+    `${API_BASE}/mastery/mistakes?user_id=${CURRENT_USER_ID}&limit=${limit}`
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function askQuestion(question, conversationId, level) {
   const res = await fetch(`${API_BASE}/chat/ask`, {
     method: "POST",
