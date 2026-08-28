@@ -18,6 +18,9 @@ class TestParseDocx(unittest.TestCase):
             for p in range(paragraphs_per_section):
                 doc.add_paragraph(f"Đoạn {s}-{p}: nội dung ví dụ về RAG và LLM.")
         tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+        # Windows không cho ghi đè/xoá file khi handle còn mở — phải đóng trước
+        # khi python-docx ghi vào đường dẫn đó (WinError 32).
+        tmp.close()
         doc.save(tmp.name)
         return tmp.name
 
@@ -39,6 +42,7 @@ class TestParseDocx(unittest.TestCase):
         doc.add_paragraph("")
         doc.add_paragraph("Nội dung thật duy nhất.")
         tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+        tmp.close()  # xem giải thích ở _make_docx
         doc.save(tmp.name)
         try:
             sections = parse_document(tmp.name, paragraphs_per_section=5)
