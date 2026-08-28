@@ -36,8 +36,7 @@ toàn bộ backend; golden set v2 chia đều tuyệt đối.
 
 **Ngoài phạm vi (hoãn theo quyết định của người dùng):** đăng nhập/xác thực
 thật (F11) và OCR cho tài liệu scan (F9). `user_id` vẫn là tham số client
-truyền vào. Đây là lỗ hổng đã biết và phải ghi rõ trong phần hạn chế của luận
-văn, không được trình bày như thể đã giải quyết.
+truyền vào — đây là lỗ hổng đã biết, còn nguyên sau đợt này.
 
 ## 3. Giai đoạn A — Memory ba tầng
 
@@ -257,8 +256,8 @@ cấu trúc, vẫn **không gọi LLM**:
 ## 6. Giai đoạn D — Frontend
 
 Trang mới: **Flashcards** (sinh thẻ + vòng ôn có 4 nút đánh giá), **StudyPlan**,
-**Profile**, **Memory** (hiển thị hệ thống đang nhớ gì về người học — vừa là
-minh bạch cho người dùng, vừa là phần demo trực quan khi bảo vệ).
+**Profile**, **Memory** (hiển thị hệ thống đang nhớ gì về người học, để người
+dùng thấy và sửa được thứ đang chi phối câu trả lời dành cho mình).
 
 Bổ sung vào trang có sẵn: panel đoạn trích khi bấm marker citation; khối bằng
 chứng phủ định khi hệ thống từ chối; ô chọn số lượng câu và độ khó ở trang Quiz;
@@ -305,7 +304,7 @@ category.
 
 `_build_golden_set.py` và `_generate_corpus.py` cho thấy bộ hiện tại được sinh
 tự động. Một bộ do LLM sinh rồi lại do LLM chấm thì một phần đang đo chính mô
-hình sinh ra nó — đây là điểm hội đồng có thể chất vấn.
+hình sinh ra nó, nên kết quả không phản ánh đúng chất lượng hệ thống.
 
 Biện pháp: sinh case ứng viên tự động, nhưng **rà thủ công toàn bộ ba nhóm rủi
 ro cao** (`ABSTENTION`, `SAFETY`, `CITATION` — 60 case) và ghi rõ quy trình rà
@@ -340,7 +339,7 @@ hưởng vì không có cột nào bị đổi.
 | Memory đưa nhiễu vào prompt, làm giảm faithfulness | giới hạn 5 sự kiện, ngưỡng điểm 0.25, chỉ vào generator; đo faithfulness trước/sau |
 | Memory là đường prompt injection dai dẳng | đóng khung tham chiếu, cắt độ dài, bỏ xuống dòng (mục 3.7) |
 | 220 case × nhiều lượt gọi vượt quota free tier | tập dev và test chạy tách; giữ nhịp nghỉ như hiện tại |
-| Không có xác thực, `user_id` giả mạo được | ngoài phạm vi lần này; phải ghi trong phần hạn chế của luận văn |
+| Không có xác thực, `user_id` giả mạo được | ngoài phạm vi lần này; không triển khai ra môi trường công khai khi chưa có F11 |
 
 ## 10. Definition of Done
 
