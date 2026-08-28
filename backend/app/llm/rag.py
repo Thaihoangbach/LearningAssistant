@@ -17,6 +17,7 @@ nhận câu trả lời có căn cứ trực tiếp trong đoạn trích tài li
 giữ đúng điều kiện chặn ở trên (lịch sử hội thoại không phải "tài liệu").
 """
 
+import os
 import re
 from dataclasses import dataclass
 from typing import List, Optional, Protocol
@@ -137,10 +138,43 @@ def _build_level_instruction(level: Optional[str]) -> str:
     return f"\n{text}\n"
 
 
+# Bật/tắt được để chạy ablation ở giai đoạn đánh giá — quy tắc này siết chặt
+# hơn hành vi cũ (câu trả lời không gắn được nguồn nào sẽ bị từ chối), nên cần
+# đo cả hai chiều: nó cải thiện Citation Accuracy bao nhiêu và làm tăng từ chối
+# nhầm bao nhiêu.
+REQUIRE_INLINE_CITATION = os.environ.get("EDUTUTOR_REQUIRE_INLINE_CITATION", "1") != "0"
+
+_CITATION_MARKER_RE = re.compile(r"\[(\d+)\]")
+
+
+def _strip_invalid_citations(answer: str, num_chunks: int) -> tuple:
+    """Gỡ mọi marker [n] trỏ ra ngoài khoảng đoạn trích thật.
+
+    Đây là lớp chặn citation bịa: LLM có thể tự nghĩ ra [5] khi chỉ có 2 đoạn
+    trích. Trả về (câu trả lời đã làm sạch, danh sách chỉ số hợp lệ 1-based
+    theo thứ tự xuất hiện, không trùng)."""
+    valid_order: List[int] = []
+
+    def _replace(match):
+        index = int(match.group(1))
+        if 1 <= index <= num_chunks:
+            if index not in valid_order:
+                valid_order.append(index)
+            return match.group(0)
+        return ""
+
+    cleaned = _CITATION_MARKER_RE.sub(_replace, answer)
+    # gỡ marker xong có thể để lại khoảng trắng thừa trước dấu câu
+    cleaned = re.sub(r"\s+([.,;:])", r"\1", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+    return cleaned, valid_order
+
+
 def _build_context(chunks: List[RetrievedChunk]) -> str:
     parts = []
-    for c in chunks:
-        parts.append(f"[Nguồn: {c.document_name}, {c.position_ref}]\n{c.text}")
+    for i, c in enumerate(chunks, start=1):
+        # Đánh số để generator gắn được [n] theo từng luận điểm (spec mục 4.3).
+        parts.append(f"[{i}] Nguồn: {c.document_name}, {c.position_ref}\n{c.text}")
     return "\n\n".join(parts)
 
 
@@ -241,7 +275,10 @@ def _build_generator_prompt(
         "nhau, hãy nêu rõ sự khác biệt đó và trích dẫn riêng từng nguồn thay vì tự "
         "chọn một câu trả lời duy nhất.\n"
         "Trả lời bằng đúng ngôn ngữ của câu hỏi (nếu câu hỏi bằng tiếng Anh thì trả lời "
-        "bằng tiếng Anh, kể cả khi đoạn trích tài liệu là ngôn ngữ khác)."
+        "bằng tiếng Anh, kể cả khi đoạn trích tài liệu là ngôn ngữ khác).\n"
+        "Mỗi câu kết luận PHẢI kết thúc bằng số hiệu đoạn trích đã dùng làm căn "
+        "cứ, đặt trong ngoặc vuông, ví dụ: [1]. Chỉ được dùng những số có trong "
+        "danh sách đoạn trích bên dưới; TUYỆT ĐỐI không bịa số không tồn tại."
         f"{simplify_instruction}"
         f"{level_instruction}\n"
         f"{goal_block}"
@@ -285,6 +322,7 @@ def answer_question(
     level: Optional[str] = None,
     learning_goal: Optional[str] = None,
     recalled_events: Optional[List[str]] = None,
+    require_inline_citation: Optional[bool] = None,
 ) -> AnswerResult:
     relevant = [c for c in retrieved_chunks if c.score >= min_score]
     if not relevant:
@@ -314,4 +352,18 @@ def answer_question(
     if not is_grounded:
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
-    return AnswerResult(answer=draft_answer, is_grounded=True, sources=_dedupe_sources(relevant))
+    require_citation = (
+        REQUIRE_INLINE_CITATION if require_inline_citation is None else require_inline_citation
+    )
+    if not require_citation:
+        return AnswerResult(answer=draft_answer, is_grounded=True, sources=_dedupe_sources(relevant))
+
+    cleaned_answer, cited_indices = _strip_invalid_citations(draft_answer, len(relevant))
+    if not cited_indices:
+        # Có nội dung thực chất nhưng không gắn được vào đoạn trích nào — theo
+        # điều kiện chặn ở PRD §7, thà từ chối còn hơn đưa ra kết luận không
+        # truy được nguồn.
+        return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
+
+    cited_chunks = [relevant[i - 1] for i in cited_indices]
+    return AnswerResult(answer=cleaned_answer, is_grounded=True, sources=_dedupe_sources(cited_chunks))

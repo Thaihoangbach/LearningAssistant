@@ -10,6 +10,7 @@ from app.llm.rag import (
     ConversationTurn,
     RetrievedChunk,
     _build_memory_block,
+    _strip_invalid_citations,
     answer_question,
 )
 
@@ -57,7 +58,7 @@ class TestAnswerQuestion(unittest.TestCase):
         dù nội dung đúng đã nằm trong candidate. Với min_score mặc định mới
         (thấp), chunk này phải được gửi cho generator+verifier quyết định,
         thay vì bị từ chối oan bởi con số điểm không đáng tin."""
-        llm = FakeLLMClient(scripted_responses=["Câu trả lời dựa trên tài liệu.", "CÓ"])
+        llm = FakeLLMClient(scripted_responses=["Câu trả lời dựa trên tài liệu. [1]", "CÓ"])
         result = answer_question(
             question="giải thích attention cho người mới học",
             retrieved_chunks=[self.make_chunk(score=0.048)],
@@ -67,7 +68,7 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertTrue(result.is_grounded)
 
     def test_grounded_answer_returned_when_verifier_confirms(self):
-        llm = FakeLLMClient(scripted_responses=["Đây là câu trả lời dựa trên tài liệu.", "CÓ"])
+        llm = FakeLLMClient(scripted_responses=["Đây là câu trả lời dựa trên tài liệu. [1]", "CÓ"])
         chunk = self.make_chunk(score=0.9)
         result = answer_question(
             question="RAG là gì?",
@@ -76,7 +77,7 @@ class TestAnswerQuestion(unittest.TestCase):
             min_score=0.3,
         )
         self.assertTrue(result.is_grounded)
-        self.assertEqual(result.answer, "Đây là câu trả lời dựa trên tài liệu.")
+        self.assertEqual(result.answer, "Đây là câu trả lời dựa trên tài liệu. [1]")
         self.assertEqual(result.sources, [chunk])
         # đúng 2 lượt gọi: generator rồi verifier (kỹ thuật đã chốt trong architecture doc)
         self.assertEqual(len(llm.prompts_received), 2)
@@ -94,7 +95,7 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertEqual(result.sources, [])
 
     def test_chunks_below_threshold_are_filtered_out(self):
-        llm = FakeLLMClient(scripted_responses=["Trả lời.", "CÓ"])
+        llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", "CÓ"])
         strong = self.make_chunk(score=0.9, text="Chunk mạnh", pos="Trang 2")
         weak = self.make_chunk(score=0.05, text="Chunk yếu", pos="Trang 5")
         result = answer_question(
@@ -132,7 +133,9 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertIn("suy ra rõ ràng", verifier_prompt)
 
     def test_duplicate_sources_are_deduplicated_in_result_but_not_in_context(self):
-        llm = FakeLLMClient(scripted_responses=["Trả lời tổng hợp.", "CÓ"])
+        # trích dẫn CẢ HAI đoạn để kiểm tra đúng việc gộp trùng: hai chunk khác
+        # nhau nhưng cùng (tài liệu, vị trí) phải gộp còn một nguồn hiển thị
+        llm = FakeLLMClient(scripted_responses=["Trả lời tổng hợp. [1] [2]", "CÓ"])
         chunk_a = self.make_chunk(text="Đoạn A trong cùng section.", doc="d.docx", pos="Mục 1")
         chunk_b = self.make_chunk(text="Đoạn B trong cùng section.", doc="d.docx", pos="Mục 1")
         result = answer_question(
@@ -376,6 +379,70 @@ class TestMemoryInPrompt(unittest.TestCase):
     def test_no_memory_produces_empty_block(self):
         self.assertEqual(_build_memory_block(None), "")
         self.assertEqual(_build_memory_block([]), "")
+
+
+class TestInlineCitation(unittest.TestCase):
+    def make_chunk(self, text="Nội dung nguồn.", doc="slide1.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_context_numbers_each_chunk(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", "CÓ"])
+        answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[self.make_chunk(doc="a.pdf"), self.make_chunk(doc="b.pdf")],
+            llm_client=llm,
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("[1]", generator_prompt)
+        self.assertIn("[2]", generator_prompt)
+
+    def test_valid_marker_is_kept_and_answer_is_grounded(self):
+        llm = FakeLLMClient(scripted_responses=["Gradient Descent là thuật toán tối ưu. [1]", "CÓ"])
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertIn("[1]", result.answer)
+
+    def test_out_of_range_marker_is_stripped(self):
+        answer, valid = _strip_invalid_citations("Câu A [1]. Câu B [7].", num_chunks=2)
+        self.assertNotIn("[7]", answer)
+        self.assertIn("[1]", answer)
+        self.assertEqual(valid, [1])
+
+    def test_answer_without_any_valid_marker_is_refused(self):
+        llm = FakeLLMClient(scripted_responses=["Một câu trả lời không có nguồn nào.", "CÓ"])
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            require_inline_citation=True,
+        )
+        self.assertFalse(result.is_grounded)
+        self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+
+    def test_flag_off_restores_previous_behaviour(self):
+        llm = FakeLLMClient(scripted_responses=["Một câu trả lời không có nguồn nào.", "CÓ"])
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            require_inline_citation=False,
+        )
+        self.assertTrue(result.is_grounded)
+
+    def test_sources_contain_only_cited_chunks(self):
+        llm = FakeLLMClient(scripted_responses=["Chỉ dùng nguồn hai. [2]", "CÓ"])
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[
+                self.make_chunk(doc="a.pdf", pos="Trang 1"),
+                self.make_chunk(doc="b.pdf", pos="Trang 2"),
+            ],
+            llm_client=llm,
+            require_inline_citation=True,
+        )
+        self.assertEqual([s.document_name for s in result.sources], ["b.pdf"])
 
 
 if __name__ == "__main__":
