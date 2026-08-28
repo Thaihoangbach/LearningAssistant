@@ -519,7 +519,10 @@ class FakeStore:
 
 
 def fake_embed(text):
-    return np.array([[1.0, 0.0, 0.0]], dtype="float32")
+    # Bắt chước ĐÚNG shape của app/ingestion/embedder.py::embed_query — nó trả
+    # về mảng 1 CHIỀU (dim,) vì cài đặt là embed_texts([text])[0]. Fake trả về
+    # (1, dim) sẽ giấu mất lỗi thiếu reshape trong record_event.
+    return np.array([1.0, 0.0, 0.0], dtype="float32")
 
 
 class MemoryServiceTestCase(unittest.TestCase):
@@ -660,6 +663,8 @@ LƯỜI bên trong hàm vì lý do đó.
 from datetime import datetime, timezone
 from typing import List, Optional
 
+import numpy as np
+
 from app.memory.scoring import ScoredEvent, importance_for, select_top_events
 from app.memory.store import MemoryRecord
 from app.models import MemoryEvent
@@ -709,7 +714,10 @@ def record_event(
     db.add(event)
     db.commit()
 
-    embedding = embed_fn(content)
+    # embed_query() trả mảng 1 CHIỀU (dim,) — phải đưa về (1, dim) trước khi
+    # đẩy vào FAISS, nếu không assert len(embeddings) == len(records) trong
+    # MemoryStore.add() sẽ so 384 với 1 và vỡ.
+    embedding = np.asarray(embed_fn(content), dtype="float32").reshape(1, -1)
     store.add(embedding, [MemoryRecord(event_id=event.id, text=content)])
 
     return event
