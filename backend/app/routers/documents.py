@@ -13,8 +13,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.ingestion.outline import extract_outline
 from app.ingestion.pipeline import process_document
-from app.models import Document
+from app.models import Document, DocumentTopic, Topic
 from app.vectorstore.faiss_store import UserVectorStore
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -22,6 +23,39 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 UPLOAD_DIR = "./data/uploads"
 MAX_FILE_MB = 30
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+
+
+def _save_outline(db: Session, document_id: str, user_id: str, file_path: str, course_name: str | None):
+    """Lưu dàn ý chủ đề và tạo sẵn Topic tương ứng.
+
+    Tạo Topic ngay tại đây là có chủ đích: trước kia Topic chỉ ra đời khi người
+    dùng tự gõ tên chủ đề lúc sinh quiz, nên kế hoạch ôn tập và mastery không
+    có gì để bám vào cho tới lúc đó. Topic mới chưa có điểm nào, và
+    app/study_planner.py coi chủ đề chưa có điểm là "chưa học" nên tự động xếp
+    lên trước — đúng hành vi mong muốn.
+
+    Không rút được dàn ý (tài liệu không có heading) thì bỏ qua, KHÔNG bịa ra
+    chủ đề."""
+    entries = extract_outline(file_path)
+    if not entries:
+        return
+
+    for entry in entries:
+        db.add(
+            DocumentTopic(
+                document_id=document_id,
+                user_id=user_id,
+                title=entry.title,
+                position_ref=entry.position_ref,
+                order_index=entry.order,
+            )
+        )
+        existing = (
+            db.query(Topic).filter(Topic.user_id == user_id, Topic.name == entry.title).first()
+        )
+        if not existing:
+            db.add(Topic(user_id=user_id, name=entry.title, course_name=course_name))
+    db.commit()
 
 
 def _run_processing_job(document_id: str, file_path: str, document_name: str, user_id: str, db: Session):
@@ -33,6 +67,7 @@ def _run_processing_job(document_id: str, file_path: str, document_name: str, us
             document_name=document_name,
             user_id=user_id,
         )
+        _save_outline(db, document_id, user_id, file_path, doc.course_name if doc else None)
         doc.status = "sẵn sàng"
         db.commit()
     except Exception as e:  # noqa: BLE001 - phải bắt mọi lỗi để cập nhật status, đúng AC F1
@@ -125,6 +160,30 @@ MEDIA_TYPES = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+
+
+@router.get("/{document_id}/outline")
+def get_document_outline(document_id: str, user_id: str, db: Session = Depends(get_db)):
+    """Dàn ý chủ đề của tài liệu — để người dùng biết tài liệu gồm những gì
+    trước khi phải tự nghĩ ra câu hỏi."""
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    if not doc:
+        raise HTTPException(404, "Không tìm thấy tài liệu.")
+
+    entries = (
+        db.query(DocumentTopic)
+        .filter(DocumentTopic.document_id == document_id, DocumentTopic.user_id == user_id)
+        .order_by(DocumentTopic.order_index.asc())
+        .all()
+    )
+    return {
+        "document_id": document_id,
+        "file_name": doc.file_name,
+        "topics": [
+            {"title": e.title, "position_ref": e.position_ref, "order": e.order_index}
+            for e in entries
+        ],
+    }
 
 
 @router.get("/{document_id}/file")

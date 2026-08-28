@@ -207,6 +207,31 @@ class LearningProfile(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class DocumentTopic(Base):
+    """Dàn ý chủ đề rút được từ tài liệu ngay lúc nạp (app/ingestion/outline.py).
+
+    Giải quyết hai vấn đề cùng lúc. Người dùng tải tài liệu lên là thấy ngay
+    nó gồm những phần gì, thay vì đối diện một ô chat trống không biết hỏi gì.
+    Và hệ thống có `Topic` để bám vào NGAY, thay vì phải đợi tới lúc người dùng
+    tự gõ tên chủ đề khi sinh quiz — nhờ vậy kế hoạch ôn tập lập được từ trước
+    khi làm bài lần nào.
+
+    Tách khỏi bảng `Topic` vì hai thứ khác nhau: bảng này mô tả CẤU TRÚC của
+    một tài liệu cụ thể, còn `Topic` là đơn vị theo dõi tiến độ của người học
+    và có thể gộp nhiều tài liệu.
+    """
+
+    __tablename__ = "document_topics"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    document_id = Column(String, ForeignKey("documents.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    position_ref = Column(String, nullable=True)
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class FlashcardReview(Base):
     """Một lượt ôn lại flashcard — bảng LỊCH SỬ, mỗi lượt ôn thêm một hàng.
 
