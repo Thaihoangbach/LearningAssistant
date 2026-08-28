@@ -35,7 +35,14 @@ def retrieve_chunks(
     if os.environ.get("EDUTUTOR_RETRIEVAL_MODE") == "dense_only":
         results = store.search(query_embedding, top_k=top_k, document_ids=document_ids)
         return [
-            RetrievedChunk(text=chunk.text, document_name=chunk.document_name, position_ref=chunk.position_ref, score=score)
+            RetrievedChunk(
+                text=chunk.text,
+                document_name=chunk.document_name,
+                position_ref=chunk.position_ref,
+                score=score,
+                chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
+            )
             for chunk, score in results
         ]
 
@@ -49,6 +56,13 @@ def retrieve_chunks(
     reranked = rerank(query, candidates, reranker, top_k=top_k)
 
     return [
-        RetrievedChunk(text=chunk.text, document_name=chunk.document_name, position_ref=chunk.position_ref, score=score)
+        RetrievedChunk(
+            text=chunk.text,
+            document_name=chunk.document_name,
+            position_ref=chunk.position_ref,
+            score=score,
+            chunk_id=chunk.chunk_id,
+            document_id=chunk.document_id,
+        )
         for chunk, score in reranked
     ]

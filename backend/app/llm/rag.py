@@ -34,6 +34,11 @@ class RetrievedChunk:
     document_name: str
     position_ref: str
     score: float
+    # Định danh để frontend mở được đúng đoạn trong tài liệu (spec mục 4.3,
+    # lớp 2). Có mặc định vì RetrievedChunk được dựng ở nhiều nơi — thêm
+    # trường bắt buộc sẽ phá mọi lời gọi hiện có.
+    chunk_id: str = ""
+    document_id: str = ""
 
 
 @dataclass

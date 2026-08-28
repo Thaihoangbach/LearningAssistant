@@ -56,7 +56,14 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
         query_vector = embed_query(doc.file_name)
         results = store.search(query_vector, top_k=10, document_ids={doc.id})
         retrieved_chunks.extend(
-            RetrievedChunk(text=c.text, document_name=c.document_name, position_ref=c.position_ref, score=score)
+            RetrievedChunk(
+                text=c.text,
+                document_name=c.document_name,
+                position_ref=c.position_ref,
+                score=score,
+                chunk_id=c.chunk_id,
+                document_id=c.document_id,
+            )
             for c, score in results
         )
     if not retrieved_chunks:
