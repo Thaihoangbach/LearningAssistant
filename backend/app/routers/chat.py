@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.capability_router import detect_capability
 from app.citation import _content_words, supporting_sentences
 from app.database import get_db
 from app.flashcard_service import count_due
@@ -17,7 +18,8 @@ from app.learner_context import build_learner_context
 from app.llm.gemini_client import GeminiClient
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
-from app.llm.recommendation import TopicMastery, build_recommendation, is_recommendation_request
+from app.llm.recommendation import TopicMastery, build_recommendation
+from app.study_planner import TopicPriority, generate_plan
 from app.memory.service import record_event
 from app.models import (
     Conversation,
@@ -150,13 +152,62 @@ def _classify_question_event(question: str, result: AnswerResult) -> tuple[str, 
     return "question_asked", f"Đã hỏi \"{preview}\""
 
 
+def _build_study_plan_result(db: Session, user_id: str, course_name: str | None, days: int) -> AnswerResult:
+    """Lập kế hoạch ôn tập ngay trong hội thoại. Trước đây năng lực này chỉ gọi
+    được qua endpoint riêng, nên hỏi "còn 5 ngày nữa thi, ôn thế nào?" trong
+    chat rơi vào nhánh hỏi đáp tài liệu và không bao giờ trả lời được."""
+    topics_query = db.query(Topic).filter(Topic.user_id == user_id)
+    if course_name:
+        topics_query = topics_query.filter(Topic.course_name == course_name)
+    topics = topics_query.all()
+
+    if not topics:
+        return AnswerResult(
+            answer=(
+                "Chưa có chủ đề nào để chia lịch. Hãy tải tài liệu lên — hệ thống sẽ tự rút "
+                "dàn ý chủ đề và lập kế hoạch được ngay."
+            ),
+            is_grounded=True,
+            sources=[],
+        )
+
+    scores_by_topic_id = {
+        s.topic_id: s.score
+        for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
+    }
+    plan = generate_plan(
+        [TopicPriority(topic_name=t.name, score=scores_by_topic_id.get(t.id)) for t in topics],
+        days=days,
+    )
+
+    lines = [f"Kế hoạch ôn tập trong {days} ngày, ưu tiên chủ đề yếu và chưa học:"]
+    for day in plan:
+        lines.append(f"Ngày {day.day}: {', '.join(day.topics) if day.topics else 'ôn tự do'}")
+    return AnswerResult(answer="\n".join(lines), is_grounded=True, sources=[])
+
+
+def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
+    due = count_due(db, user_id)
+    if due == 0:
+        answer = "Hiện không có thẻ flashcard nào đến hạn ôn. Bạn đang theo kịp lịch."
+    else:
+        answer = (
+            f"Bạn đang có {due} thẻ flashcard đến hạn ôn. Vào mục Flashcard để ôn ngay — "
+            "ôn đúng lúc đến hạn là cách nhớ lâu nhất."
+        )
+    return AnswerResult(answer=answer, is_grounded=True, sources=[])
+
+
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
-    is_recommendation = is_recommendation_request(req.question)
+    # Điều phối bằng bảng đăng ký năng lực (app/capability_router.py) thay vì
+    # chuỗi if/else. Không khớp năng lực nào thì rơi về hỏi đáp có căn cứ —
+    # đường DUY NHẤT bắt buộc qua generator + verifier.
+    capability = detect_capability(req.question)
     guardrail_result = None
     qa_result = None
 
-    if not is_recommendation:
+    if capability is None:
         # Chỉ tìm trong tài liệu "sẵn sàng", phiên bản mới nhất, thuộc quyền
         # user_id — thực thi AC F2/F5 + ưu tiên bản mới khi tài liệu có version.
         ready_docs = (
@@ -181,8 +232,17 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
 
     history = _load_conversation_history(db, conversation_id)
 
-    if is_recommendation:
-        result = _build_recommendation_result(db, req.user_id, req.course_name)
+    if capability is not None:
+        # Các năng lực này chỉ đọc lại dữ liệu đã tính sẵn (mastery, kế hoạch,
+        # lịch ôn) nên không có gì để bịa và không cần qua verifier.
+        if capability.name == "study_plan":
+            result = _build_study_plan_result(
+                db, req.user_id, req.course_name, capability.params["days"]
+            )
+        elif capability.name == "flashcard_due":
+            result = _build_flashcard_due_result(db, req.user_id)
+        else:
+            result = _build_recommendation_result(db, req.user_id, req.course_name)
     else:
         llm_client = GeminiClient()
 
@@ -285,7 +345,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
     # Chỉ ghi ký ức cho câu hỏi thật — không ghi cho nhánh gợi ý học tiếp (đọc
     # lại dữ liệu có sẵn, không phải một sự kiện học tập mới) và không ghi cho
     # câu bị guardrail chặn (không phản ánh điều gì về trình độ người học).
-    if not is_recommendation and guardrail_result is not None and not guardrail_result.blocked:
+    if capability is None and guardrail_result is not None and not guardrail_result.blocked:
         event_type, content = _classify_question_event(req.question, result)
         record_event(db, user_id=req.user_id, event_type=event_type, content=content)
 
