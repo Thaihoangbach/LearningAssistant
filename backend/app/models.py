@@ -207,6 +207,30 @@ class LearningProfile(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class FlashcardReview(Base):
+    """Một lượt ôn lại flashcard — bảng LỊCH SỬ, mỗi lượt ôn thêm một hàng.
+
+    Trạng thái hiện tại của một thẻ là hàng MỚI NHẤT của thẻ đó (xem
+    app/flashcard_service.py::latest_review_by_item). Giữ nguyên lịch sử thay
+    vì ghi đè một hàng trạng thái để về sau còn dựng lại được đường cong quên
+    của người học nếu cần.
+
+    `interval_days`/`ease`/`next_due_at` do app/spaced_repetition.py tính, module
+    đó thuần và không biết gì về bảng này.
+    """
+
+    __tablename__ = "flashcard_reviews"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    flashcard_item_id = Column(String, ForeignKey("flashcard_items.id"), nullable=False)
+    rating = Column(String, nullable=False)  # again | hard | good | easy
+    reviewed_at = Column(DateTime, default=datetime.utcnow)
+    interval_days = Column(Float, nullable=False)
+    ease = Column(Float, nullable=False)
+    next_due_at = Column(DateTime, nullable=False)
+
+
 class MemoryEvent(Base):
     """Ký ức EPISODIC — từng sự kiện học tập rời rạc, xuyên phiên làm việc.
 
