@@ -12,13 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.citation import supporting_sentences
 from app.database import get_db
+from app.flashcard_service import count_due
 from app.learner_context import build_learner_context
 from app.llm.gemini_client import GeminiClient
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation, is_recommendation_request
 from app.memory.service import record_event
-from app.models import Conversation, Document, MasteryScore, Message, Topic
+from app.models import Conversation, Document, MasteryScore, MemoryEvent, Message, Topic
 from app.qa_pipeline import answer_with_fallback
 from app.retrieval.pipeline import retrieve_chunks
 
@@ -58,9 +59,16 @@ def _load_conversation_history(db: Session, conversation_id: str) -> list[Conver
     return turns[-MAX_HISTORY_TURNS:]
 
 
+# Loại ký ức dùng làm LÝ DO một chủ đề bị coi là yếu — chỉ lấy các sự kiện
+# phản ánh việc không nhớ/không làm được, không lấy sự kiện hỏi đáp thường.
+_WEAKNESS_EVENT_TYPES = ("quiz_wrong", "flashcard_again")
+MAX_EVIDENCE_PER_TOPIC = 3
+
+
 def _build_recommendation_result(db: Session, user_id: str, course_name: str | None) -> AnswerResult:
     """TC10/TC24 — gợi ý chủ đề nên học tiếp theo, đọc lại MasteryScore đã có
-    sẵn (F4). Không cần tài liệu "sẵn sàng" nào, không gọi LLM."""
+    sẵn (F4) cộng ký ức episodic (giai đoạn A) để nói được VÌ SAO chủ đề đó
+    yếu. Vẫn KHÔNG gọi LLM: toàn bộ là đọc lại dữ liệu đã tính."""
     query = (
         db.query(MasteryScore, Topic)
         .join(Topic, MasteryScore.topic_id == Topic.id)
@@ -69,8 +77,36 @@ def _build_recommendation_result(db: Session, user_id: str, course_name: str | N
     if course_name:
         query = query.filter(Topic.course_name == course_name)
 
-    topics = [TopicMastery(topic_name=topic.name, score=score.score) for score, topic in query.all()]
-    return AnswerResult(answer=build_recommendation(topics), is_grounded=True, sources=[])
+    rows = query.all()
+    topics = [TopicMastery(topic_name=topic.name, score=score.score) for score, topic in rows]
+
+    topic_name_by_id = {topic.id: topic.name for _, topic in rows}
+    evidence_by_topic: dict[str, list[str]] = {}
+    if topic_name_by_id:
+        events = (
+            db.query(MemoryEvent)
+            .filter(
+                MemoryEvent.user_id == user_id,
+                MemoryEvent.topic_id.in_(list(topic_name_by_id.keys())),
+                MemoryEvent.event_type.in_(_WEAKNESS_EVENT_TYPES),
+            )
+            .order_by(MemoryEvent.created_at.desc())
+            .all()
+        )
+        for event in events:
+            name = topic_name_by_id.get(event.topic_id)
+            if not name:
+                continue
+            bucket = evidence_by_topic.setdefault(name, [])
+            if len(bucket) < MAX_EVIDENCE_PER_TOPIC:
+                bucket.append(event.content)
+
+    answer = build_recommendation(
+        topics,
+        evidence_by_topic=evidence_by_topic,
+        due_flashcards=count_due(db, user_id),
+    )
+    return AnswerResult(answer=answer, is_grounded=True, sources=[])
 
 
 class AskRequest(BaseModel):
