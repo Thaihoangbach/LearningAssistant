@@ -19,6 +19,7 @@ from app.routers import (
     documents,
     flashcard,
     mastery,
+    memory,
     profile,
     quiz,
     study_plan,
@@ -68,6 +69,7 @@ app.include_router(chat.router)
 app.include_router(quiz.router)
 app.include_router(mastery.router)
 app.include_router(flashcard.router)
+app.include_router(memory.router)
 app.include_router(study_plan.router)
 app.include_router(profile.router)
 
