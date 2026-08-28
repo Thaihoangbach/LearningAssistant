@@ -96,6 +96,14 @@ export async function getConversation(conversationId) {
   return res.json();
 }
 
+export async function getDocumentOutline(documentId) {
+  const res = await fetch(
+    `${API_BASE}/documents/${documentId}/outline?user_id=${CURRENT_USER_ID}`
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function generateFlashcards(documentId, topicName, numCards = 10) {
   const res = await fetch(`${API_BASE}/flashcard/generate`, {
     method: "POST",

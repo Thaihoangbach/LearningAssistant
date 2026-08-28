@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BookOpen, History, MessageCircle, Plus, Send } from "lucide-react";
 import { askQuestion, getConversation, listConversations } from "../api";
 import { Card } from "../components/ui/Card";
@@ -138,6 +139,18 @@ export default function ChatPage() {
   useEffect(() => {
     refreshConversations();
   }, []);
+
+  // Điền sẵn câu hỏi khi người dùng bấm "Hỏi về mục này" từ dàn ý tài liệu.
+  // Chỉ điền vào ô nhập chứ KHÔNG tự gửi — người dùng còn muốn sửa lại câu hỏi
+  // trước khi hỏi.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const prefilled = searchParams.get("q");
+    if (prefilled) {
+      setQuestion(prefilled);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSelectConversation = async (id) => {
     if (id === conversationId) return;
