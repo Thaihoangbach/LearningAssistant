@@ -107,6 +107,41 @@ class TestAnswerWithFallback(unittest.TestCase):
         self.assertTrue(result.abstained)
         self.assertIn("2 lượt", result.answer)
 
+    def test_retrieval_uses_augmented_query_but_generator_sees_original(self):
+        seen_queries = []
+
+        def retrieve(query, top_k, mode):
+            seen_queries.append(query)
+            return [_chunk()]
+
+        llm = FakeLLMClient(["Trả lời. [1]", "CÓ"])
+        answer_with_fallback(
+            question="tại sao nó tốt hơn?",
+            llm_client=llm,
+            retrieve_fn=retrieve,
+            searched_documents=DOCS,
+            retrieval_query="tại sao nó tốt hơn? CNN convolution",
+        )
+        # truy hồi dùng truy vấn đã bổ sung ngữ cảnh
+        self.assertEqual(seen_queries, ["tại sao nó tốt hơn? CNN convolution"])
+        # nhưng generator vẫn thấy đúng câu hỏi gốc
+        generator_prompt = llm.prompts_received[0]
+        self.assertIn("tại sao nó tốt hơn?", generator_prompt)
+        self.assertNotIn("CNN convolution", generator_prompt)
+
+    def test_retrieval_query_defaults_to_question(self):
+        seen_queries = []
+
+        def retrieve(query, top_k, mode):
+            seen_queries.append(query)
+            return [_chunk()]
+
+        llm = FakeLLMClient(["Trả lời. [1]", "CÓ"])
+        answer_with_fallback(
+            question="Hỏi gì đó?", llm_client=llm, retrieve_fn=retrieve, searched_documents=DOCS
+        )
+        self.assertEqual(seen_queries, ["Hỏi gì đó?"])
+
     def test_no_chunks_at_all_skips_llm_entirely(self):
         def retrieve(query, top_k, mode):
             return []

@@ -89,6 +89,7 @@ def answer_with_fallback(
     top_k: int = 5,
     min_score: float = 0.02,
     max_near_misses: int = MAX_NEAR_MISSES,
+    retrieval_query: Optional[str] = None,
     **answer_kwargs,
 ) -> QAResult:
     """Chạy lượt truy hồi gắt trước; chỉ khi nó trượt mới chạy lượt mở rộng.
@@ -98,8 +99,13 @@ def answer_with_fallback(
     passes_run = 0
     seen_chunks: List[RetrievedChunk] = []
 
+    # Truy hồi dùng truy vấn đã bổ sung ngữ cảnh hội thoại
+    # (app/retrieval/query_context.py); generator vẫn nhận câu hỏi GỐC để câu
+    # trả lời bám đúng điều người dùng vừa hỏi.
+    search_query = retrieval_query or question
+
     for mode in ("strict", "wide"):
-        chunks = retrieve_fn(question, top_k, mode)
+        chunks = retrieve_fn(search_query, top_k, mode)
         passes_run += 1
         seen_chunks.extend(chunks)
 

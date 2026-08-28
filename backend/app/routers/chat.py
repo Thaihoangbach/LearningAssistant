@@ -22,6 +22,7 @@ from app.memory.service import record_event
 from app.models import Conversation, Document, MasteryScore, MemoryEvent, Message, Topic
 from app.qa_pipeline import answer_with_fallback
 from app.retrieval.pipeline import retrieve_chunks
+from app.retrieval.query_context import build_retrieval_query
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -196,8 +197,13 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                     mode=mode,
                 )
 
+            # Câu hỏi tiếp nối ("tại sao nó tốt hơn?") không có đủ từ nội dung
+            # để truy hồi; bổ sung từ khoá của các lượt trước vào truy vấn.
+            retrieval_query = build_retrieval_query(req.question, history)
+
             qa_result = answer_with_fallback(
                 question=req.question,
+                retrieval_query=retrieval_query,
                 llm_client=llm_client,
                 retrieve_fn=_retrieve,
                 searched_documents=[{"id": d.id, "file_name": d.file_name} for d in ready_docs],
