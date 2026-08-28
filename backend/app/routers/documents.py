@@ -9,6 +9,7 @@ import shutil
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -118,6 +119,37 @@ def list_documents(user_id: str, db: Session = Depends(get_db)):
         }
         for d in docs
     ]
+
+
+MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+@router.get("/{document_id}/file")
+def get_document_file(document_id: str, user_id: str, db: Session = Depends(get_db)):
+    """Trả file gốc để người dùng mở đúng trang từ một citation (spec mục 4.3,
+    lớp 3). Với PDF, frontend gắn thêm '#page=N' bóc từ position_ref.
+
+    Kiểm tra quyền sở hữu bằng user_id trước khi trả file — nếu không, bất kỳ
+    ai biết document_id đều tải được tài liệu của người khác."""
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    if not doc:
+        raise HTTPException(404, "Không tìm thấy tài liệu.")
+
+    matches = glob.glob(os.path.join(UPLOAD_DIR, f"{document_id}.*"))
+    if not matches:
+        raise HTTPException(404, "File gốc của tài liệu này không còn trên đĩa.")
+
+    path = matches[0]
+    ext = os.path.splitext(path)[1].lower()
+    return FileResponse(
+        path,
+        media_type=MEDIA_TYPES.get(ext, "application/octet-stream"),
+        filename=doc.file_name,
+        content_disposition_type="inline",
+    )
 
 
 @router.delete("/{document_id}")
