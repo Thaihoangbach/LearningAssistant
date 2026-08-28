@@ -54,8 +54,28 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.database import init_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.retrieval.pipeline import retrieve_chunks  # noqa: E402
+from app.retrieval.query_context import build_retrieval_query  # noqa: E402
 
 USER_ID = "retrieval-metrics-user"
+
+
+class _Turn:
+    """Lượt hội thoại tối giản, đúng hình dạng build_retrieval_query cần."""
+
+    def __init__(self, question, answer):
+        self.question = question
+        self.answer = answer
+
+
+def _query_for(case):
+    """Case có `history` là câu hỏi TIẾP NỐI — phải đi qua bước bổ sung ngữ
+    cảnh đúng như router làm, nếu không thì đo sai hẳn hành vi thật."""
+    question = case["input"]["query"]
+    history = case.get("history") or []
+    if not history:
+        return question
+    turns = [_Turn(t.get("question", ""), t.get("answer", "")) for t in history]
+    return build_retrieval_query(question, turns)
 
 init_db()
 client = TestClient(app)
@@ -120,7 +140,7 @@ def main():
         expected_docs = {e["document"] for e in case["expected_evidence"]}
         chunks = retrieve_chunks(
             user_id=USER_ID,
-            query=case["input"]["query"],
+            query=_query_for(case),
             top_k=ARGS.top_k,
             mode=ARGS.mode,
         )
