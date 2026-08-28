@@ -27,7 +27,7 @@ export async function deleteDocument(documentId) {
   return res.json();
 }
 
-export async function generateQuiz(documentId, topicName, numQuestions = 5) {
+export async function generateQuiz(documentId, topicName, numQuestions = 5, difficulty) {
   const res = await fetch(`${API_BASE}/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -36,6 +36,9 @@ export async function generateQuiz(documentId, topicName, numQuestions = 5) {
       document_id: documentId,
       topic_name: topicName || null,
       num_questions: numQuestions,
+      // Không gửi difficulty khi người dùng để "Tự động" — backend sẽ dùng
+      // trình độ đã lưu hoặc suy từ mastery (app/learner_context.py).
+      ...(difficulty ? { difficulty } : {}),
     }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -62,7 +65,7 @@ export async function getMastery() {
   return res.json();
 }
 
-export async function askQuestion(question, conversationId) {
+export async function askQuestion(question, conversationId, level) {
   const res = await fetch(`${API_BASE}/chat/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -70,6 +73,9 @@ export async function askQuestion(question, conversationId) {
       user_id: CURRENT_USER_ID,
       question,
       conversation_id: conversationId || null,
+      // Không gửi level khi người dùng để "Tự động" — backend sẽ dùng
+      // preference đã lưu hoặc suy từ mastery (app/learner_context.py).
+      ...(level ? { level } : {}),
     }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -88,4 +94,92 @@ export async function getConversation(conversationId) {
   );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+export async function generateFlashcards(documentId, topicName, numCards = 10) {
+  const res = await fetch(`${API_BASE}/flashcard/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: CURRENT_USER_ID,
+      document_id: documentId,
+      topic_name: topicName || null,
+      num_cards: numCards,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function listDueFlashcards(limit = 20) {
+  const res = await fetch(
+    `${API_BASE}/flashcard/due?user_id=${CURRENT_USER_ID}&limit=${limit}`
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function reviewFlashcard(flashcardItemId, rating) {
+  const res = await fetch(`${API_BASE}/flashcard/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: CURRENT_USER_ID,
+      flashcard_item_id: flashcardItemId,
+      rating,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getStudyPlan(days, courseName) {
+  const params = new URLSearchParams({ user_id: CURRENT_USER_ID, days: String(days) });
+  if (courseName) params.set("course_name", courseName);
+  const res = await fetch(`${API_BASE}/study-plan?${params}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getProfile() {
+  const res = await fetch(`${API_BASE}/profile?user_id=${CURRENT_USER_ID}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateProfile({ preferredLevel, learningGoal }) {
+  const res = await fetch(`${API_BASE}/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: CURRENT_USER_ID,
+      preferred_level: preferredLevel ?? null,
+      learning_goal: learningGoal ?? null,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function listMemory(limit = 50) {
+  const res = await fetch(`${API_BASE}/memory?user_id=${CURRENT_USER_ID}&limit=${limit}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteMemory(eventId) {
+  const res = await fetch(`${API_BASE}/memory/${eventId}?user_id=${CURRENT_USER_ID}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Dựng URL mở tài liệu gốc. PDF nhảy đúng trang bằng fragment '#page=N' bóc từ
+// position_ref dạng "Trang 5". DOCX dùng position_ref dạng "Mục n" — không có
+// khái niệm trang nên KHÔNG gắn fragment, mở từ đầu file (hạn chế đã biết).
+export function documentFileUrl(documentId, positionRef) {
+  const base = `${API_BASE}/documents/${documentId}/file?user_id=${CURRENT_USER_ID}`;
+  const match = /Trang\s+(\d+)/i.exec(positionRef || "");
+  return match ? `${base}#page=${match[1]}` : base;
 }
