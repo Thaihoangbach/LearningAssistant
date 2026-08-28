@@ -17,6 +17,7 @@ nhận câu trả lời có căn cứ trực tiếp trong đoạn trích tài li
 giữ đúng điều kiện chặn ở trên (lịch sử hội thoại không phải "tài liệu").
 """
 
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -305,6 +306,87 @@ def _build_verifier_prompt(draft_answer: str, context: str) -> str:
     )
 
 
+_CLAIM_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_LEADING_MARKERS_RE = re.compile(r"^((?:\[\d+\]\s*)+)")
+
+
+def _split_claims(answer: str) -> List[str]:
+    """Tách câu trả lời thành từng luận điểm, GIỮ marker citation ở lại đúng
+    luận điểm của nó.
+
+    Generator đặt marker ở CUỐI câu ("Câu một. [1]") nên nếu chỉ tách theo dấu
+    câu thì "[1]" rơi sang đầu mảnh sau và luận điểm cuối cùng thành một mẩu
+    chỉ có mỗi marker. Vì thế sau khi tách phải chuyển các marker đứng đầu mảnh
+    về cuối mảnh liền trước."""
+    pieces = [p.strip() for p in _CLAIM_SPLIT_RE.split(answer.strip()) if p.strip()]
+
+    claims: List[str] = []
+    for piece in pieces:
+        match = _LEADING_MARKERS_RE.match(piece)
+        if match and claims:
+            claims[-1] = f"{claims[-1]} {match.group(1).strip()}".strip()
+            piece = piece[match.end() :].strip()
+        if piece:
+            claims.append(piece)
+    return claims
+
+
+def _build_claim_verifier_prompt(claims: List[str], context: str) -> str:
+    """Xin verdict cho TỪNG luận điểm trong MỘT lượt gọi.
+
+    Trước đây verifier chỉ trả một chữ CÓ/KHÔNG cho cả câu trả lời, trong khi
+    citation đã ở mức từng luận điểm — lệch pha đó khiến một câu bịa lẫn giữa
+    bốn câu đúng hoặc làm đổ cả câu trả lời tốt, hoặc lọt trọn cùng những câu
+    kia. Hỏi theo từng luận điểm mà vẫn gói trong một lượt gọi nên KHÔNG tốn
+    thêm quota."""
+    numbered = "\n".join(f"{i}. {claim}" for i, claim in enumerate(claims, start=1))
+    return (
+        "Bạn là bộ kiểm tra tính xác thực. Với TỪNG luận điểm được đánh số dưới đây, "
+        "hãy phán quyết dựa CHỈ trên đoạn trích tài liệu.\n"
+        "Trả 'CÓ' nếu nội dung thực chất của luận điểm được nêu trực tiếp HOẶC suy ra rõ "
+        "ràng từ đoạn trích — kể cả khi nó diễn đạt lại, tổng hợp từ nhiều phần, hoặc nêu "
+        "ví dụ minh hoạ hợp lý cho một khái niệm đã có trong đoạn trích.\n"
+        "Trả 'KHÔNG' CHỈ KHI luận điểm có nội dung thực chất KHÔNG xuất hiện và KHÔNG suy "
+        "ra được từ đoạn trích. Câu dẫn dắt hoặc chuyển ý không mang nội dung thực chất "
+        "thì cũng trả 'CÓ'.\n\n"
+        f"Đoạn trích tài liệu:\n{context}\n\n"
+        f"Các luận điểm:\n{numbered}\n\n"
+        'Trả lời DUY NHẤT bằng JSON dạng {"1": "CÓ", "2": "KHÔNG", ...}, không thêm text nào khác:'
+    )
+
+
+def _parse_claim_verdicts(raw: str, num_claims: int) -> Optional[dict]:
+    """Trả về {chỉ số 1-based: bool} hoặc None nếu không đọc được JSON.
+
+    None là tín hiệu để phía gọi LÙI VỀ phán quyết cả bài — mô hình trả sai
+    định dạng không phải lý do để từ chối oan người dùng."""
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group(0))
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+
+    verdicts = {}
+    for i in range(1, num_claims + 1):
+        value = parsed.get(str(i), parsed.get(i))
+        if value is None:
+            # Thiếu verdict cho một luận điểm — coi như có căn cứ, vì không có
+            # bằng chứng phủ định nào cho riêng nó.
+            verdicts[i] = True
+            continue
+        verdicts[i] = str(value).strip().upper().startswith(_POSITIVE_VERDICTS)
+    return verdicts
+
+
 def answer_question(
     question: str,
     retrieved_chunks: List[RetrievedChunk],
@@ -345,20 +427,34 @@ def answer_question(
         )
     )
 
-    # Lượt gọi 2/2 — Verifier (KHÔNG nhận lịch sử hội thoại, chỉ xét đoạn trích hiện tại)
-    verdict = llm_client.complete(_build_verifier_prompt(draft_answer, context))
-    is_grounded = verdict.strip().upper().startswith(_POSITIVE_VERDICTS)
+    # Lượt gọi 2/2 — Verifier THEO TỪNG LUẬN ĐIỂM (KHÔNG nhận lịch sử hội
+    # thoại, chỉ xét đoạn trích hiện tại). Vẫn đúng một lượt gọi: mọi luận điểm
+    # được phán quyết trong cùng một JSON.
+    claims = _split_claims(draft_answer)
+    raw_verdict = llm_client.complete(_build_claim_verifier_prompt(claims, context))
+    verdicts = _parse_claim_verdicts(raw_verdict, len(claims))
 
-    if not is_grounded:
+    if verdicts is None:
+        # Không đọc được JSON — lùi về phán quyết cả bài như trước, thay vì từ
+        # chối oan chỉ vì mô hình trả sai định dạng.
+        if not raw_verdict.strip().upper().startswith(_POSITIVE_VERDICTS):
+            return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
+        surviving_claims = claims
+    else:
+        surviving_claims = [c for i, c in enumerate(claims, start=1) if verdicts.get(i, True)]
+
+    if not surviving_claims:
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
+
+    verified_answer = " ".join(surviving_claims)
 
     require_citation = (
         REQUIRE_INLINE_CITATION if require_inline_citation is None else require_inline_citation
     )
     if not require_citation:
-        return AnswerResult(answer=draft_answer, is_grounded=True, sources=_dedupe_sources(relevant))
+        return AnswerResult(answer=verified_answer, is_grounded=True, sources=_dedupe_sources(relevant))
 
-    cleaned_answer, cited_indices = _strip_invalid_citations(draft_answer, len(relevant))
+    cleaned_answer, cited_indices = _strip_invalid_citations(verified_answer, len(relevant))
     if not cited_indices:
         # Có nội dung thực chất nhưng không gắn được vào đoạn trích nào — theo
         # điều kiện chặn ở PRD §7, thà từ chối còn hơn đưa ra kết luận không

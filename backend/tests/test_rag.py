@@ -445,5 +445,80 @@ class TestInlineCitation(unittest.TestCase):
         self.assertEqual([s.document_name for s in result.sources], ["b.pdf"])
 
 
+class TestClaimLevelVerification(unittest.TestCase):
+    """Citation đã ở mức từng luận điểm nhưng verifier lại phán quyết cả bài —
+    lệch pha đó khiến một câu bịa lẫn trong bốn câu đúng hoặc làm đổ cả câu trả
+    lời tốt, hoặc lọt trọn. Verifier per-claim vẫn chỉ tốn ĐÚNG MỘT lượt gọi:
+    nó trả verdict cho mọi luận điểm trong một JSON."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_all_claims_supported_keeps_whole_answer(self):
+        llm = FakeLLMClient(scripted_responses=["Câu một. [1] Câu hai. [1]", '{"1": "CÓ", "2": "CÓ"}'])
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertIn("Câu một.", result.answer)
+        self.assertIn("Câu hai.", result.answer)
+
+    def test_unsupported_claim_is_removed_but_rest_kept(self):
+        llm = FakeLLMClient(
+            scripted_responses=["Câu đúng. [1] Câu bịa. [1]", '{"1": "CÓ", "2": "KHÔNG"}']
+        )
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertIn("Câu đúng.", result.answer)
+        self.assertNotIn("Câu bịa.", result.answer)
+
+    def test_all_claims_rejected_abstains(self):
+        llm = FakeLLMClient(
+            scripted_responses=["Câu bịa một. [1] Câu bịa hai. [1]", '{"1": "KHÔNG", "2": "KHÔNG"}']
+        )
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertFalse(result.is_grounded)
+        self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+
+    def test_malformed_json_falls_back_to_whole_answer_verdict(self):
+        # Không parse được JSON thì phải lùi về hành vi cũ, KHÔNG được từ chối
+        # oan chỉ vì mô hình trả sai định dạng.
+        llm = FakeLLMClient(scripted_responses=["Câu trả lời. [1]", "CÓ, hoàn toàn có căn cứ"])
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertTrue(result.is_grounded)
+
+    def test_malformed_json_with_negative_verdict_abstains(self):
+        llm = FakeLLMClient(scripted_responses=["Câu trả lời. [1]", "KHÔNG có căn cứ"])
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertFalse(result.is_grounded)
+
+    def test_still_exactly_two_llm_calls(self):
+        llm = FakeLLMClient(scripted_responses=["Câu một. [1] Câu hai. [1]", '{"1": "CÓ", "2": "CÓ"}'])
+        answer_question(question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm)
+        self.assertEqual(len(llm.prompts_received), 2)
+
+    def test_sources_reflect_only_surviving_claims(self):
+        llm = FakeLLMClient(
+            scripted_responses=["Từ nguồn một. [1] Từ nguồn hai. [2]", '{"1": "KHÔNG", "2": "CÓ"}']
+        )
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[
+                self.make_chunk(doc="a.pdf", pos="Trang 1"),
+                self.make_chunk(doc="b.pdf", pos="Trang 2"),
+            ],
+            llm_client=llm,
+        )
+        self.assertEqual([s.document_name for s in result.sources], ["b.pdf"])
+
+
 if __name__ == "__main__":
     unittest.main()
