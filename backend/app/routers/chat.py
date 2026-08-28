@@ -10,14 +10,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.citation import supporting_sentences
 from app.database import get_db
 from app.learner_context import build_learner_context
 from app.llm.gemini_client import GeminiClient
 from app.llm.guardrail import check_question
-from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn, answer_question
+from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation, is_recommendation_request
 from app.memory.service import record_event
 from app.models import Conversation, Document, MasteryScore, Message, Topic
+from app.qa_pipeline import answer_with_fallback
 from app.retrieval.pipeline import retrieve_chunks
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -104,6 +106,7 @@ def _classify_question_event(question: str, result: AnswerResult) -> tuple[str, 
 def ask(req: AskRequest, db: Session = Depends(get_db)):
     is_recommendation = is_recommendation_request(req.question)
     guardrail_result = None
+    qa_result = None
 
     if not is_recommendation:
         # Chỉ tìm trong tài liệu "sẵn sàng", phiên bản mới nhất, thuộc quyền
@@ -147,22 +150,32 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             )
 
             effective_top_k = req.top_k + LEVEL_TOP_K_BOOST if learner.effective_level else req.top_k
-            retrieved_chunks = retrieve_chunks(
-                user_id=req.user_id,
-                query=req.question,
-                top_k=effective_top_k,
-                document_ids=document_ids,
-            )
 
-            result = answer_question(
+            def _retrieve(query: str, top_k: int, mode: str):
+                return retrieve_chunks(
+                    user_id=req.user_id,
+                    query=query,
+                    top_k=top_k,
+                    document_ids=document_ids,
+                    mode=mode,
+                )
+
+            qa_result = answer_with_fallback(
                 question=req.question,
-                retrieved_chunks=retrieved_chunks,
                 llm_client=llm_client,
+                retrieve_fn=_retrieve,
+                searched_documents=[{"id": d.id, "file_name": d.file_name} for d in ready_docs],
+                top_k=effective_top_k,
                 min_score=req.min_score,
                 conversation_history=history,
                 level=learner.effective_level,
                 learning_goal=learner.learning_goal,
                 recalled_events=learner.recalled_events,
+            )
+            result = AnswerResult(
+                answer=qa_result.answer,
+                is_grounded=qa_result.is_grounded,
+                sources=qa_result.sources,
             )
 
     db.add(Message(conversation_id=conversation_id, role="user", content=req.question))
@@ -192,10 +205,40 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         "conversation_id": conversation_id,
         "answer": result.answer,
         "is_grounded": result.is_grounded,
+        "abstained": qa_result.abstained if qa_result else False,
         "sources": [
-            {"document_name": s.document_name, "position_ref": s.position_ref}
+            {
+                "document_name": s.document_name,
+                "position_ref": s.position_ref,
+                "chunk_id": s.chunk_id,
+                "document_id": s.document_id,
+                "text": s.text,
+                # Câu nào trong đoạn trích thực sự chống đỡ câu trả lời — dùng
+                # để tô sáng trong panel, tính bằng trùng lặp từ vựng, không
+                # tốn lượt gọi LLM (app/citation.py).
+                "supporting_sentences": supporting_sentences(result.answer, s.text),
+            }
             for s in result.sources
         ],
+        "search_report": (
+            {
+                "passes_run": qa_result.search_report.passes_run,
+                "searched_documents": qa_result.search_report.searched_documents,
+                "near_misses": [
+                    {
+                        "chunk_id": n.chunk_id,
+                        "document_id": n.document_id,
+                        "document_name": n.document_name,
+                        "position_ref": n.position_ref,
+                        "text": n.text,
+                        "score": n.score,
+                    }
+                    for n in qa_result.search_report.near_misses
+                ],
+            }
+            if qa_result and qa_result.search_report
+            else None
+        ),
     }
 
 
