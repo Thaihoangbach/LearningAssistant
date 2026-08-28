@@ -5,23 +5,19 @@ dependency của embedder.py, faiss_store.py, gemini_client.py.
 """
 
 import json
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.learning_profile import (
-    infer_level_from_mastery,
-    resolve_effective_level,
-    should_update_preference,
-)
+from app.learner_context import build_learner_context
 from app.llm.gemini_client import GeminiClient
 from app.llm.guardrail import check_question
-from app.llm.rag import AnswerResult, ConversationTurn, answer_question
+from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn, answer_question
 from app.llm.recommendation import TopicMastery, build_recommendation, is_recommendation_request
-from app.models import Conversation, Document, LearningProfile, MasteryScore, Message, Topic
+from app.memory.service import record_event
+from app.models import Conversation, Document, MasteryScore, Message, Topic
 from app.retrieval.pipeline import retrieve_chunks
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -60,47 +56,6 @@ def _load_conversation_history(db: Session, conversation_id: str) -> list[Conver
     return turns[-MAX_HISTORY_TURNS:]
 
 
-def _compute_avg_mastery(db: Session, user_id: str) -> float | None:
-    """Cùng công thức với app/routers/mastery.py::get_mastery (trung bình cộng
-    các MasteryScore hiện có) — dùng làm tín hiệu "trình độ xác nhận qua
-    tương tác thực tế" khi Learning Profile chưa có preferred_level nào."""
-    scores = [s.score for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()]
-    return sum(scores) / len(scores) if scores else None
-
-
-def _apply_learning_profile(
-    db: Session, user_id: str, requested_level: str | None
-) -> tuple[str | None, str | None]:
-    """Đọc Learning Profile của user, quyết định level thật sự dùng cho request
-    này (app/learning_profile.py::resolve_effective_level, có suy thêm từ
-    mastery trung bình nếu chưa từng khai báo preferred_level), và nếu request
-    có tự khai báo level thì ghi lại làm preference mới cho các lần hỏi sau —
-    nhờ vậy không phải truyền lại `level` mỗi lần như thiết kế cũ.
-
-    Trả về (effective_level, learning_goal) — learning_goal chỉ đọc lại để
-    đưa vào prompt (app/llm/rag.py::_build_goal_block), không bị thay đổi ở
-    đây (chỉ /profile PUT mới ghi learning_goal, xem app/routers/profile.py)."""
-    profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
-    stored_level = profile.preferred_level if profile else None
-    learning_goal = profile.learning_goal if profile else None
-
-    if should_update_preference(requested_level):
-        if profile:
-            profile.preferred_level = requested_level
-            profile.updated_at = datetime.utcnow()
-        else:
-            profile = LearningProfile(user_id=user_id, preferred_level=requested_level)
-            db.add(profile)
-        db.commit()
-
-    inferred_level = None
-    if not requested_level and not stored_level:
-        inferred_level = infer_level_from_mastery(_compute_avg_mastery(db, user_id))
-
-    effective_level = resolve_effective_level(requested_level, stored_level, inferred_level)
-    return effective_level, learning_goal
-
-
 def _build_recommendation_result(db: Session, user_id: str, course_name: str | None) -> AnswerResult:
     """TC10/TC24 — gợi ý chủ đề nên học tiếp theo, đọc lại MasteryScore đã có
     sẵn (F4). Không cần tài liệu "sẵn sàng" nào, không gọi LLM."""
@@ -127,9 +82,28 @@ class AskRequest(BaseModel):
     level: str | None = None  # "beginner" | "advanced" | None — xem app/llm/rag.py
 
 
+# Nội dung ký ức dựng bằng template cố định — KHÔNG gọi LLM để viết, đúng
+# nguyên tắc chi phí ở PRD §6.
+QUESTION_PREVIEW_MAX = 120
+
+
+def _classify_question_event(question: str, result: AnswerResult) -> tuple[str, str]:
+    """Quyết định loại sự kiện và câu mô tả sẽ lưu vào ký ức episodic."""
+    preview = question.strip()
+    if len(preview) > QUESTION_PREVIEW_MAX:
+        preview = preview[:QUESTION_PREVIEW_MAX].rstrip() + "…"
+
+    if not result.is_grounded:
+        return "abstention", f"Đã hỏi \"{preview}\" nhưng hệ thống không tìm được căn cứ trong tài liệu"
+    if _SIMPLIFY_REQUEST_RE.search(question):
+        return "concept_confused", f"Từng nói chưa hiểu và xin giải thích đơn giản hơn khi hỏi \"{preview}\""
+    return "question_asked", f"Đã hỏi \"{preview}\""
+
+
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
     is_recommendation = is_recommendation_request(req.question)
+    guardrail_result = None
 
     if not is_recommendation:
         # Chỉ tìm trong tài liệu "sẵn sàng", phiên bản mới nhất, thuộc quyền
@@ -168,9 +142,11 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         if guardrail_result.blocked:
             result = AnswerResult(answer=guardrail_result.message, is_grounded=False, sources=[])
         else:
-            effective_level, learning_goal = _apply_learning_profile(db, req.user_id, req.level)
+            learner = build_learner_context(
+                db, req.user_id, requested_level=req.level, query=req.question
+            )
 
-            effective_top_k = req.top_k + LEVEL_TOP_K_BOOST if effective_level else req.top_k
+            effective_top_k = req.top_k + LEVEL_TOP_K_BOOST if learner.effective_level else req.top_k
             retrieved_chunks = retrieve_chunks(
                 user_id=req.user_id,
                 query=req.question,
@@ -184,8 +160,9 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                 llm_client=llm_client,
                 min_score=req.min_score,
                 conversation_history=history,
-                level=effective_level,
-                learning_goal=learning_goal,
+                level=learner.effective_level,
+                learning_goal=learner.learning_goal,
+                recalled_events=learner.recalled_events,
             )
 
     db.add(Message(conversation_id=conversation_id, role="user", content=req.question))
@@ -201,6 +178,14 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             ),
         )
     )
+
+    # Chỉ ghi ký ức cho câu hỏi thật — không ghi cho nhánh gợi ý học tiếp (đọc
+    # lại dữ liệu có sẵn, không phải một sự kiện học tập mới) và không ghi cho
+    # câu bị guardrail chặn (không phản ánh điều gì về trình độ người học).
+    if not is_recommendation and guardrail_result is not None and not guardrail_result.blocked:
+        event_type, content = _classify_question_event(req.question, result)
+        record_event(db, user_id=req.user_id, event_type=event_type, content=content)
+
     db.commit()
 
     return {
