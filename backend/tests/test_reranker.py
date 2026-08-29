@@ -64,5 +64,51 @@ class TestRerank(unittest.TestCase):
         self.assertEqual(texts, ["văn bản A", "văn bản B"])
 
 
+class TestModelCaching(unittest.TestCase):
+    """Đo thực tế cho thấy tạo instance CrossEncoderReranker mới tốn ~2,8s vì
+    model bị nạp lại. retrieve_chunks tạo instance mới MỖI lượt truy hồi, và
+    truy hồi hai lượt nhân đôi con số đó."""
+
+    def setUp(self):
+        from app.retrieval import reranker
+
+        self.reranker_module = reranker
+        reranker.clear_model_cache()
+        self.load_count = 0
+        self._original_load = reranker._load_model
+
+        def counting_load(model_name):
+            self.load_count += 1
+            return f"fake-model:{model_name}"
+
+        reranker._load_model = counting_load
+
+    def tearDown(self):
+        self.reranker_module._load_model = self._original_load
+        self.reranker_module.clear_model_cache()
+
+    def test_repeated_instances_load_model_only_once(self):
+        from app.retrieval.reranker import CrossEncoderReranker
+
+        for _ in range(5):
+            CrossEncoderReranker()._get_model()
+        self.assertEqual(self.load_count, 1)
+
+    def test_different_model_names_load_separately(self):
+        from app.retrieval.reranker import CrossEncoderReranker
+
+        CrossEncoderReranker(model_name="model-a")._get_model()
+        CrossEncoderReranker(model_name="model-b")._get_model()
+        CrossEncoderReranker(model_name="model-a")._get_model()
+        self.assertEqual(self.load_count, 2)
+
+    def test_cached_instances_share_same_object(self):
+        from app.retrieval.reranker import CrossEncoderReranker
+
+        first = CrossEncoderReranker()._get_model()
+        second = CrossEncoderReranker()._get_model()
+        self.assertIs(first, second)
+
+
 if __name__ == "__main__":
     unittest.main()

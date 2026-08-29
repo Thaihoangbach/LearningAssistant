@@ -26,6 +26,31 @@ from app.vectorstore.faiss_store import IndexedChunk
 
 DEFAULT_RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
+# Model được nạp MỘT LẦN cho mỗi tên model rồi tái dùng cho mọi lượt truy hồi.
+# Không có cache này, app/retrieval/pipeline.py tạo một CrossEncoderReranker
+# mới mỗi lần gọi và nạp lại model — đo được ~2,8s overhead mỗi lượt truy hồi,
+# nhân đôi khi truy hồi hai lượt. Cùng khuôn với @lru_cache đã dùng ở
+# app/ingestion/embedder.py cho model embedding.
+_MODEL_CACHE: dict = {}
+
+
+def _load_model(model_name: str):
+    """Tách riêng phần nạp thật để test thay được bằng hàm giả."""
+    from sentence_transformers import CrossEncoder
+
+    return CrossEncoder(model_name)
+
+
+def get_cached_model(model_name: str):
+    if model_name not in _MODEL_CACHE:
+        _MODEL_CACHE[model_name] = _load_model(model_name)
+    return _MODEL_CACHE[model_name]
+
+
+def clear_model_cache() -> None:
+    """Chỉ dùng trong test — dọn cache giữa các trường hợp kiểm thử."""
+    _MODEL_CACHE.clear()
+
 
 class RerankerClient(Protocol):
     def score(self, query: str, texts: List[str]) -> List[float]: ...
@@ -38,14 +63,11 @@ class CrossEncoderReranker:
 
     def __init__(self, model_name: str = DEFAULT_RERANKER_MODEL):
         self.model_name = model_name
-        self._model = None
 
     def _get_model(self):
-        if self._model is None:
-            from sentence_transformers import CrossEncoder
-
-            self._model = CrossEncoder(self.model_name)
-        return self._model
+        # Lấy từ cache cấp module chứ KHÔNG giữ trong instance: pipeline tạo
+        # instance mới mỗi lượt truy hồi nên cache theo instance là vô dụng.
+        return get_cached_model(self.model_name)
 
     def score(self, query: str, texts: List[str]) -> List[float]:
         if not texts:
