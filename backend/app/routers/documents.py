@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.document_cleanup import cleanup_document_topics
 from app.ingestion.outline import extract_outline
 from app.ingestion.pipeline import process_document
 from app.models import Document, DocumentTopic, Topic
@@ -36,6 +37,10 @@ def _save_outline(db: Session, document_id: str, user_id: str, file_path: str, c
 
     Không rút được dàn ý (tài liệu không có heading) thì bỏ qua, KHÔNG bịa ra
     chủ đề."""
+    # Dọn dàn ý cũ của CHÍNH tài liệu này trước, để xử lý lại một tài liệu
+    # không sinh ra dàn ý trùng lặp.
+    cleanup_document_topics(db, document_id=document_id, user_id=user_id)
+
     entries = extract_outline(file_path)
     if not entries:
         return
@@ -118,6 +123,9 @@ async def upload_document(
         previous_latest.is_latest = False
         version = previous_latest.version + 1
         db.add(previous_latest)
+        # Bản cũ không còn được dùng để hỏi đáp nữa nên dàn ý của nó cũng phải
+        # gỡ đi, tránh chủ đề trùng lặp giữa các phiên bản.
+        cleanup_document_topics(db, document_id=previous_latest.id, user_id=user_id)
 
     doc = Document(
         id=document_id,
@@ -216,6 +224,10 @@ def delete_document(document_id: str, user_id: str, db: Session = Depends(get_db
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(404, "Không tìm thấy tài liệu.")
+
+    # Dọn dàn ý và những chủ đề nó tạo ra mà người học chưa từng dùng — nếu
+    # không, kế hoạch ôn tập vẫn xếp lịch cho chủ đề của tài liệu đã xoá.
+    cleanup_document_topics(db, document_id=document_id, user_id=user_id)
 
     UserVectorStore(user_id=user_id).remove_document(document_id)
 
