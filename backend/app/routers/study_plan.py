@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.mastery import decay_unpractised
-from app.models import MasteryScore, Topic
+from app.models import DocumentTopic, MasteryScore, Topic
 from app.study_planner import TopicPriority, generate_plan
 
 router = APIRouter(prefix="/study-plan", tags=["study-plan"])
@@ -27,8 +27,19 @@ def get_study_plan(user_id: str, days: int, course_name: str | None = None, db: 
         for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
     }
 
+    # Thứ tự chủ đề trong tài liệu gốc — dùng làm ràng buộc mềm khi hai chủ đề
+    # cùng mức ưu tiên (app/study_planner.py).
+    order_by_name = {
+        dt.title: dt.order_index
+        for dt in db.query(DocumentTopic).filter(DocumentTopic.user_id == user_id).all()
+    }
+
     priorities = [
-        TopicPriority(topic_name=t.name, score=scores_by_topic_id.get(t.id))
+        TopicPriority(
+            topic_name=t.name,
+            score=scores_by_topic_id.get(t.id),
+            order_index=order_by_name.get(t.name),
+        )
         for t in topics
     ]
     plan = generate_plan(priorities, days=days)

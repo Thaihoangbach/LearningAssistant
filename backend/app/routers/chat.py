@@ -20,15 +20,18 @@ from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation
 from app.mastery import decay_unpractised
+from app.misconception import WrongChoice, find_repeated_misconceptions
 from app.study_planner import TopicPriority, generate_plan
 from app.memory.service import record_event
 from app.models import (
+    Attempt,
     Conversation,
     Document,
     DocumentTopic,
     MasteryScore,
     MemoryEvent,
     Message,
+    QuizItem,
     Topic,
 )
 from app.qa_pipeline import answer_with_fallback
@@ -122,6 +125,31 @@ def _build_recommendation_result(db: Session, user_id: str, course_name: str | N
             if len(bucket) < MAX_EVIDENCE_PER_TOPIC:
                 bucket.append(event.content)
 
+    # Quan niệm sai LẶP LẠI là lý do cụ thể hơn hẳn "chủ đề này điểm thấp", nên
+    # chèn lên ĐẦU danh sách bằng chứng của chủ đề tương ứng.
+    wrong_rows = (
+        db.query(Attempt, QuizItem)
+        .join(QuizItem, Attempt.quiz_item_id == QuizItem.id)
+        .filter(Attempt.user_id == user_id, Attempt.is_correct == False)  # noqa: E712
+        .all()
+    )
+    for text in find_repeated_misconceptions(
+        [
+            WrongChoice(
+                quiz_item_id=item.id,
+                question=item.question,
+                selected_answer=attempt.selected_answer or "",
+                correct_answer=item.correct_answer,
+                topic_name=topic_name_by_id.get(item.topic_id, ""),
+            )
+            for attempt, item in wrong_rows
+        ]
+    ):
+        for name in topic_name_by_id.values():
+            if name and f'"{name}"' in text:
+                evidence_by_topic.setdefault(name, []).insert(0, text)
+                break
+
     answer = build_recommendation(
         topics,
         evidence_by_topic=evidence_by_topic,
@@ -182,8 +210,19 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         s.topic_id: decay_unpractised(s.score, s.updated_at)
         for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
     }
+    order_by_name = {
+        dt.title: dt.order_index
+        for dt in db.query(DocumentTopic).filter(DocumentTopic.user_id == user_id).all()
+    }
     plan = generate_plan(
-        [TopicPriority(topic_name=t.name, score=scores_by_topic_id.get(t.id)) for t in topics],
+        [
+            TopicPriority(
+                topic_name=t.name,
+                score=scores_by_topic_id.get(t.id),
+                order_index=order_by_name.get(t.name),
+            )
+            for t in topics
+        ],
         days=days,
     )
 

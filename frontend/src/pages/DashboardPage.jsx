@@ -199,6 +199,15 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <ProgressBar value={t.score} level={t.level} />
+                    {/* Người dùng sẽ bối rối khi thấy điểm tụt dù không làm gì
+                        — nói rõ điểm đo được lần cuối và đã bao lâu không ôn. */}
+                    {t.score_raw != null && t.score_raw - t.score > 0.05 && (
+                      <p className="text-xs text-muted-foreground">
+                        Đo được {Math.round(t.score_raw * 100)}% ở lần luyện gần nhất
+                        {t.days_since_practice != null && ` (${t.days_since_practice} ngày trước)`} —
+                        điểm hiện tại thấp hơn do đã lâu không ôn.
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -222,6 +231,11 @@ export default function DashboardPage() {
                 {mistakes.map((m) => (
                   <li key={m.quiz_item_id} className="border-l-2 border-destructive/40 pl-3">
                     <p className="text-sm font-medium text-foreground">{m.question}</p>
+                    {m.selected_answer && (
+                      <p className="mt-0.5 text-xs text-destructive">
+                        Bạn đã chọn: {m.selected_answer}
+                      </p>
+                    )}
                     <p className="mt-0.5 text-xs text-success">Đáp án đúng: {m.correct_answer}</p>
                     {m.source_document && (
                       <p className="mt-0.5 text-xs text-muted-foreground">

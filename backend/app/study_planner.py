@@ -18,6 +18,30 @@ from typing import List, Optional
 class TopicPriority:
     topic_name: str
     score: Optional[float]  # None = chưa có dữ liệu mastery (chủ đề mới/chưa học)
+    # Thứ tự chủ đề trong tài liệu gốc (app/ingestion/outline.py). Đây là một
+    # dạng phụ thuộc trước-sau CHO KHÔNG: tác giả tài liệu đã sắp sẵn thứ tự
+    # hợp lý để học, nên dùng nó thay vì phải xây đồ thị tiên quyết — thứ mà
+    # PRD đã cố tình để ngoài phạm vi vì không có nguồn dữ liệu.
+    order_index: Optional[int] = None
+
+
+# HAI nhóm ưu tiên, không phải ba. "Chưa học" và "đã học nhưng đã quên" được
+# gộp làm một vì về mặt sư phạm chúng giống nhau: đều cần học lại từ đầu.
+#
+# Tách chúng ra từng gây đúng lỗi mà thứ tự tài liệu sinh ra để tránh: một chủ
+# đề nền tảng đã rơi xuống 11% bị xếp SAU các chủ đề dựa trên nó chỉ vì những
+# chủ đề kia chưa từng học. Gộp lại thì trong cùng nhóm "cần học", thứ tự tài
+# liệu quyết định — nền tảng luôn đứng trước phần dựa trên nó.
+_BAND_NEEDS_WORK = 0
+_BAND_REST = 1
+_WEAK_THRESHOLD = 0.4
+_NO_ORDER = 10**6
+
+
+def _priority_band(score: Optional[float]) -> int:
+    if score is None or score < _WEAK_THRESHOLD:
+        return _BAND_NEEDS_WORK
+    return _BAND_REST
 
 
 @dataclass
@@ -30,9 +54,14 @@ def generate_plan(topics: List[TopicPriority], days: int) -> List[DayPlan]:
     if days <= 0 or not topics:
         return []
 
-    # Chủ đề chưa có điểm (None) ưu tiên như điểm 0 (chưa học = cần học sớm),
-    # rồi tới điểm thấp nhất trước.
-    ordered = sorted(topics, key=lambda t: t.score if t.score is not None else 0.0)
+    ordered = sorted(
+        topics,
+        key=lambda t: (
+            _priority_band(t.score),
+            t.order_index if t.order_index is not None else _NO_ORDER,
+            t.score if t.score is not None else 0.0,
+        ),
+    )
 
     plan = [DayPlan(day=d, topics=[]) for d in range(1, days + 1)]
     for i, topic in enumerate(ordered):
