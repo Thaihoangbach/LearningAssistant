@@ -63,19 +63,47 @@ _DO_IT_FOR_ME_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SOFT_TRIGGER_PATTERNS = [
-    r"\bvai trò\b",
-    r"\bprompt\b",
-    r"\bsystem\b",
-    r"\bhệ thống\b",
-    r"\bquy tắc\b",
-    r"\bchỉ dẫn\b",
-    r"\bhướng dẫn\b",
-    r"\broleplay\b",
-]
+# Soft trigger dùng AND hai điều kiện, KHÔNG dùng danh sách từ trần.
+#
+# Bản trước liệt kê từ trần "vai trò", "hệ thống", "hướng dẫn", "quy tắc" —
+# toàn từ rất thường gặp trong câu hỏi học tập tiếng Việt ("vai trò của
+# learning rate", "hệ thống gợi ý", "quy tắc chuỗi"). Đo được 8/10 câu hỏi tự
+# nhiên kích hoạt, mỗi câu tốn thêm một lượt gọi Gemini và mang rủi ro chặn
+# nhầm. Đây là cùng khuôn hai điều kiện đã áp dụng thành công cho academic
+# integrity ngay phía trên.
+_SENSITIVE_NOUN_RE = re.compile(
+    r"\bprompt\b|\bsystem\b|hệ thống|chỉ dẫn|hướng dẫn|quy tắc|"
+    r"\broleplay\b|đóng vai|\bnội quy\b",
+    re.IGNORECASE,
+)
+_SUSPICIOUS_INTENT_RE = re.compile(
+    r"tiết lộ|in ra|cho (tôi |mình )?(xem|biết)|đưa (tôi |mình )?xem|"
+    r"bỏ qua|phớt lờ|lờ đi|vượt qua|của (bạn|mày)|"
+    r"\breveal\b|\bshow\b|\bprint\b|\bignore\b|\brepeat\b|\bbypass\b|\byour\b",
+    re.IGNORECASE,
+)
+
+# Cụm từ tự nó đã đáng ngờ, không cần thêm động từ ý đồ nào: "prompt hệ thống"
+# không phải một chủ đề học tập, khác hẳn từ "hệ thống" đứng trần trong "hệ
+# thống gợi ý" hay "hệ thống phương trình".
+_ALWAYS_AMBIGUOUS_RE = re.compile(
+    r"prompt hệ thống|chỉ dẫn hệ thống|hướng dẫn hệ thống|"
+    r"system prompt|system instruction|\bDAN\b",
+    re.IGNORECASE,
+)
 
 _HARD_BLOCK_RE = re.compile("|".join(_HARD_BLOCK_PATTERNS), re.IGNORECASE)
-_SOFT_TRIGGER_RE = re.compile("|".join(_SOFT_TRIGGER_PATTERNS), re.IGNORECASE)
+
+
+def looks_ambiguous(question: str) -> bool:
+    """Câu hỏi có đủ mơ hồ để đáng tốn một lượt gọi LLM phân loại hay không.
+
+    Hoặc chứa một cụm tự nó đã đáng ngờ, hoặc thoả CẢ HAI điều kiện: một danh
+    từ nhạy cảm VÀ một ý đồ đáng ngờ. Chỉ có danh từ thôi thì gần như luôn là
+    câu hỏi học tập bình thường."""
+    if _ALWAYS_AMBIGUOUS_RE.search(question):
+        return True
+    return bool(_SENSITIVE_NOUN_RE.search(question) and _SUSPICIOUS_INTENT_RE.search(question))
 
 
 @dataclass
@@ -116,7 +144,7 @@ def check_question(question: str, llm_client: LLMClient) -> GuardrailResult:
     if contains_hard_block_pattern(question):
         return GuardrailResult(blocked=True, message=BLOCKED_MESSAGE)
 
-    if _SOFT_TRIGGER_RE.search(question):
+    if looks_ambiguous(question):
         verdict = llm_client.complete(_build_gatekeeper_prompt(question))
         is_safe = verdict.strip().upper().startswith(_POSITIVE_VERDICTS)
         if not is_safe:
