@@ -69,5 +69,107 @@ class TestComputeMastery(unittest.TestCase):
         self.assertIsNotNone(score)
 
 
+class TestDecayWhenUnpractised(unittest.TestCase):
+    """MasteryScore chỉ được tính lại khi có Attempt MỚI, nên một chủ đề đạt
+    90% ba tháng trước mà không đụng tới vẫn hiện 90% mãi mãi — hệ thống không
+    bao giờ nhắc ôn lại đúng lúc quên rơi vào."""
+
+    def test_fresh_score_is_unchanged(self):
+        from app.mastery import decay_unpractised
+
+        now = datetime.now(timezone.utc)
+        self.assertAlmostEqual(decay_unpractised(0.9, now, now=now), 0.9, places=4)
+
+    def test_score_halves_after_one_half_life(self):
+        from app.mastery import MASTERY_HALF_LIFE_DAYS, decay_unpractised
+
+        now = datetime.now(timezone.utc)
+        updated = now - timedelta(days=MASTERY_HALF_LIFE_DAYS)
+        self.assertAlmostEqual(decay_unpractised(0.8, updated, now=now), 0.4, places=4)
+
+    def test_long_unpractised_strong_topic_becomes_weak(self):
+        from app.mastery import classify_mastery, decay_unpractised
+
+        now = datetime.now(timezone.utc)
+        updated = now - timedelta(days=90)
+        decayed = decay_unpractised(0.9, updated, now=now)
+        self.assertEqual(classify_mastery(decayed), "yếu")
+
+    def test_decay_never_goes_below_zero(self):
+        from app.mastery import decay_unpractised
+
+        now = datetime.now(timezone.utc)
+        updated = now - timedelta(days=3650)
+        self.assertGreaterEqual(decay_unpractised(0.9, updated, now=now), 0.0)
+
+    def test_naive_updated_at_does_not_crash(self):
+        from app.mastery import decay_unpractised
+
+        naive = datetime.utcnow() - timedelta(days=10)
+        self.assertIsNotNone(decay_unpractised(0.7, naive))
+
+    def test_future_timestamp_is_clamped(self):
+        from app.mastery import decay_unpractised
+
+        now = datetime.now(timezone.utc)
+        self.assertAlmostEqual(
+            decay_unpractised(0.6, now + timedelta(days=5), now=now), 0.6, places=4
+        )
+
+    def test_none_updated_at_returns_score_unchanged(self):
+        from app.mastery import decay_unpractised
+
+        self.assertAlmostEqual(decay_unpractised(0.5, None), 0.5, places=4)
+
+
+class TestDifficultyWeighting(unittest.TestCase):
+    def test_correct_on_hard_beats_correct_on_easy(self):
+        from app.mastery import Attempt as A, compute_mastery
+
+        now = datetime.now(timezone.utc)
+        hard = compute_mastery(
+            [A(is_correct=True, attempted_at=now, difficulty="advanced"),
+             A(is_correct=False, attempted_at=now, difficulty="intermediate")]
+        )
+        easy = compute_mastery(
+            [A(is_correct=True, attempted_at=now, difficulty="beginner"),
+             A(is_correct=False, attempted_at=now, difficulty="intermediate")]
+        )
+        self.assertGreater(hard, easy)
+
+    def test_wrong_on_easy_hurts_more_than_wrong_on_hard(self):
+        from app.mastery import Attempt as A, compute_mastery
+
+        now = datetime.now(timezone.utc)
+        wrong_easy = compute_mastery(
+            [A(is_correct=False, attempted_at=now, difficulty="beginner"),
+             A(is_correct=True, attempted_at=now, difficulty="intermediate")]
+        )
+        wrong_hard = compute_mastery(
+            [A(is_correct=False, attempted_at=now, difficulty="advanced"),
+             A(is_correct=True, attempted_at=now, difficulty="intermediate")]
+        )
+        self.assertLess(wrong_easy, wrong_hard)
+
+    def test_missing_difficulty_behaves_like_intermediate(self):
+        from app.mastery import Attempt as A, compute_mastery
+
+        now = datetime.now(timezone.utc)
+        without = compute_mastery([A(is_correct=True, attempted_at=now)])
+        with_mid = compute_mastery(
+            [A(is_correct=True, attempted_at=now, difficulty="intermediate")]
+        )
+        self.assertAlmostEqual(without, with_mid, places=6)
+
+    def test_unknown_difficulty_label_is_safe(self):
+        from app.mastery import Attempt as A, compute_mastery
+
+        now = datetime.now(timezone.utc)
+        score = compute_mastery([A(is_correct=True, attempted_at=now, difficulty="siêu khó")])
+        self.assertIsNotNone(score)
+        self.assertGreaterEqual(score, 0.0)
+        self.assertLessEqual(score, 1.0)
+
+
 if __name__ == "__main__":
     unittest.main()

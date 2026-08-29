@@ -19,6 +19,7 @@ from app.llm.gemini_client import GeminiClient
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation
+from app.mastery import decay_unpractised
 from app.study_planner import TopicPriority, generate_plan
 from app.memory.service import record_event
 from app.models import (
@@ -92,7 +93,13 @@ def _build_recommendation_result(db: Session, user_id: str, course_name: str | N
         query = query.filter(Topic.course_name == course_name)
 
     rows = query.all()
-    topics = [TopicMastery(topic_name=topic.name, score=score.score) for score, topic in rows]
+    topics = [
+        TopicMastery(
+            topic_name=topic.name,
+            score=decay_unpractised(score.score, score.updated_at),
+        )
+        for score, topic in rows
+    ]
 
     topic_name_by_id = {topic.id: topic.name for _, topic in rows}
     evidence_by_topic: dict[str, list[str]] = {}
@@ -172,7 +179,7 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         )
 
     scores_by_topic_id = {
-        s.topic_id: s.score
+        s.topic_id: decay_unpractised(s.score, s.updated_at)
         for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
     }
     plan = generate_plan(

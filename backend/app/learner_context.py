@@ -25,6 +25,7 @@ from app.learning_profile import (
     resolve_effective_level,
     should_update_preference,
 )
+from app.mastery import decay_unpractised
 from app.models import LearningProfile, MasteryScore, Topic
 
 # Cùng ngưỡng "yếu" với app/mastery.py::classify_mastery để không có hai bộ
@@ -47,7 +48,10 @@ def _default_recall(db, user_id, query):
 
 
 def _avg_mastery(db, user_id: str) -> Optional[float]:
-    scores = [s.score for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()]
+    rows = db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
+    # Dùng điểm ĐÃ SUY GIẢM, nếu không thì trình độ suy ra ở đây sẽ lệch với
+    # con số dashboard hiển thị (app/routers/mastery.py).
+    scores = [decay_unpractised(s.score, s.updated_at) for s in rows]
     return sum(scores) / len(scores) if scores else None
 
 
@@ -55,11 +59,18 @@ def _weak_topics(db, user_id: str) -> List[str]:
     rows = (
         db.query(MasteryScore, Topic)
         .join(Topic, MasteryScore.topic_id == Topic.id)
-        .filter(MasteryScore.user_id == user_id, MasteryScore.score < WEAK_TOPIC_THRESHOLD)
-        .order_by(MasteryScore.score.asc())
+        .filter(MasteryScore.user_id == user_id)
         .all()
     )
-    return [topic.name for _, topic in rows]
+    # Lọc theo điểm đã suy giảm, không lọc trong SQL: chủ đề từng giỏi nhưng
+    # lâu không ôn phải được coi là yếu trở lại.
+    weak = [
+        (decay_unpractised(s.score, s.updated_at), t.name)
+        for s, t in rows
+        if decay_unpractised(s.score, s.updated_at) < WEAK_TOPIC_THRESHOLD
+    ]
+    weak.sort(key=lambda pair: pair[0])
+    return [name for _, name in weak]
 
 
 def build_learner_context(

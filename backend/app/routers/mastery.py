@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.flashcard_service import count_due
-from app.mastery import classify_mastery
+from app.mastery import classify_mastery, decay_unpractised
 from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
 
 router = APIRouter(prefix="/mastery", tags=["mastery"])
@@ -42,17 +42,29 @@ def get_mastery(user_id: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    topics = [
-        {
-            "topic_id": topic.id,
-            "topic_name": topic.name,
-            "course_name": topic.course_name,
-            "score": score.score,
-            "level": classify_mastery(score.score),
-            "updated_at": score.updated_at.isoformat(),
-        }
-        for score, topic in scores
-    ]
+    now = datetime.utcnow()
+    topics = []
+    for score, topic in scores:
+        current = decay_unpractised(score.score, score.updated_at, now=now)
+        topics.append(
+            {
+                "topic_id": topic.id,
+                "topic_name": topic.name,
+                "course_name": topic.course_name,
+                # `score` là mức thành thạo ƯỚC LƯỢNG HIỆN TẠI (đã tính việc lâu
+                # không luyện); `score_raw` là mức đo được ở lần làm bài cuối.
+                # Trả cả hai để người dùng không bối rối khi thấy điểm tụt dù
+                # không làm gì — họ nhìn được cả hai con số và biết vì sao.
+                "score": current,
+                "score_raw": score.score,
+                "days_since_practice": (
+                    (now - _to_naive(score.updated_at)).days if score.updated_at else None
+                ),
+                "level": classify_mastery(current),
+                "updated_at": score.updated_at.isoformat(),
+            }
+        )
+    topics.sort(key=lambda t: t["score"])
 
     documents_ready = (
         db.query(Document).filter(Document.user_id == user_id, Document.status == "sẵn sàng").count()
@@ -71,7 +83,6 @@ def get_mastery(user_id: str, db: Session = Depends(get_db)):
     # trong bảng Attempt từ lâu, chỉ là chưa ai hiển thị nó — mà "tôi có khá
     # lên không" mới là câu người học thực sự muốn biết, chứ không phải một
     # điểm số tĩnh.
-    now = datetime.utcnow()
     recent_cutoff = now - timedelta(days=TREND_WINDOW_DAYS)
     previous_cutoff = now - timedelta(days=TREND_WINDOW_DAYS * 2)
 
@@ -122,7 +133,11 @@ def get_mistakes(user_id: str, limit: int = MAX_MISTAKES_RETURNED, db: Session =
                 "quiz_item_id": item.id,
                 "question": item.question,
                 "correct_answer": item.correct_answer,
+                # Đáp án người học đã chọn nói lên KIỂU hiểu sai, không chỉ
+                # việc sai — đáp án nhiễu vốn được thiết kế là nhầm lẫn hợp lý.
+                "selected_answer": attempt.selected_answer,
                 "explanation": item.explanation,
+                "difficulty": item.difficulty,
                 "topic_name": topic_names.get(item.topic_id),
                 "source_document": item.source_document,
                 "source_position": item.source_position,

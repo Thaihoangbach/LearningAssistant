@@ -119,6 +119,9 @@ class QuizItem(Base):
     explanation = Column(Text, nullable=True)
     source_document = Column(String, nullable=True)
     source_position = Column(String, nullable=True)
+    # Độ khó lúc sinh câu hỏi — dùng để cân trọng số mastery (app/mastery.py).
+    # Không lưu thì trả lời đúng một câu dễ cộng điểm y hệt một câu khó.
+    difficulty = Column(String, nullable=True)
 
     quiz = relationship("Quiz", back_populates="items")
 
@@ -160,6 +163,11 @@ class Attempt(Base):
     quiz_item_id = Column(String, ForeignKey("quiz_items.id"), nullable=False)
     topic_id = Column(String, ForeignKey("topics.id"), nullable=True)
     is_correct = Column(Boolean, nullable=False)
+    # Đáp án người học đã chọn. Quiz generator cố tình thiết kế đáp án nhiễu là
+    # "nhầm lẫn hợp lý giữa hai khái niệm gần nhau", nên CHỌN NHẦM CÁI NÀO mang
+    # thông tin chẩn đoán thật — không lưu thì chỉ cá nhân hoá được tới mức
+    # "chủ đề yếu", thô hơn nhiều so với mức dữ liệu cho phép.
+    selected_answer = Column(Text, nullable=True)
     attempted_at = Column(DateTime, default=datetime.utcnow)
 
 

@@ -118,6 +118,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
                 explanation=item.explanation,
                 source_document=item.source_document,
                 source_position=item.source_position,
+                difficulty=effective_difficulty,
             )
         )
     db.commit()
@@ -156,6 +157,7 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
         quiz_item_id=quiz_item.id,
         topic_id=quiz_item.topic_id,
         is_correct=is_correct,
+        selected_answer=req.selected_answer,
     )
     db.add(attempt)
     db.commit()
@@ -163,12 +165,22 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
     # Cập nhật mastery ngay (F4) nếu câu hỏi này gắn với một Topic
     new_score = None
     if quiz_item.topic_id:
+        # Join sang QuizItem để lấy độ khó — mastery cân trọng số theo độ khó
+        # (app/mastery.py), nếu chỉ đọc Attempt thì mọi lượt bị coi ngang nhau.
         history = (
-            db.query(Attempt)
+            db.query(Attempt, QuizItem)
+            .join(QuizItem, Attempt.quiz_item_id == QuizItem.id)
             .filter(Attempt.user_id == req.user_id, Attempt.topic_id == quiz_item.topic_id)
             .all()
         )
-        mastery_attempts = [MasteryAttempt(is_correct=a.is_correct, attempted_at=a.attempted_at) for a in history]
+        mastery_attempts = [
+            MasteryAttempt(
+                is_correct=a.is_correct,
+                attempted_at=a.attempted_at,
+                difficulty=item.difficulty,
+            )
+            for a, item in history
+        ]
         new_score = compute_mastery(mastery_attempts)
 
         if new_score is not None:

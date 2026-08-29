@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.mastery import decay_unpractised
 from app.models import MasteryScore, Topic
 from app.study_planner import TopicPriority, generate_plan
 
@@ -22,7 +23,7 @@ def get_study_plan(user_id: str, days: int, course_name: str | None = None, db: 
     topics = topics_query.all()
 
     scores_by_topic_id = {
-        s.topic_id: s.score
+        s.topic_id: decay_unpractised(s.score, s.updated_at)
         for s in db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
     }
 
