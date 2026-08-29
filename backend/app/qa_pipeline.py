@@ -42,6 +42,10 @@ class QAResult:
     is_grounded: bool
     sources: List[RetrievedChunk] = field(default_factory=list)
     abstained: bool = False
+    # Khác abstained: tìm được nội dung nhưng nó không trả lời đúng câu hỏi,
+    # thường vì câu hỏi quá mơ hồ. Người dùng cần được hỏi lại chứ không phải
+    # nghe "không có trong tài liệu".
+    needs_clarification: bool = False
     search_report: Optional[SearchReport] = None
 
 
@@ -123,6 +127,21 @@ def answer_with_fallback(
             min_score=min_score,
             **answer_kwargs,
         )
+        # Câu hỏi mơ hồ thì chạy thêm lượt truy hồi mở rộng cũng vô ích — vấn
+        # đề nằm ở câu hỏi, không nằm ở phạm vi tìm kiếm. Dừng và hỏi lại luôn.
+        if result.needs_clarification:
+            return QAResult(
+                answer=result.answer,
+                is_grounded=False,
+                sources=[],
+                needs_clarification=True,
+                search_report=SearchReport(
+                    passes_run=passes_run,
+                    searched_documents=searched_documents,
+                    suggested_topics=suggest_topics_fn(question) if suggest_topics_fn else [],
+                ),
+            )
+
         if result.is_grounded:
             return QAResult(
                 answer=result.answer,

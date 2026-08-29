@@ -56,11 +56,20 @@ class AnswerResult:
     answer: str
     is_grounded: bool
     sources: List[RetrievedChunk]
+    # "Không tìm thấy gì" và "tìm thấy nhưng lạc đề" là HAI chuyện khác nhau,
+    # người dùng cần hai phản hồi khác nhau: một cái nói kho tài liệu thiếu
+    # nội dung, một cái nói câu hỏi chưa đủ rõ để tìm đúng chỗ.
+    needs_clarification: bool = False
 
 
 NO_CONTEXT_MESSAGE = "Nội dung này chưa có trong tài liệu bạn đã tải lên."
 NOT_GROUNDED_MESSAGE = (
     "Chưa đủ căn cứ trong kho tài liệu để trả lời chắc chắn câu hỏi này."
+)
+NEEDS_CLARIFICATION_MESSAGE = (
+    "Câu hỏi chưa đủ rõ để tìm đúng chỗ trong tài liệu của bạn. Nội dung tìm được "
+    "không thực sự trả lời điều bạn hỏi, nên thay vì đưa ra một câu trả lời lạc đề, "
+    "bạn cho biết rõ hơn đang muốn hỏi về chủ đề nào nhé?"
 )
 
 _POSITIVE_VERDICTS = ("CÓ", "YES", "TRUE")
@@ -331,7 +340,7 @@ def _split_claims(answer: str) -> List[str]:
     return claims
 
 
-def _build_claim_verifier_prompt(claims: List[str], context: str) -> str:
+def _build_claim_verifier_prompt(question: str, claims: List[str], context: str) -> str:
     """Xin verdict cho TỪNG luận điểm trong MỘT lượt gọi.
 
     Trước đây verifier chỉ trả một chữ CÓ/KHÔNG cho cả câu trả lời, trong khi
@@ -341,8 +350,15 @@ def _build_claim_verifier_prompt(claims: List[str], context: str) -> str:
     thêm quota."""
     numbered = "\n".join(f"{i}. {claim}" for i, claim in enumerate(claims, start=1))
     return (
-        "Bạn là bộ kiểm tra tính xác thực. Với TỪNG luận điểm được đánh số dưới đây, "
-        "hãy phán quyết dựa CHỈ trên đoạn trích tài liệu.\n"
+        "Bạn là bộ kiểm tra. Có HAI việc phải phán quyết.\n\n"
+        "VIỆC 1 — câu trả lời có thực sự TRẢ LỜI ĐÚNG câu hỏi không? Trả 'CÓ' nếu nó nói "
+        "đúng vào điều được hỏi. Trả 'KHÔNG' nếu nó nói sang chuyện khác, KỂ CẢ khi nội "
+        "dung đó hoàn toàn có căn cứ trong tài liệu — ví dụ người dùng hỏi về một hạn mức "
+        "nhưng câu trả lời lại nói về một khái niệm không liên quan. Nếu câu hỏi quá mơ hồ "
+        "đến mức không thể biết người dùng đang hỏi gì thì cũng trả 'KHÔNG'.\n\n"
+        f"Câu hỏi của người dùng: {question}\n\n"
+        "VIỆC 2 — với TỪNG luận điểm được đánh số dưới đây, phán quyết dựa CHỈ trên đoạn "
+        "trích tài liệu.\n"
         "Trả 'CÓ' nếu nội dung thực chất của luận điểm được nêu trực tiếp HOẶC suy ra rõ "
         "ràng từ đoạn trích — kể cả khi nó diễn đạt lại, tổng hợp từ nhiều phần, hoặc nêu "
         "ví dụ minh hoạ hợp lý cho một khái niệm đã có trong đoạn trích.\n"
@@ -351,8 +367,21 @@ def _build_claim_verifier_prompt(claims: List[str], context: str) -> str:
         "thì cũng trả 'CÓ'.\n\n"
         f"Đoạn trích tài liệu:\n{context}\n\n"
         f"Các luận điểm:\n{numbered}\n\n"
-        'Trả lời DUY NHẤT bằng JSON dạng {"1": "CÓ", "2": "KHÔNG", ...}, không thêm text nào khác:'
+        'Trả lời DUY NHẤT bằng JSON, gồm khoá "addresses_question" cho VIỆC 1 và các khoá '
+        'số cho VIỆC 2, dạng {"addresses_question": "CÓ", "1": "CÓ", "2": "KHÔNG"}, '
+        "không thêm text nào khác:"
     )
+
+
+def _parse_addresses_question(raw: str) -> Optional[bool]:
+    """Phán quyết "câu trả lời có trả lời đúng câu hỏi không".
+
+    Trả None khi mô hình không đưa ra khoá này — phía gọi coi như CÓ, để một
+    lỗi định dạng không biến thành từ chối oan."""
+    match = re.search(r'"addresses_question"\s*:\s*"([^"]*)"', raw, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).strip().upper().startswith(_POSITIVE_VERDICTS)
 
 
 def _parse_claim_verdicts(raw: str, num_claims: int) -> Optional[dict]:
@@ -431,7 +460,18 @@ def answer_question(
     # thoại, chỉ xét đoạn trích hiện tại). Vẫn đúng một lượt gọi: mọi luận điểm
     # được phán quyết trong cùng một JSON.
     claims = _split_claims(draft_answer)
-    raw_verdict = llm_client.complete(_build_claim_verifier_prompt(claims, context))
+    raw_verdict = llm_client.complete(_build_claim_verifier_prompt(question, claims, context))
+    # Câu trả lời có căn cứ nhưng LẠC ĐỀ là một thất bại riêng, không phải
+    # "không tìm thấy": hỏi về một hạn mức mà nhận về một câu đúng sự thật về
+    # learning rate thì trích dẫn chỉ làm nó trông đáng tin hơn.
+    if _parse_addresses_question(raw_verdict) is False:
+        return AnswerResult(
+            answer=NEEDS_CLARIFICATION_MESSAGE,
+            is_grounded=False,
+            sources=[],
+            needs_clarification=True,
+        )
+
     verdicts = _parse_claim_verdicts(raw_verdict, len(claims))
 
     if verdicts is None:

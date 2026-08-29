@@ -402,6 +402,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         "answer": result.answer,
         "is_grounded": result.is_grounded,
         "abstained": qa_result.abstained if qa_result else False,
+        "needs_clarification": qa_result.needs_clarification if qa_result else False,
         "sources": [
             {
                 "document_name": s.document_name,

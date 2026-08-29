@@ -520,5 +520,87 @@ class TestClaimLevelVerification(unittest.TestCase):
         self.assertEqual([s.document_name for s in result.sources], ["b.pdf"])
 
 
+class TestAnswerAddressesQuestion(unittest.TestCase):
+    """Verifier truoc day CHI kiem "co can cu khong", khong nhan cau hoi nen
+    khong the kiem "co tra loi dung cau hoi khong". Hau qua do duoc: hoi "Hạn
+    mức này là bao nhiêu?" nhan ve mot cau ve learning rate — co can cu that,
+    co trich dan that, nhung khong tra loi dieu duoc hoi. Trich dan lam no
+    trong nhu da duoc kiem chung."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_verifier_prompt_includes_the_question(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}'])
+        answer_question(
+            question="Hạn mức này là bao nhiêu?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+        )
+        _, verifier_prompt = llm.prompts_received
+        self.assertIn("Hạn mức này là bao nhiêu?", verifier_prompt)
+
+    def test_answer_not_addressing_question_asks_for_clarification(self):
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "Learning rate thường chọn trong khoảng 0.001 đến 0.1. [1]",
+                '{"addresses_question": "KHÔNG", "1": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Hạn mức này là bao nhiêu?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+        )
+        self.assertFalse(result.is_grounded)
+        self.assertTrue(result.needs_clarification)
+        self.assertEqual(result.sources, [])
+
+    def test_answer_addressing_question_is_returned(self):
+        llm = FakeLLMClient(
+            scripted_responses=["Gradient Descent là thuật toán tối ưu. [1]",
+                                '{"addresses_question": "CÓ", "1": "CÓ"}']
+        )
+        result = answer_question(
+            question="Gradient Descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertFalse(result.needs_clarification)
+
+    def test_missing_addresses_key_defaults_to_addressing(self):
+        """Thieu khoa nay thi KHONG duoc tu choi oan — lui ve hanh vi cu."""
+        llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", '{"1": "CÓ"}'])
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertFalse(result.needs_clarification)
+
+    def test_clarification_is_distinct_from_abstention(self):
+        """Khong tim thay gi va tim thay nhung lac de la HAI chuyen khac nhau,
+        nguoi dung can hai phan hoi khac nhau."""
+        llm = FakeLLMClient(scripted_responses=["Trả lời lạc đề. [1]",
+                                                '{"addresses_question": "KHÔNG", "1": "CÓ"}'])
+        off_topic = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        no_context = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[self.make_chunk(score=0.001)],
+            llm_client=FakeLLMClient(scripted_responses=[]),
+            min_score=0.02,
+        )
+        self.assertTrue(off_topic.needs_clarification)
+        self.assertFalse(no_context.needs_clarification)
+        self.assertNotEqual(off_topic.answer, no_context.answer)
+
+    def test_still_exactly_two_llm_calls(self):
+        llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}'])
+        answer_question(question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm)
+        self.assertEqual(len(llm.prompts_received), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
