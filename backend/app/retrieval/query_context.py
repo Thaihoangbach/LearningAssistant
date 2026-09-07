@@ -2,10 +2,10 @@
 
 Vấn đề đang sửa: lịch sử hội thoại được đưa vào prompt của generator
 (app/llm/rag.py) nhưng truy hồi lại dùng nguyên văn câu hỏi thô. Khi người
-dùng hỏi tiếp "tại sao nó lại tốt hơn?", cả dense retrieval lẫn BM25 đều đi
-tìm bằng một chuỗi gần như không có từ nội dung nào, nên lấy về đoạn không
-liên quan. Generator có lịch sử nhưng không có đoạn trích đúng — hoặc từ chối
-oan, hoặc bịa.
+dùng hỏi tiếp "tại sao nó lại tốt hơn?", cả dense retrieval lẫn full-text
+search đều đi tìm bằng một chuỗi gần như không có từ nội dung nào, nên lấy về
+đoạn không liên quan. Generator có lịch sử nhưng không có đoạn trích đúng —
+hoặc từ chối oan, hoặc bịa.
 
 Cố ý KHÔNG gọi LLM để viết lại câu hỏi cho trôi chảy: truy hồi cần TỪ NỘI
 DUNG chứ không cần câu văn đúng ngữ pháp, nên chỉ cần ghép thêm từ khoá của

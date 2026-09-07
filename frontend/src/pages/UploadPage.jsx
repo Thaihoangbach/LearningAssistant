@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ChevronRight, FileUp, Inbox, ListTree, Trash2 } from "lucide-react";
 import {
@@ -12,6 +12,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import EmptyState from "../components/ui/EmptyState";
 import StatusBadge from "../components/StatusBadge";
+import { DOCUMENT_STATUS } from "../lib/constants";
 
 function DocumentOutline({ documentId }) {
   const [topics, setTopics] = useState(null);
@@ -60,6 +61,7 @@ export default function UploadPage() {
   const [courseName, setCourseName] = useState("");
   const [file, setFile] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -70,19 +72,40 @@ export default function UploadPage() {
       setDocuments(await listDocuments());
     } catch (e) {
       setError(e.message);
+    } finally {
+      setDocumentsLoading(false);
     }
   };
 
+  const pollIntervalRef = useRef(null);
+
   useEffect(() => {
     refresh();
-    // F1 AC: trạng thái xử lý cập nhật theo thời gian thực -> poll đơn giản mỗi 2s
-    const interval = setInterval(refresh, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
   }, []);
+
+  // F1 AC: trạng thái xử lý cập nhật theo thời gian thực -> poll mỗi 2s, NHƯNG
+  // chỉ khi thật sự có tài liệu đang xử lý — trước đây poll vô điều kiện suốt
+  // thời gian ở trang này, kể cả khi mọi tài liệu đã "sẵn sàng"/"lỗi", dội
+  // GET /documents mỗi 2s không để làm gì.
+  useEffect(() => {
+    const hasProcessing = documents.some((d) => d.status === DOCUMENT_STATUS.PROCESSING);
+    if (hasProcessing && !pollIntervalRef.current) {
+      pollIntervalRef.current = setInterval(refresh, 2000);
+    } else if (!hasProcessing && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, [documents]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    // Enter trong ô "Tên môn học" submit form ngay cả khi nút Tải tài liệu
+    // đang `loading` (disabled qua prop, không chặn được implicit submit ở
+    // mọi trình duyệt) — chặn tường minh ở đây để không gửi trùng 1 file.
+    if (uploading || !file) return;
     setUploading(true);
     setError(null);
     try {
@@ -155,7 +178,9 @@ export default function UploadPage() {
           <CardTitle className="text-base font-semibold text-foreground">Danh sách tài liệu</CardTitle>
         </CardHeader>
         <CardContent>
-          {documents.length === 0 ? (
+          {documentsLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải danh sách tài liệu…</p>
+          ) : documents.length === 0 ? (
             <EmptyState icon={Inbox} title="Chưa có tài liệu nào" description="Tải lên tài liệu đầu tiên ở trên để bắt đầu." />
           ) : (
             <ul className="flex flex-col divide-y divide-border">
@@ -169,7 +194,7 @@ export default function UploadPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      {d.status === "sẵn sàng" && (
+                      {d.status === DOCUMENT_STATUS.READY && (
                         <button
                           type="button"
                           onClick={() => setOpenOutlineId(openOutlineId === d.id ? null : d.id)}

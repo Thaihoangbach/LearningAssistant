@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, Outlet, useLocation } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
+import ErrorBoundary from "./components/ErrorBoundary";
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
 import ChatPage from "./pages/ChatPage";
@@ -25,7 +26,12 @@ function Layout() {
   const title = PAGE_TITLES[location.pathname] || "EduTutor";
   return (
     <AppShell title={title}>
-      <Outlet />
+      {/* `key` đổi theo route -> đổi trang tự dựng lại ErrorBoundary (React
+          coi là component mới), nên rời khỏi trang lỗi rồi quay lại không
+          cần nút "thử lại" riêng gọi lại đúng logic đã crash. */}
+      <ErrorBoundary key={location.pathname}>
+        <Outlet />
+      </ErrorBoundary>
     </AppShell>
   );
 }

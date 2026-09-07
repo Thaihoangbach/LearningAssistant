@@ -1,16 +1,16 @@
 """API route cho kế hoạch học tập (TC15, TC16).
 
 Tính lại toàn bộ mỗi lần gọi từ Topic/MasteryScore hiện có — xem
-app/study_planner.py để biết lý do không cần bảng StudyPlan riêng.
+app/services/study_planner.py để biết lý do không cần bảng StudyPlan riêng.
 """
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.mastery import decay_unpractised
 from app.models import DocumentTopic, MasteryScore, Topic
-from app.study_planner import TopicPriority, generate_plan
+from app.services.mastery import decay_unpractised
+from app.services.study_planner import TopicPriority, generate_plan
 
 router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 
@@ -28,7 +28,7 @@ def get_study_plan(user_id: str, days: int, course_name: str | None = None, db: 
     }
 
     # Thứ tự chủ đề trong tài liệu gốc — dùng làm ràng buộc mềm khi hai chủ đề
-    # cùng mức ưu tiên (app/study_planner.py).
+    # cùng mức ưu tiên (app/services/study_planner.py).
     order_by_name = {
         dt.title: dt.order_index
         for dt in db.query(DocumentTopic).filter(DocumentTopic.user_id == user_id).all()

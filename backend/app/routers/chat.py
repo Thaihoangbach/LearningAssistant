@@ -1,8 +1,4 @@
-"""API routes cho F2 — hỏi đáp có căn cứ dựa trên tài liệu (RAG).
-
-CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install fastapi`, cộng toàn bộ
-dependency của embedder.py, faiss_store.py, gemini_client.py.
-"""
+"""API routes cho F2 — hỏi đáp có căn cứ dựa trên tài liệu (RAG)."""
 
 import json
 
@@ -10,18 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.capability_router import detect_capability
-from app.citation import _content_words, supporting_sentences
 from app.database import get_db
-from app.flashcard_service import count_due
-from app.learner_context import build_learner_context
-from app.llm.gemini_client import GeminiClient
+from app.llm.client_factory import get_llm_client
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
 from app.llm.recommendation import TopicMastery, build_recommendation
-from app.mastery import decay_unpractised
-from app.misconception import WrongChoice, find_repeated_misconceptions
-from app.study_planner import TopicPriority, generate_plan
 from app.memory.service import record_event
 from app.models import (
     Attempt,
@@ -34,9 +23,16 @@ from app.models import (
     QuizItem,
     Topic,
 )
-from app.qa_pipeline import answer_with_fallback
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
+from app.services.capability_detector import detect_capability
+from app.services.citation import _content_words, supporting_sentences
+from app.services.flashcard import count_due
+from app.services.learner_context import build_learner_context
+from app.services.mastery import decay_unpractised
+from app.services.misconception import WrongChoice, find_repeated_misconceptions
+from app.services.qa_pipeline import answer_with_fallback
+from app.services.study_planner import TopicPriority, generate_plan
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -246,9 +242,9 @@ def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
 
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
-    # Điều phối bằng bảng đăng ký năng lực (app/capability_router.py) thay vì
-    # chuỗi if/else. Không khớp năng lực nào thì rơi về hỏi đáp có căn cứ —
-    # đường DUY NHẤT bắt buộc qua generator + verifier.
+    # Điều phối bằng bảng đăng ký năng lực (app/services/capability_detector.py)
+    # thay vì chuỗi if/else. Không khớp năng lực nào thì rơi về hỏi đáp có căn
+    # cứ — đường DUY NHẤT bắt buộc qua generator + verifier.
     capability = detect_capability(req.question)
     guardrail_result = None
     qa_result = None
@@ -290,7 +286,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         else:
             result = _build_recommendation_result(db, req.user_id, req.course_name)
     else:
-        llm_client = GeminiClient()
+        llm_client = get_llm_client()
 
         # Guardrail (F2 an toàn đầu vào) — chặn prompt injection/jailbreak, yêu cầu
         # làm bài hộ, và câu hỏi ngoài phạm vi học tập TRƯỚC khi tốn lượt gọi
@@ -307,6 +303,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
 
             def _retrieve(query: str, top_k: int, mode: str):
                 return retrieve_chunks(
+                    db=db,
                     user_id=req.user_id,
                     query=query,
                     top_k=top_k,
@@ -403,6 +400,10 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         "is_grounded": result.is_grounded,
         "abstained": qa_result.abstained if qa_result else False,
         "needs_clarification": qa_result.needs_clarification if qa_result else False,
+        # Hậu quét injection trên câu trả lời cuối (app/services/qa_pipeline.py)
+        # — phát hiện, không tự chặn. `False` mặc định cho các nhánh không sinh
+        # bằng LLM (capability rule-based, guardrail chặn từ đầu vào).
+        "injection_flag": qa_result.injection_flag if qa_result else False,
         "sources": [
             {
                 "document_name": s.document_name,
@@ -412,7 +413,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                 "text": s.text,
                 # Câu nào trong đoạn trích thực sự chống đỡ câu trả lời — dùng
                 # để tô sáng trong panel, tính bằng trùng lặp từ vựng, không
-                # tốn lượt gọi LLM (app/citation.py).
+                # tốn lượt gọi LLM (app/services/citation.py).
                 "supporting_sentences": supporting_sentences(result.answer, s.text),
             }
             for s in result.sources

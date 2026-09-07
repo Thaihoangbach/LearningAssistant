@@ -1,6 +1,7 @@
-"""Kiểu dữ liệu dùng chung giữa faiss_store.py và bm25_index.py — tách riêng
-để tránh circular import (cả hai module đều cần biết cấu trúc IndexedChunk,
-và faiss_store.py cũng cần gọi vào bm25_index.py cho hybrid_search())."""
+"""Kiểu dữ liệu dùng chung cho một đoạn trích đã chunk — độc lập với nơi lưu
+trữ (app/vectorstore/pgvector_store.py) để module đó và các nơi gọi
+(app/ingestion/pipeline.py, app/retrieval/*.py) không phụ thuộc vòng lẫn
+nhau."""
 
 from dataclasses import dataclass
 

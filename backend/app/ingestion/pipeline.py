@@ -4,21 +4,24 @@
 liệu lên (xem sequence diagram F1 trong architecture-diagrams.md). Tách
 riêng khỏi router để test được logic orchestration độc lập với FastAPI.
 
-CHƯA CHẠY END-TO-END ĐƯỢC TRONG SANDBOX NÀY vì phụ thuộc embedder.py và
-faiss_store.py (cần sentence-transformers, faiss — chưa cài được). Phần
-parser + chunker bên trong ĐÃ được test riêng và pass (test_parser.py,
-test_chunker.py).
+Phần parser + chunker bên trong ĐÃ được test riêng (test_parser.py,
+test_chunker.py); phần embed+lưu vector cần Postgres+pgvector thật, xem
+tests/test_pipeline.py (dùng tests/pg_test_helpers.py).
 """
 
 import uuid
 
+from sqlalchemy.orm import Session
+
 from app.ingestion.chunker import chunk_sections
 from app.ingestion.embedder import embed_texts
 from app.ingestion.parser import parse_document
-from app.vectorstore.faiss_store import IndexedChunk, UserVectorStore
+from app.vectorstore.pgvector_store import PgVectorStore
+from app.vectorstore.types import IndexedChunk
 
 
 def process_document(
+    db: Session,
     file_path: str,
     document_id: str,
     document_name: str,
@@ -30,7 +33,11 @@ def process_document(
 
     Ném exception nếu bước nào lỗi — caller (router) chịu trách nhiệm bắt
     lỗi và cập nhật Document.status = "lỗi" kèm error_reason, đúng AC F1.
-    """
+
+    KHÔNG tự `db.commit()` — caller (app/routers/documents.py::
+    _run_processing_job) commit một lần cho cả job (parse+embed+lưu chunk +
+    lưu dàn ý + đổi status), để một lỗi giữa chừng không để lại nửa chunk đã
+    lưu mà status vẫn còn "đang xử lý"."""
     sections = parse_document(file_path)
     chunks = chunk_sections(sections, max_chars=max_chars, overlap_chars=overlap_chars)
 
@@ -51,7 +58,7 @@ def process_document(
         for c in chunks
     ]
 
-    store = UserVectorStore(user_id=user_id)
+    store = PgVectorStore(db=db, user_id=user_id)
     store.add(embeddings, indexed_chunks)
 
     return len(chunks)

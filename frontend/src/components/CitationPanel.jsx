@@ -2,7 +2,8 @@ import { ExternalLink, X } from "lucide-react";
 import { documentFileUrl } from "../api";
 
 // Backend đã tính sẵn danh sách câu chống đỡ bằng trùng lặp từ vựng
-// (app/citation.py), frontend chỉ việc tô sáng chúng trong nguyên văn đoạn.
+// (app/services/citation.py), frontend chỉ việc tô sáng chúng trong nguyên
+// văn đoạn.
 function highlight(text, supporting) {
   if (!supporting || supporting.length === 0) return text;
 

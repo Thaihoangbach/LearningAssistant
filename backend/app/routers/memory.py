@@ -4,10 +4,9 @@ Ký ức chi phối câu trả lời mà người dùng nhận được, nên ph
 được. Đây là lý do endpoint DELETE tồn tại ngay từ đầu chứ không phải tính năng
 thêm cho đủ bộ CRUD.
 
-Xoá chỉ gỡ hàng trong DB, KHÔNG gỡ vector khỏi FAISS index của memory —
-recall_events() lọc lại theo DB sau khi tra index (app/memory/service.py) nên
-một vector mồ côi không bao giờ lọt vào kết quả. Chấp nhận đánh đổi này để
-tránh phải dựng lại toàn bộ index mỗi lần xoá một mẩu ký ức.
+Embedding nằm THẲNG trên cột MemoryEvent.embedding (app/memory/service.py), nên
+xoá một hàng xoá luôn vector của nó trong cùng transaction — không còn nguy cơ
+để lại vector mồ côi ở một index riêng như bản FAISS cũ.
 """
 
 from fastapi import APIRouter, Depends, HTTPException

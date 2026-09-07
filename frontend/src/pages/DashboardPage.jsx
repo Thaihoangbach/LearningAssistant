@@ -18,8 +18,13 @@ import Badge from "../components/ui/Badge";
 import ProgressBar from "../components/ui/ProgressBar";
 import EmptyState from "../components/ui/EmptyState";
 import StatusBadge from "../components/StatusBadge";
+import { MASTERY_LEVEL } from "../lib/constants";
 
-const LEVEL_VARIANT = { "tốt": "success", "trung bình": "warning", "yếu": "destructive" };
+const LEVEL_VARIANT = {
+  [MASTERY_LEVEL.GOOD]: "success",
+  [MASTERY_LEVEL.MEDIUM]: "warning",
+  [MASTERY_LEVEL.WEAK]: "destructive",
+};
 
 function KpiCard({ icon: Icon, label, value, hint }) {
   return (

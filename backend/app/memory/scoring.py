@@ -1,8 +1,8 @@
-"""Chấm điểm truy hồi ký ức episodic — hàm thuần, KHÔNG chạm DB hay FAISS.
+"""Chấm điểm truy hồi ký ức episodic — hàm thuần, KHÔNG chạm DB.
 
-Tách riêng khỏi store.py/service.py theo đúng khuôn đã dùng ở app/mastery.py và
-app/study_planner.py: phần quyết định LOGIC phải test được mà không cần cài
-faiss hay sentence-transformers.
+Tách riêng khỏi service.py theo đúng khuôn đã dùng ở app/services/mastery.py
+và app/services/study_planner.py: phần quyết định LOGIC phải test được bằng
+input giả, không cần một kết nối DB thật.
 
 Công thức truy hồi lấy ý tưởng từ ba tín hiệu độc lập nhau: sự kiện càng gần
 đây càng đáng nhắc lại (recency), càng liên quan tới câu hỏi hiện tại càng đáng
@@ -42,8 +42,8 @@ DEFAULT_IMPORTANCE = 0.3
 @dataclass
 class ScoredEvent:
     """Một ứng viên ký ức kèm độ liên quan đã tính sẵn bởi tầng gọi (service.py
-    tính relevance bằng FAISS rồi truyền vào đây). `score` do select_top_events()
-    điền, khởi tạo 0.0."""
+    tính relevance bằng cosine_distance ngay trong câu truy vấn Postgres rồi
+    truyền vào đây). `score` do select_top_events() điền, khởi tạo 0.0."""
 
     event_id: str
     event_type: str
@@ -59,8 +59,9 @@ def importance_for(event_type: str) -> float:
 
 
 def _to_naive_utc(value: datetime) -> datetime:
-    # Cùng lý do với app/mastery.py:26-27 — created_at đọc từ SQLite là naive,
-    # còn `now` mặc định là aware; trừ trực tiếp hai kiểu này sẽ TypeError.
+    # Cùng lý do với app/services/mastery.py::_to_naive_utc — created_at đọc từ
+    # DB luôn là naive, còn `now` mặc định là aware; trừ trực tiếp hai kiểu này
+    # sẽ TypeError.
     return value.replace(tzinfo=None) if value.tzinfo is not None else value
 
 

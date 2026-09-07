@@ -1,5 +1,5 @@
 """Gợi ý chủ đề nên học tiếp theo (TC10, TC24) — hoàn toàn rule-based, KHÔNG
-gọi LLM, vì chỉ đọc lại MasteryScore đã tính sẵn (app/mastery.py, F4).
+gọi LLM, vì chỉ đọc lại MasteryScore đã tính sẵn (app/services/mastery.py, F4).
 
 TC24 ("recommendation sau quiz") không cần thêm code riêng: MasteryScore được
 cập nhật ngay khi nộp quiz (app/routers/quiz.py::submit_attempt), nên lần gọi

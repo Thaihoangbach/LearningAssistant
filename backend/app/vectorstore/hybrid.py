@@ -1,13 +1,13 @@
-"""Reciprocal Rank Fusion (RRF) — gộp nhiều danh sách xếp hạng (dense, BM25)
-thành một điểm số duy nhất, KHÔNG cần chuẩn hoá thang điểm giữa các phương
-pháp khác nhau (cosine similarity ~ [-1, 1] vs điểm BM25 không giới hạn) —
-đây là lý do chọn RRF thay vì cộng trọng số trực tiếp hai loại điểm.
+"""Reciprocal Rank Fusion (RRF) — gộp nhiều danh sách xếp hạng (dense cosine
+similarity, Postgres full-text search) thành một điểm số duy nhất, KHÔNG cần
+chuẩn hoá thang điểm giữa các phương pháp khác nhau (cosine similarity
+~ [-1, 1] vs điểm ts_rank không giới hạn) — đây là lý do chọn RRF thay vì
+cộng trọng số trực tiếp hai loại điểm.
 
 Công thức chuẩn: score(doc) = sum(1 / (k + rank)) trên mọi danh sách mà doc
 xuất hiện, k=60 là hằng số phổ biến trong literature (Cormack et al., 2009).
 
-Pure function, không phụ thuộc FAISS/BM25 thật — test bằng
-tests/test_hybrid.py.
+Pure function, không phụ thuộc DB thật — test bằng tests/test_hybrid.py.
 """
 
 from typing import Dict, List

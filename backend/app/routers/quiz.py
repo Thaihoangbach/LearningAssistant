@@ -1,25 +1,23 @@
-"""API routes cho F3 (Quiz) + trigger cập nhật mastery cho F4.
-
-CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install fastapi sqlalchemy`.
-"""
+"""API routes cho F3 (Quiz) + trigger cập nhật mastery cho F4."""
 
 import json
 import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
-from app.learner_context import build_learner_context
-from app.llm.gemini_client import GeminiClient
+from app.llm.client_factory import get_llm_client
 from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
-from app.mastery import Attempt as MasteryAttempt, compute_mastery
 from app.memory.service import record_event
 from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
-from app.vectorstore.faiss_store import UserVectorStore
+from app.services.learner_context import build_learner_context
+from app.services.mastery import Attempt as MasteryAttempt, compute_mastery
+from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
@@ -50,7 +48,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     # Lấy chunk từ TỪNG tài liệu bằng một câu hỏi tổng quát làm query truy hồi, để quiz
     # tổng hợp (TC13) không bị dồn hết câu hỏi vào một tài liệu/chương duy nhất.
     # Đơn giản hoá cho MVP: retrieval theo tên tài liệu, chưa tối ưu lấy "đại diện" nội dung.
-    store = UserVectorStore(user_id=req.user_id)
+    store = PgVectorStore(db=db, user_id=req.user_id)
     retrieved_chunks: list[RetrievedChunk] = []
     for doc in docs:
         query_vector = embed_query(doc.file_name)
@@ -74,7 +72,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     learner = build_learner_context(db, req.user_id, requested_level=req.difficulty)
     effective_difficulty = learner.effective_level
 
-    llm_client = GeminiClient()
+    llm_client = get_llm_client()
     items = generate_quiz(
         chunks=retrieved_chunks,
         llm_client=llm_client,
@@ -146,7 +144,18 @@ class SubmitAttemptRequest(BaseModel):
 
 @router.post("/submit")
 def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
-    quiz_item = db.query(QuizItem).filter(QuizItem.id == req.quiz_item_id).first()
+    # Join sang Quiz để xác nhận quiz_item_id THUỘC VỀ req.user_id — trước đây
+    # tra thẳng theo id, không lọc user_id nào (khác review() ở flashcard.py,
+    # vốn lọc đúng theo FlashcardSet.user_id cho cùng một việc). Không có kiểm
+    # tra này, một request nộp bài với quiz_item_id của người khác vẫn ghi
+    # được Attempt gắn cho req.user_id — đầu độc mastery/ký ức của tài khoản
+    # gửi request bằng câu hỏi không phải của họ.
+    quiz_item = (
+        db.query(QuizItem)
+        .join(Quiz, QuizItem.quiz_id == Quiz.id)
+        .filter(QuizItem.id == req.quiz_item_id, Quiz.user_id == req.user_id)
+        .first()
+    )
     if not quiz_item:
         raise HTTPException(404, "Không tìm thấy câu hỏi.")
 
@@ -166,7 +175,8 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
     new_score = None
     if quiz_item.topic_id:
         # Join sang QuizItem để lấy độ khó — mastery cân trọng số theo độ khó
-        # (app/mastery.py), nếu chỉ đọc Attempt thì mọi lượt bị coi ngang nhau.
+        # (app/services/mastery.py), nếu chỉ đọc Attempt thì mọi lượt bị coi
+        # ngang nhau.
         history = (
             db.query(Attempt, QuizItem)
             .join(QuizItem, Attempt.quiz_item_id == QuizItem.id)
@@ -184,15 +194,22 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
         new_score = compute_mastery(mastery_attempts)
 
         if new_score is not None:
-            record = (
-                db.query(MasteryScore)
-                .filter(MasteryScore.user_id == req.user_id, MasteryScore.topic_id == quiz_item.topic_id)
-                .first()
+            # BUG-3 (đã vá) — 2 lượt nộp bài GẦN NHAU cho cùng (user_id,
+            # topic_id) từng có thể cùng đọc "chưa có record" rồi cùng
+            # INSERT, sinh 2 dòng MasteryScore trùng. Trước vá tạm bằng khoá
+            # ứng dụng (app/concurrency.py); giờ sửa TẬN GỐC bằng
+            # UniqueConstraint(user_id, topic_id) ở models.py + upsert
+            # NGUYÊN TỬ của Postgres (INSERT ... ON CONFLICT DO UPDATE) — dù
+            # 2 transaction thật sự chạy đồng thời, DB tự đảm bảo chỉ một
+            # dòng tồn tại, không cần khoá ở tầng ứng dụng.
+            upsert = insert(MasteryScore).values(
+                user_id=req.user_id, topic_id=quiz_item.topic_id, score=new_score
             )
-            if record:
-                record.score = new_score
-            else:
-                db.add(MasteryScore(user_id=req.user_id, topic_id=quiz_item.topic_id, score=new_score))
+            upsert = upsert.on_conflict_do_update(
+                constraint="uq_mastery_scores_user_topic",
+                set_={"score": upsert.excluded.score},
+            )
+            db.execute(upsert)
             db.commit()
 
     # Ký ức episodic — làm sai một câu quiz là tín hiệu mạnh nhất về chỗ người

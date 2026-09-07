@@ -6,14 +6,15 @@ import {
   listDueFlashcards,
   reviewFlashcard,
 } from "../api";
+import { DOCUMENT_STATUS } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import EmptyState from "../components/ui/EmptyState";
 
-// Bốn mức của app/spaced_repetition.py — nhãn tiếng Việt, giữ nguyên giá trị
-// gửi lên backend.
+// Bốn mức của app/services/spaced_repetition.py — nhãn tiếng Việt, giữ
+// nguyên giá trị gửi lên backend.
 const RATINGS = [
   { value: "again", label: "Quên rồi", hint: "gặp lại ngay" },
   { value: "hard", label: "Khó", hint: "sớm gặp lại" },
@@ -30,20 +31,25 @@ export default function FlashcardsPage() {
   const [error, setError] = useState(null);
 
   const [due, setDue] = useState([]);
+  const [dueLoading, setDueLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
   const loadDue = async () => {
-    const res = await listDueFlashcards();
-    setDue(res.items);
-    setCurrent(0);
-    setFlipped(false);
+    try {
+      const res = await listDueFlashcards();
+      setDue(res.items);
+      setCurrent(0);
+      setFlipped(false);
+    } finally {
+      setDueLoading(false);
+    }
   };
 
   useEffect(() => {
     listDocuments()
-      .then((docs) => setDocuments(docs.filter((d) => d.status === "sẵn sàng")))
+      .then((docs) => setDocuments(docs.filter((d) => d.status === DOCUMENT_STATUS.READY)))
       .catch((e) => setError(e.message));
     loadDue().catch((e) => setError(e.message));
   }, []);
@@ -147,7 +153,9 @@ export default function FlashcardsPage() {
         </CardContent>
       </Card>
 
-      {!card ? (
+      {dueLoading ? (
+        <p className="text-sm text-muted-foreground">Đang tải thẻ đến hạn…</p>
+      ) : !card ? (
         <EmptyState
           icon={Layers}
           title="Không có thẻ nào đến hạn"

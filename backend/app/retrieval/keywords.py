@@ -1,8 +1,9 @@
 """Bóc từ khoá nội dung khỏi câu hỏi, phục vụ lượt truy hồi MỞ RỘNG.
 
-Lượt truy hồi thứ hai ngả về BM25 theo từ khoá thay vì ngữ nghĩa, vì điểm mù
-cố hữu của truy hồi ngữ nghĩa là thuật ngữ chính xác xuất hiện đúng một lần ở
-sâu trong tài liệu — dạng "thông tin bị chôn" mà lượt một hay bỏ sót.
+Lượt truy hồi thứ hai ngả về tìm kiếm từ khoá (Postgres full-text search)
+thay vì ngữ nghĩa, vì điểm mù cố hữu của truy hồi ngữ nghĩa là thuật ngữ
+chính xác xuất hiện đúng một lần ở sâu trong tài liệu — dạng "thông tin bị
+chôn" mà lượt một hay bỏ sót.
 
 Module thuần, không import gì nặng, để test được độc lập.
 """
@@ -22,8 +23,9 @@ _WORD_RE = re.compile(r"[\w\-]+", re.UNICODE)
 
 
 def extract_keywords(query: str) -> str:
-    """Giữ nguyên chữ hoa/thường của từ gốc — thuật ngữ như BM25, RRF, CNN mất
-    ý nghĩa nếu bị hạ về chữ thường trước khi đưa cho BM25."""
+    """Giữ nguyên chữ hoa/thường của từ gốc — thuật ngữ như RRF, CNN, LSTM mất
+    ý nghĩa nếu bị hạ về chữ thường trước khi đưa vào truy vấn full-text
+    search."""
     if not query.strip():
         return ""
 

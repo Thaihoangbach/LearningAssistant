@@ -57,7 +57,7 @@ export async function generateQuiz(documentId, topicName, numQuestions = 5, diff
       topic_name: topicName || null,
       num_questions: numQuestions,
       // Không gửi difficulty khi người dùng để "Tự động" — backend sẽ dùng
-      // trình độ đã lưu hoặc suy từ mastery (app/learner_context.py).
+      // trình độ đã lưu hoặc suy từ mastery (app/services/learner_context.py).
       ...(difficulty ? { difficulty } : {}),
     }),
   });
@@ -102,7 +102,7 @@ export async function askQuestion(question, conversationId, level) {
       question,
       conversation_id: conversationId || null,
       // Không gửi level khi người dùng để "Tự động" — backend sẽ dùng
-      // preference đã lưu hoặc suy từ mastery (app/learner_context.py).
+      // preference đã lưu hoặc suy từ mastery (app/services/learner_context.py).
       ...(level ? { level } : {}),
     }),
   });

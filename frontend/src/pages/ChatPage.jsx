@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { BookmarkPlus, BookOpen, History, Lightbulb, MessageCircle, Plus, Send } from "lucide-react";
 import {
@@ -112,9 +112,16 @@ function MessageBubble({ message, onOpenSource, onAskAgain, onSaveCard }) {
   );
 }
 
-function ConversationList({ conversations, activeId, onSelect, error }) {
+function ConversationList({ conversations, activeId, onSelect, error, loading }) {
   if (error) {
     return <p className="p-4 text-sm text-destructive">{error}</p>;
+  }
+  // Chờ lượt tải ĐẦU TIÊN xong mới quyết định hiện "Chưa có lịch sử" — trước
+  // đây `conversations` khởi tạo `[]` nên EmptyState hiện ngay lúc mount rồi
+  // mới nhảy sang danh sách thật khi fetch xong, tạo cảm giác "vừa mất hết
+  // lịch sử rồi lại có" mỗi lần vào trang.
+  if (loading) {
+    return <p className="p-4 text-sm text-muted-foreground">Đang tải…</p>;
   }
   if (conversations.length === 0) {
     return (
@@ -153,11 +160,23 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   // Không có ô chọn trình độ ở đây nữa: người học nghĩ "chỗ này khó quá", chứ
   // không nghĩ "tôi là trình độ nâng cao". Trình độ được backend suy từ kết quả
-  // làm bài (app/learner_context.py), còn muốn cố định thì đặt ở trang Hồ sơ.
+  // làm bài (app/services/learner_context.py), còn muốn cố định thì đặt ở
+  // trang Hồ sơ.
   const [openSource, setOpenSource] = useState(null);
 
   const [conversations, setConversations] = useState([]);
   const [listError, setListError] = useState(null);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+
+  // Tăng mỗi khi người dùng bắt đầu một PHIÊN hội thoại khác (bấm "Cuộc hội
+  // thoại mới" hoặc chọn hội thoại khác trong lịch sử) trong lúc một câu hỏi
+  // trước đó còn đang chờ trả lời. `askQuestion`/`getConversation` chụp lại
+  // giá trị hiện tại lúc bắt đầu gọi; khi resolve, chỉ áp kết quả nếu giá trị
+  // vẫn còn khớp — nếu không thì người dùng đã rời sang hội thoại khác, áp
+  // thẳng sẽ làm tin nhắn/conversationId của phiên CŨ lẫn vào màn hình đang
+  // xem, hoặc tệ hơn là đổi conversationId đang active sang một hội thoại
+  // người dùng không còn chọn.
+  const sessionTokenRef = useRef(0);
 
   const refreshConversations = async () => {
     try {
@@ -165,6 +184,8 @@ export default function ChatPage() {
       setListError(null);
     } catch (e) {
       setListError(e.message);
+    } finally {
+      setConversationsLoading(false);
     }
   };
 
@@ -186,9 +207,11 @@ export default function ChatPage() {
 
   const handleSelectConversation = async (id) => {
     if (id === conversationId) return;
+    const token = ++sessionTokenRef.current;
     setLoading(true);
     try {
       const convo = await getConversation(id);
+      if (sessionTokenRef.current !== token) return; // đã chuyển sang phiên khác trong lúc chờ
       setConversationId(convo.id);
       setMessages(
         convo.messages.map((m) => ({
@@ -199,15 +222,18 @@ export default function ChatPage() {
         }))
       );
     } catch (e) {
+      if (sessionTokenRef.current !== token) return;
       setMessages([{ role: "assistant", content: `Lỗi: ${e.message}`, isGrounded: false }]);
     } finally {
-      setLoading(false);
+      if (sessionTokenRef.current === token) setLoading(false);
     }
   };
 
   const handleNewConversation = () => {
+    sessionTokenRef.current += 1;
     setConversationId(null);
     setMessages([]);
+    setLoading(false);
   };
 
   const handleSaveCard = async (index, message) => {
@@ -229,15 +255,27 @@ export default function ChatPage() {
 
   const handleAskText = async (text) => {
     const trimmed = (text || "").trim();
-    if (!trimmed) return;
+    // Chặn gửi trùng: Input không tự chặn Enter khi đang loading (chỉ nút Gửi
+    // có `disabled`), nên gõ nhanh rồi Enter 2 lần trước đây tạo ra 2 lượt gọi
+    // askQuestion() chồng nhau — cả hai cùng đọc `conversationId` cũ (null cho
+    // hội thoại mới), có thể sinh 2 conversation riêng ở backend cho 1 hội
+    // thoại ở giao diện.
+    if (loading || !trimmed) return;
 
-    const isNewConversation = conversationId === null;
+    const token = ++sessionTokenRef.current;
+    const askedInConversationId = conversationId;
+    const isNewConversation = askedInConversationId === null;
     setMessages((m) => [...m, { role: "user", content: trimmed }]);
     setQuestion("");
     setLoading(true);
 
     try {
-      const result = await askQuestion(trimmed, conversationId);
+      const result = await askQuestion(trimmed, askedInConversationId);
+      // Người dùng đã bấm "Cuộc hội thoại mới" hoặc chọn hội thoại khác trong
+      // lúc chờ — câu trả lời này không còn thuộc về màn hình đang xem, áp
+      // vào sẽ làm lẫn tin nhắn giữa 2 hội thoại hoặc đổi nhầm conversationId
+      // đang active.
+      if (sessionTokenRef.current !== token) return;
       setConversationId(result.conversation_id);
       setMessages((m) => [
         ...m,
@@ -258,9 +296,10 @@ export default function ChatPage() {
         await refreshConversations();
       }
     } catch (e) {
+      if (sessionTokenRef.current !== token) return;
       setMessages((m) => [...m, { role: "assistant", content: `Lỗi: ${e.message}`, isGrounded: false }]);
     } finally {
-      setLoading(false);
+      if (sessionTokenRef.current === token) setLoading(false);
     }
   };
 
@@ -284,6 +323,7 @@ export default function ChatPage() {
             activeId={conversationId}
             onSelect={handleSelectConversation}
             error={listError}
+            loading={conversationsLoading}
           />
         </div>
       </Card>
@@ -322,6 +362,7 @@ export default function ChatPage() {
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Hỏi về nội dung tài liệu đã tải..."
             className="flex-1"
+            disabled={loading}
           />
           <Button type="submit" disabled={!question.trim()} loading={loading} size="icon" aria-label="Gửi câu hỏi">
             <Send className="h-4 w-4" aria-hidden="true" />

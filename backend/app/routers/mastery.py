@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.flashcard_service import count_due
-from app.mastery import classify_mastery, decay_unpractised
 from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
+from app.services.flashcard import count_due
+from app.services.mastery import classify_mastery, decay_unpractised
 
 router = APIRouter(prefix="/mastery", tags=["mastery"])
 

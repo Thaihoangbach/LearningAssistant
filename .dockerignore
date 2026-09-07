@@ -1,7 +1,7 @@
 .git/
 .env
 backend/data/
-backend/tests/
+tests/
 frontend/
 eval/
 docs/

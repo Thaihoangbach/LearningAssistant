@@ -1,12 +1,9 @@
-"""API routes cho Learning Profile — cá nhân hóa dài hạn (Giai đoạn 1 trong
-hướng phát triển, xem docs/thesis Chương 8).
+"""API routes cho Learning Profile — cá nhân hóa dài hạn.
 
 Gộp lại hai loại dữ liệu cá nhân hóa vốn tách riêng theo thiết kế
 (architecture-diagrams.md): `preferred_level`/`learning_goal` do người dùng
 tự khai báo (tĩnh, lưu trong bảng LEARNING_PROFILE), và `weak_topics` suy ra
 từ MasteryScore (động, không lưu trùng ở đây — luôn đọc lại mới nhất).
-
-CHƯA CHẠY ĐƯỢC TRONG SANDBOX NÀY: cần `pip install fastapi sqlalchemy`.
 """
 
 from datetime import datetime
@@ -22,9 +19,9 @@ from app.models import LearningProfile, MasteryScore, Topic
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 # Cùng ngưỡng với app/llm/recommendation.py::_WEAK_THRESHOLD và
-# app/mastery.py::classify_mastery — giữ độc lập thay vì import tên private
-# xuyên module, chấp nhận trùng hằng số nhỏ để không ràng buộc router này vào
-# nội bộ các module khác.
+# app/services/mastery.py::classify_mastery — giữ độc lập thay vì import tên
+# private xuyên module, chấp nhận trùng hằng số nhỏ để không ràng buộc router
+# này vào nội bộ các module khác.
 WEAK_MASTERY_THRESHOLD = 0.4
 GOOD_MASTERY_THRESHOLD = 0.75
 MAX_TOPICS_SHOWN = 3
@@ -49,8 +46,7 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
         "learning_goal": profile.learning_goal if profile else None,
         # weak_topics/mastered_topics suy ra từ MasteryScore NGAY tại thời điểm
         # gọi, KHÔNG lưu trong LEARNING_PROFILE — tránh hai nguồn dữ liệu lệch
-        # nhau theo thời gian. Đây là "tóm tắt chủ đề đã học/chưa học" nêu ở
-        # docs/thesis Chương 8, Giai đoạn 1.
+        # nhau theo thời gian.
         "weak_topics": weak_topics[:MAX_TOPICS_SHOWN],
         "mastered_topics": mastered_topics[:MAX_TOPICS_SHOWN],
         "updated_at": profile.updated_at.isoformat() if profile else None,
@@ -67,7 +63,7 @@ class UpdateProfileRequest(BaseModel):
 def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
     """Cập nhật thủ công qua màn hình hồ sơ (nếu có). Cùng bảng này cũng được
     /chat/ask và /quiz/generate tự động cập nhật `preferred_level` khi người
-    dùng truyền level/difficulty tường minh — xem app/learning_profile.py.
+    dùng truyền level/difficulty tường minh — xem app/services/learning_profile.py.
 
     `learning_goal` được đọc lại và đưa vào prompt sinh câu trả lời ở NHIỀU
     lượt hỏi đáp sau này (app/llm/rag.py::_build_goal_block), khác với một

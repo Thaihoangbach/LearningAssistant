@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, ListChecks, Sparkles, X } from "lucide-react";
 import { listDocuments, generateQuiz, submitAttempt } from "../api";
+import { DOCUMENT_STATUS } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -20,11 +21,17 @@ export default function QuizPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    listDocuments().then((docs) => setDocuments(docs.filter((d) => d.status === "sẵn sàng")));
+    // Thiếu .catch() trước đây khiến lỗi mạng/backend rớt thành unhandled
+    // promise rejection — dropdown tài liệu chỉ đứng im rỗng, không có gì báo
+    // cho người dùng biết vì sao (khác FlashcardsPage đã bắt lỗi đúng cách
+    // cho cùng một lượt gọi listDocuments()).
+    listDocuments()
+      .then((docs) => setDocuments(docs.filter((d) => d.status === DOCUMENT_STATUS.READY)))
+      .catch((e) => setError(e.message));
   }, []);
 
   const handleGenerate = async () => {
-    if (!documentId) return;
+    if (loading || !documentId) return;
     setLoading(true);
     setError(null);
     setResults({});

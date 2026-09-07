@@ -116,24 +116,30 @@ export default function ProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Chủ đề còn yếu</p>
-            <TopicBadges
-              names={profile?.weak_topics}
-              emptyText="Chưa có chủ đề nào bị đánh giá là yếu."
-            />
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Chủ đề đã nắm vững</p>
-            <TopicBadges
-              names={profile?.mastered_topics}
-              emptyText="Chưa có chủ đề nào đạt mức thành thạo tốt."
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Hai danh sách này tính lại từ điểm thành thạo mỗi lần mở trang, không phải do bạn tự
-            khai — nên chúng luôn phản ánh kết quả làm bài gần nhất.
-          </p>
+          {profile === null ? (
+            <p className="text-sm text-muted-foreground">Đang tải…</p>
+          ) : (
+            <>
+              <div>
+                <p className="mb-2 text-sm font-medium text-foreground">Chủ đề còn yếu</p>
+                <TopicBadges
+                  names={profile?.weak_topics}
+                  emptyText="Chưa có chủ đề nào bị đánh giá là yếu."
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-medium text-foreground">Chủ đề đã nắm vững</p>
+                <TopicBadges
+                  names={profile?.mastered_topics}
+                  emptyText="Chưa có chủ đề nào đạt mức thành thạo tốt."
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Hai danh sách này tính lại từ điểm thành thạo mỗi lần mở trang, không phải do bạn tự
+                khai — nên chúng luôn phản ánh kết quả làm bài gần nhất.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -7,15 +7,15 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.flashcard_service import due_items
 from app.ingestion.embedder import embed_query
+from app.llm.client_factory import get_llm_client
 from app.llm.flashcard_generator import generate_flashcards
-from app.llm.gemini_client import GeminiClient
 from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
 from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic
-from app.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule_next_review
-from app.vectorstore.faiss_store import UserVectorStore
+from app.services.flashcard import due_items
+from app.services.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule_next_review
+from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/flashcard", tags=["flashcard"])
 
@@ -38,7 +38,7 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
         raise HTTPException(400, "Tài liệu không tồn tại hoặc chưa sẵn sàng.")
 
     query_vector = embed_query(doc.file_name)
-    store = UserVectorStore(user_id=req.user_id)
+    store = PgVectorStore(db=db, user_id=req.user_id)
     results = store.search(query_vector, top_k=10, document_ids={doc.id})
 
     retrieved_chunks = [
@@ -55,7 +55,7 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh flashcard từ tài liệu này.")
 
-    llm_client = GeminiClient()
+    llm_client = get_llm_client()
     items = generate_flashcards(chunks=retrieved_chunks, llm_client=llm_client, num_cards=req.num_cards)
     if not items:
         raise HTTPException(500, "Không sinh được flashcard nào xác minh được từ tài liệu.")
