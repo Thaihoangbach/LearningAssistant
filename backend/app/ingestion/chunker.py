@@ -1,17 +1,29 @@
 """Chunking logic cho pipeline nạp tài liệu (F1).
 
-Nhận đầu vào là danh sách các "section" đã được parser.py trích xuất —
-mỗi section là một tuple (position_ref, text), ví dụ (position_ref="Trang 3",
-text="...") với PDF, hoặc (position_ref="Mục 2", text="...") với DOCX.
+Nhận đầu vào là danh sách "section" đã được parser.py trích xuất — mỗi section
+là tuple (position_ref, text), ví dụ ("Trang 3", "...") với PDF hoặc
+("Mục 2", "...") với DOCX.
 
-Chia mỗi section thành các Chunk không vượt quá `max_chars`, có phần chồng
-lấn `overlap_chars` giữa hai chunk liên tiếp trong cùng section để không cắt
-đứt ngữ cảnh ở ranh giới chunk. `position_ref` được giữ nguyên cho mọi chunk
-sinh ra từ cùng một section, để F2 có thể trích dẫn đúng vị trí nguồn.
+Hai nguyên tắc:
+
+1. Cắt theo RANH GIỚI CÂU, không cắt theo ký tự. Bản trước cắt thẳng
+   `text[start:start+max_chars]` nên cắt giữa câu, thậm chí giữa từ — embedding
+   của một mẩu cụt kém hơn hẳn, và panel trích dẫn hiện ra đoạn dở dang. Chỉ
+   khi một câu đơn lẻ dài hơn max_chars mới buộc phải cắt cứng.
+
+2. BẮC CẦU qua ranh giới section. Chồng lấn trong cùng một section không cứu
+   được nội dung vắt từ cuối trang này sang đầu trang sau — với PDF mỗi trang
+   là một section nên đó là ranh giới cứng, không có chunk nào chứa cả hai
+   phía. Chunk bắc cầu ghi rõ CẢ HAI vị trí trong position_ref để trích dẫn
+   vẫn trung thực, không gán bừa vào một bên.
 """
 
+import re
 from dataclasses import dataclass
 from typing import List, Tuple
+
+# Ranh giới câu: sau dấu kết câu và khoảng trắng, hoặc xuống dòng.
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
 @dataclass
@@ -21,34 +33,113 @@ class Chunk:
     chunk_index: int
 
 
+def _hard_split(text: str, max_chars: int, overlap_chars: int) -> List[str]:
+    """Cắt cứng theo ký tự — chỉ dùng cho câu đơn lẻ dài hơn max_chars.
+
+    Giữ nguyên ngữ nghĩa chồng lấn của bản cũ (bước nhảy = max_chars -
+    overlap_chars) để ghép lại vẫn khôi phục đúng văn bản gốc."""
+    step = max_chars - overlap_chars
+    pieces = []
+    start = 0
+    while start < len(text):
+        pieces.append(text[start : start + max_chars])
+        if start + max_chars >= len(text):
+            break
+        start += step
+    return pieces
+
+
+def _split_text(text: str, max_chars: int, overlap_chars: int) -> List[str]:
+    sentences = [s.strip() for s in _SENTENCE_SPLIT_RE.split(text) if s.strip()]
+    if not sentences:
+        return []
+
+    pieces: List[str] = []
+    current: List[str] = []
+    current_len = 0
+
+    def flush():
+        """Xả phần đang gom thành một chunk, rồi giữ lại vài câu cuối làm phần
+        chồng lấn cho chunk kế tiếp."""
+        nonlocal current, current_len
+        if current:
+            pieces.append(" ".join(current))
+        carried: List[str] = []
+        carried_len = 0
+        for s in reversed(current):
+            if carried_len + len(s) > overlap_chars:
+                break
+            carried.insert(0, s)
+            carried_len += len(s) + 1
+        current = carried
+        current_len = carried_len
+
+    for sentence in sentences:
+        if len(sentence) > max_chars:
+            # Câu dài hơn cả một chunk: xả phần đang gom rồi cắt cứng riêng nó.
+            if current:
+                pieces.append(" ".join(current))
+                current, current_len = [], 0
+            pieces.extend(_hard_split(sentence, max_chars, overlap_chars))
+            continue
+
+        if current_len + len(sentence) + 1 > max_chars and current:
+            flush()
+
+        current.append(sentence)
+        current_len += len(sentence) + 1
+
+    if current:
+        pieces.append(" ".join(current))
+
+    # Phần chồng lấn ở cuối có thể sinh ra một chunk trùng hệt chunk trước.
+    deduped: List[str] = []
+    for p in pieces:
+        if not deduped or p != deduped[-1]:
+            deduped.append(p)
+    return deduped
+
+
 def chunk_sections(
     sections: List[Tuple[str, str]],
     max_chars: int = 800,
     overlap_chars: int = 100,
+    bridge_sections: bool = True,
 ) -> List[Chunk]:
     if overlap_chars >= max_chars:
         raise ValueError("overlap_chars phải nhỏ hơn max_chars")
 
     chunks: List[Chunk] = []
-    step = max_chars - overlap_chars
+    prev_ref = None
+    prev_text = None
 
     for position_ref, text in sections:
         stripped = text.strip()
         if not stripped:
             continue
 
-        start = 0
-        while start < len(stripped):
-            piece = stripped[start : start + max_chars]
+        # Chunk bắc cầu — chỉ tạo khi CẢ HAI section đủ dài. Section ngắn hơn
+        # cửa sổ chồng lấn đã nằm trọn trong chunk của chính nó rồi, bắc cầu
+        # chỉ thêm nhiễu.
+        if (
+            bridge_sections
+            and prev_text is not None
+            and len(prev_text) >= overlap_chars
+            and len(stripped) >= overlap_chars
+        ):
+            bridge = f"{prev_text[-overlap_chars:].strip()} {stripped[:overlap_chars].strip()}"
             chunks.append(
                 Chunk(
-                    text=piece,
-                    position_ref=position_ref,
+                    text=bridge,
+                    position_ref=f"{prev_ref}–{position_ref}",
                     chunk_index=len(chunks),
                 )
             )
-            if start + max_chars >= len(stripped):
-                break
-            start += step
+
+        for piece in _split_text(stripped, max_chars, overlap_chars):
+            chunks.append(Chunk(text=piece, position_ref=position_ref, chunk_index=len(chunks)))
+
+        prev_ref = position_ref
+        prev_text = stripped
 
     return chunks

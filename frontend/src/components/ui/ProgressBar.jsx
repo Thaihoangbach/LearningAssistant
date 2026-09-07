@@ -1,9 +1,10 @@
 import { cn } from "../../lib/cn";
+import { MASTERY_LEVEL } from "../../lib/constants";
 
 const LEVEL_COLOR = {
-  "tốt": "bg-success",
-  "trung bình": "bg-warning",
-  "yếu": "bg-destructive",
+  [MASTERY_LEVEL.GOOD]: "bg-success",
+  [MASTERY_LEVEL.MEDIUM]: "bg-warning",
+  [MASTERY_LEVEL.WEAK]: "bg-destructive",
 };
 
 export default function ProgressBar({ value, level, className }) {

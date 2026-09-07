@@ -36,6 +36,15 @@ _DIFFICULTY_INSTRUCTIONS = {
         "hoặc đáp án. Các lựa chọn sai (distractor) nên là hiểu lầm phổ biến dễ "
         "nhận ra, không đánh đố bằng chi tiết kỹ thuật nhỏ."
     ),
+    "intermediate": (
+        "Ưu tiên câu hỏi ở mức vận dụng: người học phải hiểu khái niệm rồi áp "
+        "dụng vào một tình huống quen thuộc, chứ không chỉ nhắc lại định nghĩa "
+        "như mức cơ bản, nhưng cũng không cần phân tích đánh đổi kỹ thuật sâu "
+        "như mức nâng cao. Mỗi câu nên hỏi 'khi nào dùng', 'điều gì xảy ra "
+        "nếu', hoặc 'chọn phương án nào cho trường hợp này'. Các lựa chọn sai "
+        "phải là nhầm lẫn hợp lý giữa hai khái niệm gần nhau, không phải đáp "
+        "án hiển nhiên sai."
+    ),
     "advanced": (
         "Ưu tiên câu hỏi yêu cầu phân tích, so sánh, hoặc áp dụng kiến thức vào "
         "tình huống mới — không chỉ hỏi lại định nghĩa. Câu hỏi không được trùng "

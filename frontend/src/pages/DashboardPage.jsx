@@ -3,19 +3,28 @@ import { Link } from "react-router-dom";
 import {
   CheckCircle2,
   FileText,
+  Layers,
   ListChecks,
   MessageCircle,
+  Minus,
   Target,
+  TrendingDown,
+  TrendingUp,
   Upload,
 } from "lucide-react";
-import { getMastery, listDocuments } from "../api";
+import { getMastery, getMistakes, listDocuments } from "../api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import ProgressBar from "../components/ui/ProgressBar";
 import EmptyState from "../components/ui/EmptyState";
 import StatusBadge from "../components/StatusBadge";
+import { MASTERY_LEVEL } from "../lib/constants";
 
-const LEVEL_VARIANT = { "tốt": "success", "trung bình": "warning", "yếu": "destructive" };
+const LEVEL_VARIANT = {
+  [MASTERY_LEVEL.GOOD]: "success",
+  [MASTERY_LEVEL.MEDIUM]: "warning",
+  [MASTERY_LEVEL.WEAK]: "destructive",
+};
 
 function KpiCard({ icon: Icon, label, value, hint }) {
   return (
@@ -34,6 +43,43 @@ function KpiCard({ icon: Icon, label, value, hint }) {
   );
 }
 
+function TrendLine({ summary }) {
+  const { accuracy_recent: recent, accuracy_previous: previous, trend_window_days: days } = summary;
+
+  if (recent == null) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Chưa có lượt làm bài nào trong {days} ngày qua, nên chưa so sánh được tiến bộ.
+      </p>
+    );
+  }
+  if (previous == null) {
+    return (
+      <p className="text-sm text-foreground">
+        {days} ngày qua bạn đúng {Math.round(recent * 100)}%. Cần thêm một tuần dữ liệu nữa mới
+        so sánh được với trước đó.
+      </p>
+    );
+  }
+
+  const delta = recent - previous;
+  const Icon = delta > 0.02 ? TrendingUp : delta < -0.02 ? TrendingDown : Minus;
+  const tone =
+    delta > 0.02 ? "text-success" : delta < -0.02 ? "text-destructive" : "text-muted-foreground";
+  const verdict =
+    delta > 0.02 ? "khá hơn tuần trước" : delta < -0.02 ? "kém hơn tuần trước" : "ngang tuần trước";
+
+  return (
+    <div className={`flex items-center gap-2 text-sm ${tone}`}>
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>
+        {days} ngày qua đúng {Math.round(recent * 100)}%, {days} ngày trước đó{" "}
+        {Math.round(previous * 100)}% — {verdict}.
+      </span>
+    </div>
+  );
+}
+
 const QUICK_ACTIONS = [
   { to: "/documents", label: "Tải tài liệu", description: "Thêm slide, giáo trình mới", icon: Upload },
   { to: "/chat", label: "Hỏi đáp", description: "Hỏi về nội dung đã tải lên", icon: MessageCircle },
@@ -46,11 +92,14 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [mistakes, setMistakes] = useState([]);
+
   useEffect(() => {
-    Promise.all([getMastery(), listDocuments()])
-      .then(([masteryRes, docsRes]) => {
+    Promise.all([getMastery(), listDocuments(), getMistakes(5)])
+      .then(([masteryRes, docsRes, mistakesRes]) => {
         setMastery(masteryRes);
         setDocuments(docsRes);
+        setMistakes(mistakesRes.mistakes);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -83,9 +132,23 @@ export default function DashboardPage() {
           value={summary.avg_mastery == null ? "—" : `${Math.round(summary.avg_mastery * 100)}%`}
           hint={summary.avg_mastery == null ? "Chưa có dữ liệu" : `${topics.length} chủ đề`}
         />
-        <KpiCard icon={ListChecks} label="Quiz đã tạo" value={summary.quizzes_taken} />
+        <KpiCard
+          icon={Layers}
+          label="Thẻ đến hạn ôn"
+          value={summary.flashcards_due ?? 0}
+          hint={summary.flashcards_due > 0 ? "Ôn đúng hạn để nhớ lâu" : "Đang theo kịp lịch"}
+        />
         <KpiCard icon={CheckCircle2} label="Lượt làm bài" value={summary.attempts_total} hint={accuracyHint} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Bạn có tiến bộ không?</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TrendLine summary={summary} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {QUICK_ACTIONS.map(({ to, label, description, icon: Icon }) => (
@@ -141,6 +204,15 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <ProgressBar value={t.score} level={t.level} />
+                    {/* Người dùng sẽ bối rối khi thấy điểm tụt dù không làm gì
+                        — nói rõ điểm đo được lần cuối và đã bao lâu không ôn. */}
+                    {t.score_raw != null && t.score_raw - t.score > 0.05 && (
+                      <p className="text-xs text-muted-foreground">
+                        Đo được {Math.round(t.score_raw * 100)}% ở lần luyện gần nhất
+                        {t.days_since_practice != null && ` (${t.days_since_practice} ngày trước)`} —
+                        điểm hiện tại thấp hơn do đã lâu không ôn.
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -149,6 +221,47 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Câu bạn từng làm sai</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {mistakes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {summary.attempts_total === 0
+                  ? "Chưa làm quiz nào. Những câu trả lời sai sẽ được giữ lại ở đây để ôn lại."
+                  : "Chưa có câu nào sai. Giữ phong độ nhé."}
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {mistakes.map((m) => (
+                  <li key={m.quiz_item_id} className="border-l-2 border-destructive/40 pl-3">
+                    <p className="text-sm font-medium text-foreground">{m.question}</p>
+                    {m.selected_answer && (
+                      <p className="mt-0.5 text-xs text-destructive">
+                        Bạn đã chọn: {m.selected_answer}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-xs text-success">Đáp án đúng: {m.correct_answer}</p>
+                    {m.source_document && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Nguồn: {m.source_document} — {m.source_position}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {summary.mistakes_total > mistakes.length && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Còn {summary.mistakes_total - mistakes.length} câu sai khác.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <Card>
           <CardHeader>
             <CardTitle>Tài liệu gần đây</CardTitle>
           </CardHeader>

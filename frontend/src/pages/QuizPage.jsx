@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, ListChecks, Sparkles, X } from "lucide-react";
 import { listDocuments, generateQuiz, submitAttempt } from "../api";
+import { DOCUMENT_STATUS } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -12,22 +13,30 @@ export default function QuizPage() {
   const [documents, setDocuments] = useState([]);
   const [documentId, setDocumentId] = useState("");
   const [topicName, setTopicName] = useState("");
+  const [numQuestions, setNumQuestions] = useState(5);
+  const [difficulty, setDifficulty] = useState(""); // "" = để backend tự quyết theo hồ sơ
   const [quizItems, setQuizItems] = useState([]);
   const [results, setResults] = useState({}); // quiz_item_id -> {is_correct, correct_answer, explanation}
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    listDocuments().then((docs) => setDocuments(docs.filter((d) => d.status === "sẵn sàng")));
+    // Thiếu .catch() trước đây khiến lỗi mạng/backend rớt thành unhandled
+    // promise rejection — dropdown tài liệu chỉ đứng im rỗng, không có gì báo
+    // cho người dùng biết vì sao (khác FlashcardsPage đã bắt lỗi đúng cách
+    // cho cùng một lượt gọi listDocuments()).
+    listDocuments()
+      .then((docs) => setDocuments(docs.filter((d) => d.status === DOCUMENT_STATUS.READY)))
+      .catch((e) => setError(e.message));
   }, []);
 
   const handleGenerate = async () => {
-    if (!documentId) return;
+    if (loading || !documentId) return;
     setLoading(true);
     setError(null);
     setResults({});
     try {
-      const res = await generateQuiz(documentId, topicName, 5);
+      const res = await generateQuiz(documentId, topicName, numQuestions, difficulty);
       setQuizItems(res.items);
     } catch (e) {
       setError(e.message);
@@ -77,6 +86,37 @@ export default function QuizPage() {
                 value={topicName}
                 onChange={(e) => setTopicName(e.target.value)}
               />
+            </div>
+            <div className="w-32">
+              <label htmlFor="quiz-count" className="mb-1.5 block text-sm font-medium text-foreground">
+                Số câu
+              </label>
+              <Select
+                id="quiz-count"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(Number(e.target.value))}
+              >
+                {[3, 5, 10, 15, 20].map((n) => (
+                  <option key={n} value={n}>
+                    {n} câu
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-40">
+              <label htmlFor="quiz-difficulty" className="mb-1.5 block text-sm font-medium text-foreground">
+                Độ khó
+              </label>
+              <Select
+                id="quiz-difficulty"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+              >
+                <option value="">Tự động</option>
+                <option value="beginner">Cơ bản</option>
+                <option value="intermediate">Vận dụng</option>
+                <option value="advanced">Nâng cao</option>
+              </Select>
             </div>
             <Button onClick={handleGenerate} disabled={!documentId} loading={loading} className="shrink-0">
               <Sparkles className="h-4 w-4" aria-hidden="true" />

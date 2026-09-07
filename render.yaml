@@ -1,0 +1,33 @@
+# Blueprint cho Render (New + -> Blueprint, trỏ vào repo này). Chỉ dựng
+# backend — frontend deploy riêng trên Vercel (đã có frontend/vercel.json).
+#
+# Biến `sync: false` là SECRET: Render sẽ hỏi bạn điền trực tiếp trên
+# dashboard khi tạo service, KHÔNG đọc giá trị từ file này (nên file này an
+# toàn để commit — không chứa key thật nào).
+services:
+  - type: web
+    name: edututor-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: STORAGE_ENDPOINT_URL
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_BUCKET_NAME
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

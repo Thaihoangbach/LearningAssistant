@@ -1,19 +1,20 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import Badge from "./ui/Badge";
+import { DOCUMENT_STATUS } from "../lib/constants";
 
 const CONFIG = {
-  "sẵn sàng": { variant: "success", icon: CheckCircle2 },
-  "lỗi": { variant: "destructive", icon: XCircle },
-  "đang xử lý": { variant: "warning", icon: Loader2 },
+  [DOCUMENT_STATUS.READY]: { variant: "success", icon: CheckCircle2 },
+  [DOCUMENT_STATUS.ERROR]: { variant: "destructive", icon: XCircle },
+  [DOCUMENT_STATUS.PROCESSING]: { variant: "warning", icon: Loader2 },
 };
 
 export default function StatusBadge({ status, reason }) {
-  const { variant, icon: Icon } = CONFIG[status] || CONFIG["đang xử lý"];
+  const { variant, icon: Icon } = CONFIG[status] || CONFIG[DOCUMENT_STATUS.PROCESSING];
   return (
     <Badge variant={variant}>
-      <Icon className={`h-3.5 w-3.5 ${status === "đang xử lý" ? "animate-spin" : ""}`} aria-hidden="true" />
+      <Icon className={`h-3.5 w-3.5 ${status === DOCUMENT_STATUS.PROCESSING ? "animate-spin" : ""}`} aria-hidden="true" />
       {status}
-      {status === "lỗi" && reason ? ` — ${reason}` : ""}
+      {status === DOCUMENT_STATUS.ERROR && reason ? ` — ${reason}` : ""}
     </Badge>
   );
 }

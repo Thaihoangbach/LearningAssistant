@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
+from app.llm.client_factory import get_llm_client
 from app.llm.flashcard_generator import generate_flashcards
-from app.llm.gemini_client import GeminiClient
 from app.llm.rag import RetrievedChunk
-from app.models import Document, FlashcardItem, FlashcardSet, Topic
-from app.vectorstore.faiss_store import UserVectorStore
+from app.memory.service import record_event
+from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic
+from app.services.flashcard import due_items
+from app.services.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule_next_review
+from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/flashcard", tags=["flashcard"])
 
@@ -35,17 +38,24 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
         raise HTTPException(400, "Tài liệu không tồn tại hoặc chưa sẵn sàng.")
 
     query_vector = embed_query(doc.file_name)
-    store = UserVectorStore(user_id=req.user_id)
+    store = PgVectorStore(db=db, user_id=req.user_id)
     results = store.search(query_vector, top_k=10, document_ids={doc.id})
 
     retrieved_chunks = [
-        RetrievedChunk(text=c.text, document_name=c.document_name, position_ref=c.position_ref, score=score)
+        RetrievedChunk(
+            text=c.text,
+            document_name=c.document_name,
+            position_ref=c.position_ref,
+            score=score,
+            chunk_id=c.chunk_id,
+            document_id=c.document_id,
+        )
         for c, score in results
     ]
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh flashcard từ tài liệu này.")
 
-    llm_client = GeminiClient()
+    llm_client = get_llm_client()
     items = generate_flashcards(chunks=retrieved_chunks, llm_client=llm_client, num_cards=req.num_cards)
     if not items:
         raise HTTPException(500, "Không sinh được flashcard nào xác minh được từ tài liệu.")
@@ -87,4 +97,166 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
             }
             for i in saved
         ],
+    }
+
+
+class SaveFlashcardRequest(BaseModel):
+    user_id: str
+    front: str
+    back: str
+    source_document: str | None = None
+    source_position: str | None = None
+    topic_name: str | None = None
+
+
+# Bộ chứa các thẻ người dùng tự lưu từ câu trả lời hỏi đáp, tách khỏi các bộ
+# sinh tự động từ tài liệu.
+SAVED_SET_DOCUMENT_ID = "saved-from-answers"
+
+
+@router.post("/save")
+def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
+    """Biến một câu trả lời hỏi đáp thành thẻ ôn tập.
+
+    Đây là mắt nối giữa hỏi đáp và vòng ôn tập: trước đây một câu trả lời hay
+    chỉ trôi vào lịch sử chat rồi mất, dù nó chính là thứ người học muốn nhớ.
+    Thẻ lưu theo đường này vào thẳng hàng đợi ôn tập vì chưa có lượt ôn nào."""
+    if not req.front.strip() or not req.back.strip():
+        raise HTTPException(400, "Thẻ phải có cả mặt trước và mặt sau.")
+
+    fset = (
+        db.query(FlashcardSet)
+        .filter(
+            FlashcardSet.user_id == req.user_id,
+            FlashcardSet.document_id == SAVED_SET_DOCUMENT_ID,
+        )
+        .first()
+    )
+    if not fset:
+        fset = FlashcardSet(user_id=req.user_id, document_id=SAVED_SET_DOCUMENT_ID)
+        db.add(fset)
+        db.commit()
+
+    topic_id = None
+    if req.topic_name and req.topic_name.strip():
+        name = req.topic_name.strip()
+        topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == name).first()
+        if not topic:
+            topic = Topic(user_id=req.user_id, name=name)
+            db.add(topic)
+            db.commit()
+        topic_id = topic.id
+
+    item = FlashcardItem(
+        flashcard_set_id=fset.id,
+        topic_id=topic_id,
+        front=req.front.strip(),
+        back=req.back.strip(),
+        source_document=req.source_document,
+        source_position=req.source_position,
+    )
+    db.add(item)
+    db.commit()
+
+    return {
+        "id": item.id,
+        "front": item.front,
+        "back": item.back,
+        "source_document": item.source_document,
+        "source_position": item.source_position,
+    }
+
+
+@router.get("/due")
+def list_due(user_id: str, limit: int = 20, db: Session = Depends(get_db)):
+    """Thẻ cần ôn hôm nay — chưa từng ôn hoặc đã tới hạn."""
+    items = due_items(db, user_id, limit=limit)
+    return {
+        "items": [
+            {
+                "id": item.id,
+                "front": item.front,
+                "back": item.back,
+                "source_document": item.source_document,
+                "source_position": item.source_position,
+                "interval_days": review.interval_days if review else 0,
+                "ease": review.ease if review else DEFAULT_EASE,
+            }
+            for item, review in items
+        ]
+    }
+
+
+class ReviewFlashcardRequest(BaseModel):
+    user_id: str
+    flashcard_item_id: str
+    rating: str  # again | hard | good | easy
+
+
+# Chỉ ghi ký ức cho hai đầu mút của thang đánh giá: "quên hẳn" và "quá dễ" nói
+# lên điều gì đó về người học, còn "hard"/"good" là trạng thái bình thường của
+# việc ôn tập và ghi lại chỉ làm nhiễu ký ức.
+_MEMORY_EVENT_BY_RATING = {"again": "flashcard_again", "easy": "flashcard_easy"}
+
+
+@router.post("/review")
+def review(req: ReviewFlashcardRequest, db: Session = Depends(get_db)):
+    if req.rating not in VALID_RATINGS:
+        raise HTTPException(400, f"Mức đánh giá không hợp lệ. Chỉ nhận: {', '.join(VALID_RATINGS)}.")
+
+    item = (
+        db.query(FlashcardItem)
+        .join(FlashcardSet, FlashcardItem.flashcard_set_id == FlashcardSet.id)
+        .filter(FlashcardItem.id == req.flashcard_item_id, FlashcardSet.user_id == req.user_id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(404, "Không tìm thấy thẻ này.")
+
+    previous = (
+        db.query(FlashcardReview)
+        .filter(
+            FlashcardReview.user_id == req.user_id,
+            FlashcardReview.flashcard_item_id == item.id,
+        )
+        .order_by(FlashcardReview.reviewed_at.desc())
+        .first()
+    )
+
+    schedule = schedule_next_review(
+        rating=req.rating,
+        interval_days=previous.interval_days if previous else 0.0,
+        ease=previous.ease if previous else DEFAULT_EASE,
+    )
+
+    db.add(
+        FlashcardReview(
+            user_id=req.user_id,
+            flashcard_item_id=item.id,
+            rating=req.rating,
+            interval_days=schedule.interval_days,
+            ease=schedule.ease,
+            next_due_at=schedule.next_due_at,
+        )
+    )
+    db.commit()
+
+    event_type = _MEMORY_EVENT_BY_RATING.get(req.rating)
+    if event_type:
+        verb = "quên" if req.rating == "again" else "thấy quá dễ"
+        record_event(
+            db,
+            user_id=req.user_id,
+            event_type=event_type,
+            content=f"Khi ôn flashcard đã {verb} thẻ: \"{item.front}\"",
+            topic_id=item.topic_id,
+            source_ref=item.source_position,
+        )
+
+    return {
+        "rating": req.rating,
+        "interval_days": schedule.interval_days,
+        "ease": schedule.ease,
+        "next_due_at": schedule.next_due_at.isoformat(),
+        "back": item.back,
     }
