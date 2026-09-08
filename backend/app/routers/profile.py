@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import ensure_user, get_db
 from app.llm.guardrail import BLOCKED_MESSAGE, contains_hard_block_pattern
 from app.models import LearningProfile, MasteryScore, Topic
 
@@ -81,6 +81,7 @@ def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
             profile.learning_goal = req.learning_goal
         profile.updated_at = datetime.utcnow()
     else:
+        ensure_user(db, req.user_id)
         profile = LearningProfile(
             user_id=req.user_id,
             preferred_level=req.preferred_level,
