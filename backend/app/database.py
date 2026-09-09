@@ -14,7 +14,8 @@ danh sách CREATE INDEX thủ công. Chạy `alembic upgrade head` trước khi 
 import os
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session, sessionmaker
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
@@ -35,3 +36,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_user(db: Session, user_id: str) -> None:
+    """Tạo hàng `users` cho `user_id` nếu chưa có — KHÔNG tự commit, chỉ flush,
+    để lời gọi này nằm CHUNG transaction với write theo sau (vd tạo Document,
+    Conversation) thay vì phải commit riêng.
+
+    Cần thiết vì MỌI bảng khác đều có FK bắt buộc trỏ về `users.id` (xem
+    app/models.py), nhưng chưa có màn hình đăng ký thật (F5) — frontend luôn
+    gửi lên đúng một `user_id` cố định (`demo-user`, xem frontend/src/api.js)
+    mà không có bước nào tạo trước hàng `users` tương ứng. Trên một DB mới
+    migrate xong, hàng đó chưa tồn tại, nên INSERT đầu tiên tham chiếu tới nó
+    (Document, Conversation, LearningProfile...) sẽ luôn thất bại với
+    ForeignKeyViolation — đã tái hiện được lỗi này khi test trực tiếp backend
+    đã deploy. Import `User` ở đây (không phải đầu file) để tránh vòng lặp
+    import với models.py, vốn không cần biết gì về database.py."""
+    from app.models import User
+
+    stmt = (
+        insert(User)
+        .values(id=user_id, email=f"{user_id}@local.invalid", display_name=user_id)
+        .on_conflict_do_nothing(index_elements=["id"])
+    )
+    db.execute(stmt)
+    db.flush()

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import ensure_user, get_db
 from app.llm.client_factory import get_llm_client
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
@@ -222,9 +222,17 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         days=days,
     )
 
+    # Mỗi chủ đề một dòng (không nối bằng dấu phẩy) — một ngày có thể có rất
+    # nhiều chủ đề, gộp chung một dòng sẽ thành một khối văn bản dài khó đọc.
+    # AnswerWithCitations.jsx đã có sẵn `whitespace-pre-wrap` nên chỉ cần
+    # xuống dòng thật ở đây là frontend hiển thị đúng, không cần sửa gì thêm.
     lines = [f"Kế hoạch ôn tập trong {days} ngày, ưu tiên chủ đề yếu và chưa học:"]
     for day in plan:
-        lines.append(f"Ngày {day.day}: {', '.join(day.topics) if day.topics else 'ôn tự do'}")
+        lines.append(f"\nNgày {day.day}:")
+        if day.topics:
+            lines.extend(f"- {topic}" for topic in day.topics)
+        else:
+            lines.append("- ôn tự do")
     return AnswerResult(answer="\n".join(lines), is_grounded=True, sources=[])
 
 
@@ -267,6 +275,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
 
     conversation_id = req.conversation_id
     if not conversation_id:
+        ensure_user(db, req.user_id)
         convo = Conversation(user_id=req.user_id, course_name=req.course_name)
         db.add(convo)
         db.commit()

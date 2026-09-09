@@ -18,7 +18,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app import storage
-from app.database import SessionLocal, get_db
+from app.database import SessionLocal, ensure_user, get_db
 from app.ingestion.outline import extract_outline
 from app.ingestion.pipeline import process_document
 from app.models import Document, DocumentTopic, Topic
@@ -87,7 +87,7 @@ def _run_processing_job(document_id: str, storage_key: str, ext: str, document_n
         try:
             # pypdf/python-docx (app/ingestion/parser.py, outline.py) cần một
             # file THẬT trên đĩa — tải về file TẠM của riêng lượt xử lý này,
-            # không phải bản lưu trữ lâu dài (đó là R2, key=storage_key).
+            # không phải bản lưu trữ lâu dài (đó là B2, key=storage_key).
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
                 tmp.write(storage.read_file(storage_key))
                 file_path = tmp.name
@@ -176,6 +176,7 @@ async def upload_document(
         # gỡ đi, tránh chủ đề trùng lặp giữa các phiên bản.
         cleanup_document_topics(db, document_id=previous_latest.id, user_id=user_id)
 
+    ensure_user(db, user_id)
     doc = Document(
         id=document_id,
         user_id=user_id,
@@ -257,7 +258,7 @@ def get_document_file(document_id: str, user_id: str, db: Session = Depends(get_
     ext = os.path.splitext(doc.file_name)[1].lower()
     try:
         content = storage.read_file(_storage_key(document_id, ext))
-    except Exception as exc:  # noqa: BLE001 — R2 trả lỗi khi object không tồn tại
+    except Exception as exc:  # noqa: BLE001 — B2 trả lỗi khi object không tồn tại
         raise HTTPException(404, "File gốc của tài liệu này không còn trên kho lưu trữ.") from exc
 
     return Response(
@@ -287,17 +288,17 @@ def delete_document(document_id: str, user_id: str, db: Session = Depends(get_db
     db.delete(doc)
     db.commit()
 
-    # R2 KHÔNG transactional CHUNG với Postgres — xoá SAU khi DB đã commit
+    # B2 KHÔNG transactional CHUNG với Postgres — xoá SAU khi DB đã commit
     # thành công, không phải trước: nếu db.commit() ở trên thất bại, file gốc
-    # trên R2 vẫn còn (đúng, vì Document/chunk cũng chưa thật sự bị xoá). Lỗi
-    # xoá R2 chỉ log, không raise — với người dùng, tài liệu ĐÃ xoá xong
-    # (không còn trong DB/truy hồi được nữa); một object rác còn sót trên R2
+    # trên B2 vẫn còn (đúng, vì Document/chunk cũng chưa thật sự bị xoá). Lỗi
+    # xoá B2 chỉ log, không raise — với người dùng, tài liệu ĐÃ xoá xong
+    # (không còn trong DB/truy hồi được nữa); một object rác còn sót trên B2
     # ít hại hơn nhiều so với việc báo "xoá thất bại" cho một thao tác đã
     # thành công ở phần quan trọng.
     ext = os.path.splitext(doc.file_name)[1].lower()
     try:
         storage.delete_file(_storage_key(document_id, ext))
     except Exception:  # noqa: BLE001
-        logger.exception("Xoá file gốc trên R2 thất bại cho document %s", document_id)
+        logger.exception("Xoá file gốc trên B2 thất bại cho document %s", document_id)
 
     return {"status": "deleted", "document_id": document_id}
