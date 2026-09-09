@@ -222,9 +222,17 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         days=days,
     )
 
+    # Mỗi chủ đề một dòng (không nối bằng dấu phẩy) — một ngày có thể có rất
+    # nhiều chủ đề, gộp chung một dòng sẽ thành một khối văn bản dài khó đọc.
+    # AnswerWithCitations.jsx đã có sẵn `whitespace-pre-wrap` nên chỉ cần
+    # xuống dòng thật ở đây là frontend hiển thị đúng, không cần sửa gì thêm.
     lines = [f"Kế hoạch ôn tập trong {days} ngày, ưu tiên chủ đề yếu và chưa học:"]
     for day in plan:
-        lines.append(f"Ngày {day.day}: {', '.join(day.topics) if day.topics else 'ôn tự do'}")
+        lines.append(f"\nNgày {day.day}:")
+        if day.topics:
+            lines.extend(f"- {topic}" for topic in day.topics)
+        else:
+            lines.append("- ôn tự do")
     return AnswerResult(answer="\n".join(lines), is_grounded=True, sources=[])
 
 
