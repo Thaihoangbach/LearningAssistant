@@ -40,7 +40,10 @@ _MAX_TEXTS_PER_CALL = 96
 def _get_client():
     import cohere
 
-    api_key = os.environ.get("COHERE_API_KEY")
+    # .strip(): key dán vào biến môi trường (Render...) dễ dính thêm khoảng
+    # trắng/newline ở đầu/cuối — header "Bearer <key>\n" chứa newline bị
+    # httpx từ chối thẳng với LocalProtocolError, sập MỌI request cần embed.
+    api_key = (os.environ.get("COHERE_API_KEY") or "").strip()
     if not api_key:
         raise ValueError(
             "Thiếu COHERE_API_KEY. Lấy key tại https://dashboard.cohere.com/api-keys "
