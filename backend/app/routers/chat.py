@@ -25,7 +25,7 @@ from app.models import (
 )
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
-from app.ingestion.outline import is_plausible_topic
+from app.ingestion.outline import filter_topic_titles
 from app.services.capability_detector import detect_capability
 from app.services.citation import _content_words, supporting_sentences
 from app.services.flashcard import count_due
@@ -204,11 +204,14 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         )
 
     # Lọc chất lượng TẠI ĐIỂM TIÊU THỤ (app/ingestion/outline.py::
-    # is_plausible_topic) — không tin thẳng Topic.name, vì bảng này có thể còn
-    # chứa dữ liệu rút từ TRƯỚC khi heuristic trích xuất outline được siết
-    # chặt (BUG-001). Nếu không còn chủ đề nào hợp lệ, thà từ chối rõ ràng còn
-    # hơn trả về một "kế hoạch" ghép từ nội dung nhiễu.
-    topics = [t for t in topics if is_plausible_topic(t.name)]
+    # filter_topic_titles) — không tin thẳng Topic.name, vì bảng này có thể
+    # còn chứa dữ liệu rút từ TRƯỚC khi heuristic trích xuất outline được siết
+    # chặt (BUG-001). Dùng filter_topic_titles (không chỉ is_plausible_topic
+    # từng dòng) vì loại nhiễu chính trong dữ liệu thật là HEADER/FOOTER LẶP
+    # LẠI theo từng trang scan — mỗi biến thể lỗi OCR khác nhau đủ để không
+    # dòng nào tự nó trông bất thường, chỉ lộ ra khi so cả danh sách với nhau.
+    plausible_names = set(filter_topic_titles([t.name for t in topics]))
+    topics = [t for t in topics if t.name in plausible_names]
     if not topics:
         return AnswerResult(
             answer="Không đủ dữ liệu để tạo kế hoạch học tập đáng tin cậy từ tài liệu hiện tại.",
@@ -360,8 +363,10 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                 # Cùng lớp lọc chất lượng với kế hoạch ôn tập
                 # (_build_study_plan_result ở trên, BUG-006) — DocumentTopic
                 # cũng có thể còn dòng nhiễu rút từ trước khi heuristic outline
-                # được siết chặt (vd OCR vỡ "BY A. M. TUBING").
-                rows = [r for r in rows if is_plausible_topic(r.title)]
+                # được siết chặt (vd OCR vỡ "BY A. M. TUBING", hoặc header/
+                # footer scan lặp lại theo trang).
+                plausible_titles = set(filter_topic_titles([r.title for r in rows]))
+                rows = [r for r in rows if r.title in plausible_titles]
                 if not rows:
                     return []
 

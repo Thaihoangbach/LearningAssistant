@@ -134,6 +134,14 @@ def is_plausible_topic(text: str) -> bool:
         return False
     if _TRAILING_STOPWORD_RE.search(stripped):
         return False
+    if "," in stripped or ";" in stripped:
+        # Một heading/tên chủ đề thật (kể cả mục đánh số như "6.1 Machine
+        # Translation") hầu như không bao giờ chứa dấu phẩy/chấm phẩy GIỮA
+        # câu — đó là dấu hiệu của một CÂU VĂN đầy đủ, không phải tiêu đề.
+        # Tín hiệu này bắt được phần lớn các bước chứng minh/danh sách bị đánh
+        # số nhầm thành heading (vd "3. Từ đỉnh A, vẽ một đường thẳng song
+        # song với hai") mà không cần biết trước nội dung tài liệu nào.
+        return False
 
     non_space = sum(1 for ch in stripped if not ch.isspace())
     if non_space == 0:
@@ -143,6 +151,55 @@ def is_plausible_topic(text: str) -> bool:
         return False
 
     return True
+
+
+_REPEAT_SIMILARITY_THRESHOLD = 0.7
+_REPEAT_MIN_OCCURRENCES = 3
+
+
+def _normalize_for_repetition(title: str) -> str:
+    """Giữ lại CHỈ chữ cái (bỏ số, dấu câu, khoảng trắng), viết thường — để so
+    khớp gần đúng bỏ qua đúng loại nhiễu OCR hay gặp nhất: số trang chạy theo
+    header/footer và lẫn lộn chữ số/chữ cái (vd "INTELLIGENCE" -> "INTK1X1OENCK")."""
+    return re.sub(r"[^a-zA-ZÀ-ỹ]", "", title).lower()
+
+
+def _drop_repeated_near_duplicates(titles: List[str]) -> List[str]:
+    """Loại các dòng LẶP LẠI GẦN GIỐNG NHAU nhiều lần trong CÙNG một danh sách
+    — dấu hiệu chung của header/footer chạy lặp trên mỗi trang một tài liệu
+    scan (vd "COMPUTING MACHINERY AND INTELLIGENCE 435" lặp dưới hàng chục
+    biến thể lỗi OCR khác nhau mỗi trang). Đây là tín hiệu Ở CẤP DANH SÁCH,
+    không phát hiện được bằng cách nhìn một dòng riêng lẻ — mỗi biến thể lỗi
+    OCR khác nhau đủ để không dòng nào TỰ NÓ trông bất thường, nhưng việc CÙNG
+    một hình dạng xuất hiện lặp đi lặp lại mới là bằng chứng đó không phải
+    một chủ đề học được.
+
+    Không hardcode chuỗi cụ thể nào — so khớp gần đúng bằng
+    `difflib.SequenceMatcher` trên phiên bản đã chuẩn hoá (chỉ giữ chữ cái)."""
+    import difflib
+
+    normalized = [_normalize_for_repetition(t) for t in titles]
+    keep = [True] * len(titles)
+    for i, ni in enumerate(normalized):
+        if not ni:
+            continue
+        close = sum(
+            1
+            for j, nj in enumerate(normalized)
+            if j != i and nj and difflib.SequenceMatcher(None, ni, nj).ratio() >= _REPEAT_SIMILARITY_THRESHOLD
+        )
+        if close >= _REPEAT_MIN_OCCURRENCES - 1:
+            keep[i] = False
+    return [t for t, k in zip(titles, keep) if k]
+
+
+def filter_topic_titles(titles: List[str]) -> List[str]:
+    """Bộ lọc chất lượng ĐẦY ĐỦ dùng ở mọi nơi tiêu thụ danh sách tên chủ đề
+    (kế hoạch ôn tập, gợi ý chủ đề) — kết hợp lọc từng dòng (`is_plausible_topic`)
+    VÀ lọc lặp lại ở cấp danh sách (`_drop_repeated_near_duplicates`). Nhận
+    một danh sách chuỗi thô, trả về danh sách đã lọc (thứ tự giữ nguyên)."""
+    plausible = [t for t in titles if is_plausible_topic(t)]
+    return _drop_repeated_near_duplicates(plausible)
 
 
 def _is_title_case_or_caps(stripped: str) -> bool:
@@ -224,10 +281,15 @@ def _looks_like_heading(line: str, following: str) -> bool:
         return False
     if _CITATION_LIKE_RE.search(stripped):
         return False
-    if _NUMBERED_SECTION_RE.match(stripped):
-        return True
+    # Kết thúc bằng dấu câu hết-câu (. ! ? : ; ,) áp dụng cho MỌI ứng viên, kể
+    # cả mục đánh số — trước đây mục đánh số return True ngay, bỏ qua kiểm
+    # tra này, nên một câu văn bản thường được đánh số kiểu danh sách/bước
+    # chứng minh ("3. Từ đỉnh A, vẽ một đường thẳng...") vẫn lọt qua y hệt một
+    # heading đánh số thật ("6.1 Machine Translation").
     if _SENTENCE_END_RE.search(stripped):
         return False
+    if _NUMBERED_SECTION_RE.match(stripped):
+        return True
     return _is_title_case_or_caps(stripped)
 
 
