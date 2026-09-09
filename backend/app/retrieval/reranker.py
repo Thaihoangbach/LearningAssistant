@@ -46,7 +46,10 @@ class RerankerClient(Protocol):
 def _get_cohere_client():
     import cohere
 
-    api_key = os.environ.get("COHERE_API_KEY")
+    # .strip(): cùng lý do ở app/ingestion/embedder.py::_get_client() — key
+    # dính newline/khoảng trắng thừa làm header "Bearer ..." bị httpx từ
+    # chối (LocalProtocolError) thay vì lỗi xác thực bình thường.
+    api_key = (os.environ.get("COHERE_API_KEY") or "").strip()
     if not api_key:
         raise ValueError(
             "Thiếu COHERE_API_KEY. Lấy key tại https://dashboard.cohere.com/api-keys "
