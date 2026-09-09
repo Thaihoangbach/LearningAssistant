@@ -180,6 +180,42 @@ def _strip_invalid_citations(answer: str, num_chunks: int) -> tuple:
     return cleaned, valid_order
 
 
+def _renumber_citations_to_final_sources(
+    answer: str, cited_indices: List[int], relevant: List[RetrievedChunk]
+) -> tuple:
+    """Đánh lại số [n] trong câu trả lời để khớp ĐÚNG vị trí trong mảng
+    `sources` CUỐI CÙNG trả về cho client (BUG-002).
+
+    `cited_indices` là chỉ số 1-based tính theo `relevant` (danh sách đoạn
+    trích TRƯỚC khi gộp trùng) — nhưng `_dedupe_sources()` có thể gộp nhiều
+    đoạn cùng (document_name, position_ref) thành MỘT phần tử. Nếu trả thẳng
+    `cleaned_answer` (còn nguyên số theo `relevant`) kèm mảng đã gộp, marker
+    trong văn bản có thể trỏ ra ngoài mảng sources thật sự trả về — đúng như
+    QA quan sát: câu trả lời có [4] trong khi sources chỉ có 3 phần tử, hoặc
+    [6] trong khi chỉ có 1 nguồn. Đây là NGUYÊN NHÂN GỐC, không phải do
+    frontend hiển thị sai hay LLM tự bịa số (đã bị `_strip_invalid_citations`
+    chặn trước đó — mọi số trong `cited_indices` chắc chắn hợp lệ trong phạm
+    vi `relevant`)."""
+    cited_chunks = [relevant[i - 1] for i in cited_indices]
+    deduped = _dedupe_sources(cited_chunks)
+
+    new_index_by_key = {}
+    for new_idx, c in enumerate(deduped, start=1):
+        new_index_by_key.setdefault((c.document_name, c.position_ref), new_idx)
+
+    old_to_new = {
+        old_idx: new_index_by_key[(relevant[old_idx - 1].document_name, relevant[old_idx - 1].position_ref)]
+        for old_idx in cited_indices
+    }
+
+    def _renumber(match):
+        new_idx = old_to_new.get(int(match.group(1)))
+        return f"[{new_idx}]" if new_idx else match.group(0)
+
+    renumbered = _CITATION_MARKER_RE.sub(_renumber, answer)
+    return renumbered, deduped
+
+
 def _wrap_chunk_text(text: str) -> str:
     """Bọc nội dung đoạn trích trong thẻ đánh dấu DỮ LIỆU, không phải chỉ dẫn.
 
@@ -522,5 +558,5 @@ def answer_question(
         # truy được nguồn.
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
-    cited_chunks = [relevant[i - 1] for i in cited_indices]
-    return AnswerResult(answer=cleaned_answer, is_grounded=True, sources=_dedupe_sources(cited_chunks))
+    final_answer, sources = _renumber_citations_to_final_sources(cleaned_answer, cited_indices, relevant)
+    return AnswerResult(answer=final_answer, is_grounded=True, sources=sources)

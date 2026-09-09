@@ -113,5 +113,31 @@ class TestOutlineOrdering(unittest.TestCase):
         self.assertEqual(plan[0].topics, ["Chưa học"])
 
 
+class TestMaxPlanTopicsSafetyCap(unittest.TestCase):
+    """BUG-001 — lưới an toàn cuối cùng: dù topic đã qua lọc chất lượng ở tầng
+    gọi (app/ingestion/outline.py::is_plausible_topic), một tài khoản nhiều
+    tài liệu vẫn có thể dồn hàng trăm Topic hợp lệ về một "kế hoạch" quá dài."""
+
+    def test_plan_never_exceeds_max_plan_topics(self):
+        from app.services.study_planner import _MAX_PLAN_TOPICS
+
+        topics = [
+            TopicPriority(topic_name=f"Chủ đề {i}", score=None, order_index=i)
+            for i in range(_MAX_PLAN_TOPICS + 50)
+        ]
+        plan = generate_plan(topics, days=3)
+        total = sum(len(d.topics) for d in plan)
+        self.assertLessEqual(total, _MAX_PLAN_TOPICS)
+
+    def test_below_cap_keeps_all_topics(self):
+        from app.services.study_planner import _MAX_PLAN_TOPICS
+
+        topics = [TopicPriority(topic_name=f"T{i}", score=None) for i in range(5)]
+        self.assertLess(5, _MAX_PLAN_TOPICS)
+        plan = generate_plan(topics, days=2)
+        total = sum(len(d.topics) for d in plan)
+        self.assertEqual(total, 5)
+
+
 if __name__ == "__main__":
     unittest.main()

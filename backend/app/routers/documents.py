@@ -8,6 +8,7 @@ tải file từ B2 về một file TẠM, xử lý xong thì xoá file tạm đ�
 bản lưu trữ lâu dài).
 """
 
+import hashlib
 import logging
 import os
 import tempfile
@@ -20,6 +21,7 @@ from sqlalchemy.orm import Session
 from app import storage
 from app.database import SessionLocal, ensure_user, get_db
 from app.ingestion.outline import extract_outline
+from app.ingestion.parser import UnsupportedFileType
 from app.ingestion.pipeline import process_document
 from app.models import Document, DocumentTopic, Topic
 from app.services.document_cleanup import cleanup_document_topics
@@ -32,9 +34,46 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 MAX_FILE_MB = 30
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 
+# BUG-009: phân loại nguyên nhân xử lý thất bại thay vì một câu chung chung
+# cho mọi trường hợp — nội dung message vẫn AN TOÀN (không lộ stack
+# trace/đường dẫn/tên thư viện), chỉ khác nhau ở NGUYÊN NHÂN.
+_MSG_INVALID_DOCUMENT = (
+    "Không đọc được nội dung từ file này — có thể file bị hỏng, là bản scan "
+    "ảnh không có lớp văn bản, hoặc rỗng. Thử một file PDF/DOCX khác."
+)
+_MSG_RESOURCE_LIMIT = (
+    "Hệ thống đang quá tải khi xử lý tài liệu này (thường do tài liệu dài/nhiều "
+    "trang). Vui lòng thử tải lại sau ít phút."
+)
+_MSG_PROCESSING_FAILED = "Không xử lý được tài liệu này. Thử tải lại, hoặc kiểm tra định dạng file."
+
+
+def _categorize_processing_error(exc: Exception) -> str:
+    """BUG-004/BUG-009 — trả về error_reason AN TOÀN, phân loại theo nguyên
+    nhân thật sự thay vì luôn dùng một câu chung chung. `_run_processing_job`
+    đã log đầy đủ traceback ở server; hàm này chỉ quyết định câu hiển thị cho
+    client."""
+    import cohere
+
+    if isinstance(exc, cohere.TooManyRequestsError):
+        # Cohere trial key giới hạn token/phút — tài liệu dài (nhiều batch
+        # embed liên tiếp) dễ chạm trần dù đã retry có backoff
+        # (app/ingestion/embedder.py::_MAX_RATE_LIMIT_RETRIES).
+        return _MSG_RESOURCE_LIMIT
+    if isinstance(exc, (ValueError, UnsupportedFileType)):
+        # process_document ném ValueError khi không trích được chunk nào
+        # (app/ingestion/pipeline.py) — file mở được nhưng không có nội dung
+        # text hữu ích (scan ảnh, file rỗng/hỏng cấu trúc bên trong).
+        return _MSG_INVALID_DOCUMENT
+    return _MSG_PROCESSING_FAILED
+
 
 def _storage_key(document_id: str, ext: str) -> str:
     return f"{document_id}{ext}"
+
+
+def _hash_bytes(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
 
 
 def _save_outline(db: Session, document_id: str, user_id: str, file_path: str, course_name: str | None):
@@ -108,11 +147,13 @@ def _run_processing_job(document_id: str, storage_key: str, ext: str, document_n
             # Không lưu str(e) NGUYÊN VĂN vào error_reason — trường này được
             # GET /documents trả thẳng cho client, có thể lộ đường dẫn cục bộ/
             # chi tiết thư viện. Ghi log đầy đủ ở server, chỉ lưu thông báo
-            # chung cho client (cùng nguyên tắc đã áp dụng cho
-            # app/main.py::unhandled_exception_handler).
+            # PHÂN LOẠI theo nguyên nhân cho client (BUG-004/BUG-009) — vẫn
+            # cùng nguyên tắc an toàn đã áp dụng cho
+            # app/main.py::unhandled_exception_handler, chỉ khác câu chữ theo
+            # loại lỗi thay vì luôn một câu chung chung.
             logger.exception("Xử lý tài liệu %s thất bại", document_id)
             doc.status = "lỗi"
-            doc.error_reason = "Không xử lý được tài liệu này. Thử tải lại, hoặc kiểm tra định dạng file."
+            doc.error_reason = _categorize_processing_error(e)
             db.commit()
     finally:
         db.close()
@@ -154,20 +195,25 @@ async def upload_document(
 
     storage.save_file(storage_key, bytes(buffer))
 
-    # Versioning (TC20) — upload lại cùng file_name+course_name thì đánh dấu bản
-    # cũ is_latest=False thay vì ghi đè/xoá, để hỏi đáp/quiz chỉ dùng bản mới
-    # nhất (xem app/routers/chat.py, app/routers/quiz.py) nhưng vẫn giữ lịch sử.
+    # BUG-005: nhận diện bản trùng bằng NỘI DUNG THẬT (content_hash), không
+    # phải file_name — hai file khác nhau có thể trùng tên (không phải bản
+    # trùng), và cùng nội dung có thể đổi tên giữa hai lần tải (vẫn phải coi
+    # là bản trùng). Versioning (TC20): bản cũ được đánh dấu is_latest=False
+    # thay vì ghi đè/xoá, để hỏi đáp/quiz chỉ dùng bản mới nhất (xem
+    # app/routers/chat.py, app/routers/quiz.py) nhưng vẫn giữ lịch sử.
+    content_hash = _hash_bytes(bytes(buffer))
     previous_latest = (
         db.query(Document)
         .filter(
             Document.user_id == user_id,
-            Document.file_name == file.filename,
             Document.course_name == course_name,
+            Document.content_hash == content_hash,
             Document.is_latest == True,
         )
         .first()
     )
     version = 1
+    is_duplicate = previous_latest is not None
     if previous_latest:
         previous_latest.is_latest = False
         version = previous_latest.version + 1
@@ -185,6 +231,7 @@ async def upload_document(
         status="đang xử lý",
         version=version,
         is_latest=True,
+        content_hash=content_hash,
     )
     db.add(doc)
     db.commit()
@@ -193,12 +240,25 @@ async def upload_document(
         _run_processing_job, document_id, storage_key, ext, file.filename, user_id
     )
 
-    return {"document_id": document_id, "status": "đang xử lý"}
+    return {
+        "document_id": document_id,
+        "status": "đang xử lý",
+        "version": version,
+        "is_duplicate": is_duplicate,
+    }
 
 
 @router.get("")
-def list_documents(user_id: str, db: Session = Depends(get_db)):
-    docs = db.query(Document).filter(Document.user_id == user_id).all()
+def list_documents(user_id: str, include_old_versions: bool = False, db: Session = Depends(get_db)):
+    """BUG-005: mặc định chỉ trả bản MỚI NHẤT của mỗi tài liệu — trước đây trả
+    NGUYÊN mọi Document (kể cả bản cũ đã bị versioning thay thế), nên upload
+    lại cùng một file nhiều lần hiện ra thành nhiều dòng rời rạc trông như
+    trùng lặp không kiểm soát, dù backend đã có version/is_latest. `version`
+    vẫn trả kèm mỗi dòng để UI hiển thị "phiên bản N" khi > 1."""
+    query = db.query(Document).filter(Document.user_id == user_id)
+    if not include_old_versions:
+        query = query.filter(Document.is_latest == True)  # noqa: E712
+    docs = query.all()
     return [
         {
             "id": d.id,

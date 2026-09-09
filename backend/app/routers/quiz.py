@@ -122,8 +122,15 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     db.commit()
 
     quiz_items = db.query(QuizItem).filter(QuizItem.quiz_id == quiz.id).all()
+    # BUG-003: trước đây trả 200 kèm items ngắn hơn num_questions yêu cầu mà
+    # không báo gì — người dùng tưởng đã tạo đủ. `generated`/`requested`/
+    # `partial` cho frontend biết CHÍNH XÁC có thiếu hay không, thay vì suy
+    # đoán từ độ dài mảng items (dễ quên kiểm tra).
     return {
         "quiz_id": quiz.id,
+        "requested": req.num_questions,
+        "generated": len(quiz_items),
+        "partial": len(quiz_items) < req.num_questions,
         "items": [
             {
                 "id": qi.id,

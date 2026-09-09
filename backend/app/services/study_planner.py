@@ -37,6 +37,13 @@ _BAND_REST = 1
 _WEAK_THRESHOLD = 0.4
 _NO_ORDER = 10**6
 
+# Lưới an toàn cuối cùng cho BUG-001: dù topic đã qua lọc chất lượng
+# (app/ingestion/outline.py::is_plausible_topic) ở tầng gọi, một tài khoản có
+# nhiều tài liệu vẫn có thể dồn về hàng trăm Topic hợp lệ — chia hết cho vài
+# ngày sẽ ra một "kế hoạch" dài không dùng được. Giữ lại nhóm ưu tiên cao nhất
+# (yếu/chưa học trước, theo đúng thứ tự đã sắp) thay vì cắt ngẫu nhiên.
+_MAX_PLAN_TOPICS = 60
+
 
 def _priority_band(score: Optional[float]) -> int:
     if score is None or score < _WEAK_THRESHOLD:
@@ -61,7 +68,7 @@ def generate_plan(topics: List[TopicPriority], days: int) -> List[DayPlan]:
             t.order_index if t.order_index is not None else _NO_ORDER,
             t.score if t.score is not None else 0.0,
         ),
-    )
+    )[:_MAX_PLAN_TOPICS]
 
     plan = [DayPlan(day=d, topics=[]) for d in range(1, days + 1)]
     for i, topic in enumerate(ordered):

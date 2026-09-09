@@ -1,6 +1,7 @@
 """API routes cho Flashcard (TC14) — tái sử dụng pattern app/routers/quiz.py."""
 
 import os
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
+from app.ingestion.outline import is_bibliography_like_chunk
 from app.llm.client_factory import get_llm_client
 from app.llm.flashcard_generator import generate_flashcards
 from app.llm.rag import RetrievedChunk
@@ -18,6 +20,14 @@ from app.services.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule
 from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/flashcard", tags=["flashcard"])
+
+
+def _prioritize_core_content(chunks: List[RetrievedChunk]) -> List[RetrievedChunk]:
+    """BUG-007 — đẩy các đoạn giống khu vực tham khảo/trích dẫn xuống CUỐI
+    danh sách (KHÔNG xoá) trước khi đưa vào generator, để flashcard ưu tiên
+    dạy nội dung cốt lõi. Tách thành hàm thuần để test được không cần Postgres
+    thật (xem tests/test_flashcard.py)."""
+    return sorted(chunks, key=lambda c: is_bibliography_like_chunk(c.text))
 
 
 class GenerateFlashcardRequest(BaseModel):
@@ -39,7 +49,11 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
 
     query_vector = embed_query(doc.file_name)
     store = PgVectorStore(db=db, user_id=req.user_id)
-    results = store.search(query_vector, top_k=10, document_ids={doc.id})
+    # BUG-007: top_k nới rộng hơn app/routers/quiz.py (10 -> 15) để sau khi đẩy
+    # các đoạn giống mục tham khảo xuống cuối, vẫn còn đủ đoạn nội dung cốt
+    # lõi cho generator chọn — quiz không đổi vì QA không quan sát thấy vấn đề
+    # tương tự ở đó.
+    results = store.search(query_vector, top_k=15, document_ids={doc.id})
 
     retrieved_chunks = [
         RetrievedChunk(
@@ -54,6 +68,11 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
     ]
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh flashcard từ tài liệu này.")
+
+    # Hạ ưu tiên (KHÔNG xoá) các đoạn giống khu vực tham khảo/trích dẫn —
+    # flashcard nên dạy nội dung cốt lõi trước (BUG-007). sort() ổn định nên
+    # thứ tự tương đối trong từng nhóm (theo điểm truy hồi) được giữ nguyên.
+    retrieved_chunks = _prioritize_core_content(retrieved_chunks)
 
     llm_client = get_llm_client()
     items = generate_flashcards(chunks=retrieved_chunks, llm_client=llm_client, num_cards=req.num_cards)

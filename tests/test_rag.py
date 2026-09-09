@@ -5,11 +5,13 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from app.llm.rag import (
+    NEEDS_CLARIFICATION_MESSAGE,
     NO_CONTEXT_MESSAGE,
     NOT_GROUNDED_MESSAGE,
     ConversationTurn,
     RetrievedChunk,
     _build_memory_block,
+    _renumber_citations_to_final_sources,
     _strip_invalid_citations,
     answer_question,
 )
@@ -461,6 +463,134 @@ class TestInlineCitation(unittest.TestCase):
             require_inline_citation=True,
         )
         self.assertEqual([s.document_name for s in result.sources], ["b.pdf"])
+
+
+class TestCitationIndexValidation(unittest.TestCase):
+    """BUG-002 — mọi citation index trong câu trả lời CUỐI CÙNG phải là
+    1 <= n <= len(sources) đúng theo mảng `sources` THẬT SỰ trả về, không phải
+    theo `relevant` (danh sách trước khi gộp trùng)."""
+
+    def make_chunk(self, doc="a.pdf", pos="Trang 1", text="Nội dung.", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    # --- Ma trận theo yêu cầu BUG-002 (áp lên _strip_invalid_citations) ---
+    def test_index_1_with_3_sources_is_valid(self):
+        _, valid = _strip_invalid_citations("Câu. [1]", num_chunks=3)
+        self.assertEqual(valid, [1])
+
+    def test_index_3_with_3_sources_is_valid(self):
+        _, valid = _strip_invalid_citations("Câu. [3]", num_chunks=3)
+        self.assertEqual(valid, [3])
+
+    def test_index_4_with_3_sources_is_invalid(self):
+        answer, valid = _strip_invalid_citations("Câu. [4]", num_chunks=3)
+        self.assertEqual(valid, [])
+        self.assertNotIn("[4]", answer)
+
+    def test_index_0_is_invalid(self):
+        answer, valid = _strip_invalid_citations("Câu. [0]", num_chunks=3)
+        self.assertEqual(valid, [])
+        self.assertNotIn("[0]", answer)
+
+    def test_negative_index_never_matches_the_marker_pattern(self):
+        # "[-1]" không khớp mẫu \[(\d+)\] (chỉ nhận chữ số) nên không được coi
+        # là citation hợp lệ ở CẢ backend lẫn frontend (AnswerWithCitations.jsx
+        # dùng đúng mẫu này) — hiện ra như text thường, không phải link vỡ.
+        answer, valid = _strip_invalid_citations("Câu. [-1]", num_chunks=3)
+        self.assertEqual(valid, [])
+
+    def test_multiple_valid_citations_are_all_kept(self):
+        answer, valid = _strip_invalid_citations("A [1] B [2] C [3]", num_chunks=3)
+        self.assertEqual(valid, [1, 2, 3])
+        for marker in ("[1]", "[2]", "[3]"):
+            self.assertIn(marker, answer)
+
+    def test_mixture_of_valid_and_invalid_citations(self):
+        answer, valid = _strip_invalid_citations("A [1] B [9] C [2]", num_chunks=3)
+        self.assertEqual(valid, [1, 2])
+        self.assertIn("[1]", answer)
+        self.assertIn("[2]", answer)
+        self.assertNotIn("[9]", answer)
+
+    def test_no_citation_is_valid_when_inline_citation_not_required(self):
+        llm = FakeLLMClient(scripted_responses=["Một câu trả lời không có nguồn nào.", "CÓ"])
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            require_inline_citation=False,
+        )
+        self.assertTrue(result.is_grounded)
+
+    # --- Nguyên nhân gốc thật sự của BUG-002: gộp trùng LÀM LỆCH số thứ tự ---
+    def test_renumbering_keeps_markers_within_final_sources_length(self):
+        """Trước fix: cited_indices tính theo `relevant` (chưa gộp), còn
+        sources trả về đã gộp trùng — [3] có thể còn nguyên trong văn bản dù
+        sources chỉ có 1 phần tử. Đây chính là điều QA quan sát được
+        (production): "[4]" với 3 sources, "[6]" với 1 source."""
+        relevant = [
+            self.make_chunk(doc="a.pdf", pos="Trang 1"),  # index 1
+            self.make_chunk(doc="b.pdf", pos="Trang 1"),  # index 2
+            self.make_chunk(doc="a.pdf", pos="Trang 1"),  # index 3 - TRÙNG với index 1
+        ]
+        answer, sources = _renumber_citations_to_final_sources(
+            "Câu một. [1] Câu hai. [3]", cited_indices=[1, 3], relevant=relevant
+        )
+        # 2 chunk trùng (a.pdf, Trang 1) gộp thành 1 nguồn duy nhất.
+        self.assertEqual(len(sources), 1)
+        markers = [int(n) for n in re_findall_markers(answer)]
+        for marker in markers:
+            self.assertTrue(1 <= marker <= len(sources), f"marker [{marker}] ngoài phạm vi {len(sources)} sources")
+        # Cả hai marker cùng trỏ về NGUỒN THẬT (a.pdf) -> cùng đánh số 1.
+        self.assertEqual(markers, [1, 1])
+
+    def test_end_to_end_answer_never_cites_beyond_final_sources(self):
+        llm = FakeLLMClient(scripted_responses=["Câu một. [1] Câu hai. [3]", "CÓ"])
+        result = answer_question(
+            question="Hỏi?",
+            retrieved_chunks=[
+                self.make_chunk(doc="a.pdf", pos="Trang 1"),
+                self.make_chunk(doc="b.pdf", pos="Trang 1"),
+                self.make_chunk(doc="a.pdf", pos="Trang 1"),
+            ],
+            llm_client=llm,
+        )
+        markers = [int(n) for n in re_findall_markers(result.answer)]
+        self.assertTrue(markers, "câu trả lời phải còn ít nhất một citation")
+        for marker in markers:
+            self.assertTrue(1 <= marker <= len(result.sources))
+
+
+class TestClarificationVsAbstentionCopy(unittest.TestCase):
+    """BUG-008 — 'chưa đủ rõ để hỏi' (needs_clarification) và 'không có trong
+    tài liệu' (abstained/not-grounded) phải là HAI câu chữ khác nhau, để
+    frontend (chỉ render nguyên văn result.answer, xem
+    frontend/src/pages/ChatPage.jsx) hiển thị đúng hai thông điệp khác nhau
+    mà không cần logic đặc biệt gì thêm ở tầng UI."""
+
+    def test_clarification_message_differs_from_abstention_messages(self):
+        self.assertNotEqual(NEEDS_CLARIFICATION_MESSAGE, NOT_GROUNDED_MESSAGE)
+        self.assertNotEqual(NEEDS_CLARIFICATION_MESSAGE, NO_CONTEXT_MESSAGE)
+
+    def test_needs_clarification_flag_returns_the_clarification_copy(self):
+        # Verifier phán quyết "không trả lời đúng câu hỏi" (VIỆC 1 = KHÔNG).
+        llm = FakeLLMClient(
+            scripted_responses=["Trả lời lạc đề.", '{"addresses_question": "KHÔNG", "1": "CÓ"}']
+        )
+        result = answer_question(
+            question="Nó có nhanh hơn không?",
+            retrieved_chunks=[RetrievedChunk(text="Nội dung.", document_name="a.pdf", position_ref="Trang 1", score=0.5)],
+            llm_client=llm,
+        )
+        self.assertEqual(result.answer, NEEDS_CLARIFICATION_MESSAGE)
+        self.assertTrue(result.needs_clarification)
+        self.assertNotEqual(result.answer, NOT_GROUNDED_MESSAGE)
+
+
+def re_findall_markers(text):
+    import re
+
+    return re.findall(r"\[(\d+)\]", text)
 
 
 class TestClaimLevelVerification(unittest.TestCase):

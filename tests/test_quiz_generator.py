@@ -50,7 +50,10 @@ class TestGenerateQuiz(unittest.TestCase):
         self.assertEqual(len(llm.prompts_received), 3)
 
     def test_item_failing_verification_is_filtered_out(self):
-        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG"])
+        # BUG-003: 1 câu hợp lệ (< 2 yêu cầu) là thành công MỘT PHẦN -> kích
+        # hoạt lượt bù (xem TestBoundedRetryOnUndergeneration bên dưới); lượt
+        # bù ở đây trả "[]" nên tổng vẫn dừng ở 1.
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", "[]"])
         result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
 
         self.assertEqual(len(result), 1)
@@ -96,6 +99,65 @@ class TestGenerateQuiz(unittest.TestCase):
         generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=3)
         prompt = llm.prompts_received[0]
         self.assertNotIn("định nghĩa/khái niệm cơ bản", prompt)
+
+
+ONE_ITEM_JSON = """
+[{"question": "Câu bù thêm?", "options": ["A", "B", "C", "D"], "correct_answer": "A", "explanation": "vì...", "chunk_index": 0}]
+"""
+
+
+class TestBoundedRetryOnUndergeneration(unittest.TestCase):
+    """BUG-003 — kết quả ít hơn num_questions yêu cầu không còn âm thầm trả về
+    như vậy: nếu lượt đầu có kết quả THẬT (>0) nhưng vẫn thiếu, gọi thêm MỘT
+    lượt bù bị chặn (không lặp vô hạn)."""
+
+    def test_partial_result_triggers_one_top_up_attempt(self):
+        # Lượt 1: 1/2 câu verify được (KHÔNG cho câu 2). Lượt 2 (bù 1 câu còn
+        # thiếu): trả về đúng 1 câu mới, verify CÓ.
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+        )
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual({r.question for r in result}, {"RAG là gì?", "Câu bù thêm?"})
+
+    def test_retry_is_bounded_not_infinite(self):
+        # Lượt bù CŨNG chỉ ra 1 câu verify được trong khi vẫn thiếu 1 -> KHÔNG
+        # có lượt thứ ba, dừng lại ở kết quả đã có (bounded retry).
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+        )
+        generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=5)
+        # 2 lượt sinh (1 generator + verifier mỗi lượt): lượt1 = 1 gen + 2
+        # verify (2 raw item), lượt2 = 1 gen + 1 verify (1 raw item) = 5 tổng.
+        self.assertEqual(len(llm.prompts_received), 5)
+
+    def test_zero_items_on_first_attempt_does_not_retry(self):
+        # Lượt đầu ra 0 câu hoàn toàn (không phải thiếu MỘT PHẦN) -> không bù,
+        # vẫn đúng hành vi cũ (test_malformed_json_returns_empty_list ở trên).
+        llm = FakeLLMClient(scripted_responses=["không phải JSON"])
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=3)
+        self.assertEqual(result, [])
+        self.assertEqual(len(llm.prompts_received), 1)
+
+    def test_top_up_attempt_does_not_duplicate_already_collected_questions(self):
+        # LLM lặp lại chính câu hỏi đã có ở lượt bù -> bị lọc trùng, không
+        # được cộng thêm vào kết quả.
+        duplicate_question_json = (
+            '[{"question": "RAG là gì?", "options": ["A","B","C","D"], '
+            '"correct_answer": "A", "explanation": "x", "chunk_index": 0}]'
+        )
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", duplicate_question_json, "CÓ"]
+        )
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
+        self.assertEqual(len(result), 1)
+
+    def test_exact_count_on_first_attempt_does_not_trigger_retry(self):
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "CÓ"])
+        generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
+        self.assertEqual(len(llm.prompts_received), 3)  # không có lượt bù
 
 
 class TestIntermediateDifficulty(unittest.TestCase):
