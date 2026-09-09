@@ -250,6 +250,13 @@ def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
 
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
+    # Câu hỏi rỗng/toàn khoảng trắng vẫn qua được validation kiểu `str` của
+    # Pydantic, nhưng Cohere embed API từ chối text rỗng (BadRequestError,
+    # không bắt được ở embedder.py) — chặn ở đây thay vì để crash 500 lúc
+    # embed_query().
+    if not req.question.strip():
+        raise HTTPException(400, "Câu hỏi không được để trống.")
+
     # Điều phối bằng bảng đăng ký năng lực (app/services/capability_detector.py)
     # thay vì chuỗi if/else. Không khớp năng lực nào thì rơi về hỏi đáp có căn
     # cứ — đường DUY NHẤT bắt buộc qua generator + verifier.
