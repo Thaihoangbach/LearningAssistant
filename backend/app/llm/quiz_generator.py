@@ -98,6 +98,19 @@ def _build_item_verifier_prompt(question: str, correct_answer: str, chunk_text: 
     )
 
 
+def _strip_json_fence(text: str) -> str:
+    """Bỏ markdown code fence (```json ... ```) nếu model bọc JSON trong đó.
+
+    OpenAI thường trả JSON kèm fence dù prompt đã yêu cầu "DUY NHẤT JSON" —
+    cùng vấn đề đã gặp và xử lý ở app/llm/rag.py::_parse_claim_verdicts."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+    return text.strip()
+
+
 def generate_quiz(
     chunks: List[RetrievedChunk],
     llm_client: LLMClient,
@@ -109,7 +122,7 @@ def generate_quiz(
 
     raw_response = llm_client.complete(_build_generator_prompt(chunks, num_questions, difficulty=difficulty))
     try:
-        raw_items = json.loads(raw_response)
+        raw_items = json.loads(_strip_json_fence(raw_response))
     except (json.JSONDecodeError, TypeError):
         return []
 

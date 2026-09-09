@@ -49,6 +49,18 @@ def _build_item_verifier_prompt(front: str, back: str, chunk_text: str) -> str:
     )
 
 
+def _strip_json_fence(text: str) -> str:
+    """Bỏ markdown code fence (```json ... ```) nếu model bọc JSON trong đó.
+
+    Cùng vấn đề và cách xử lý ở app/llm/quiz_generator.py::_strip_json_fence."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:]
+    return text.strip()
+
+
 def generate_flashcards(
     chunks: List[RetrievedChunk],
     llm_client: LLMClient,
@@ -59,7 +71,7 @@ def generate_flashcards(
 
     raw_response = llm_client.complete(_build_generator_prompt(chunks, num_cards))
     try:
-        raw_items = json.loads(raw_response)
+        raw_items = json.loads(_strip_json_fence(raw_response))
     except (json.JSONDecodeError, TypeError):
         return []
 
