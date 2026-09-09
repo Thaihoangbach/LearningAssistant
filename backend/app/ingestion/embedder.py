@@ -24,6 +24,7 @@ routers/flashcard.py) không cần đổi gì.
 """
 
 import os
+import time
 from functools import lru_cache
 from typing import List
 
@@ -58,15 +59,32 @@ def _normalize(vectors: np.ndarray) -> np.ndarray:
     return vectors / norms
 
 
+# Cohere trial key: 100k token/phút + số lượt gọi/tháng giới hạn. Một tài
+# liệu dài (vài chục trang) tạo nhiều batch gửi liên tiếp dễ vượt trần/phút
+# ngay giữa lúc xử lý — 429 lúc đó làm CẢ tài liệu rơi vào trạng thái "lỗi"
+# dù nội dung/format hoàn toàn hợp lệ. Retry có chờ (backoff) thay vì để
+# BackgroundTasks (không có deadline người dùng đang chờ) crash ngay lần 429
+# đầu tiên.
+_MAX_RATE_LIMIT_RETRIES = 5
+
+
 def _embed_batch(texts: List[str], input_type: str) -> np.ndarray:
+    import cohere
+
     client = _get_client()
-    response = client.embed(
-        model=EMBED_MODEL,
-        input_type=input_type,
-        texts=texts,
-        embedding_types=["float"],
-    )
-    return np.asarray(response.embeddings.float, dtype="float32")
+    for attempt in range(_MAX_RATE_LIMIT_RETRIES):
+        try:
+            response = client.embed(
+                model=EMBED_MODEL,
+                input_type=input_type,
+                texts=texts,
+                embedding_types=["float"],
+            )
+            return np.asarray(response.embeddings.float, dtype="float32")
+        except cohere.TooManyRequestsError:
+            if attempt == _MAX_RATE_LIMIT_RETRIES - 1:
+                raise
+            time.sleep(15 * (attempt + 1))
 
 
 def embed_texts(texts: List[str], input_type: str = "search_document") -> np.ndarray:

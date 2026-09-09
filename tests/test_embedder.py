@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
+import cohere
 import numpy as np
 
 from app.ingestion import embedder
@@ -76,6 +77,45 @@ class TestEmbedTexts(unittest.TestCase):
 
         self.assertEqual(self.fake_client.calls[0]["input_type"], "search_query")
         self.assertEqual(vector.shape, (4,))
+
+
+class _FlakyRateLimitedClient:
+    """Ném TooManyRequestsError (429) đúng `fail_times` lần đầu rồi mới trả kết quả —
+    mô phỏng trial key Cohere hết token/phút giữa lúc xử lý một tài liệu dài."""
+
+    def __init__(self, fail_times):
+        self.fail_times = fail_times
+        self.calls = 0
+
+    def embed(self, *, model, input_type, texts, embedding_types):
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise cohere.TooManyRequestsError(body={"message": "trial token rate limit exceeded"})
+        vectors = [[1.0, 0.0, 0.0, 0.0] for _ in texts]
+        return _FakeResponse(embeddings=_FakeEmbeddings(float=vectors))
+
+
+class TestEmbedTextsRateLimitRetry(unittest.TestCase):
+    def setUp(self):
+        patcher = patch("time.sleep", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_retries_and_succeeds_after_transient_429(self):
+        fake_client = _FlakyRateLimitedClient(fail_times=2)
+        with patch.object(embedder, "_get_client", return_value=fake_client):
+            result = embedder.embed_texts(["một đoạn văn bản"])
+
+        self.assertEqual(result.shape, (1, 4))
+        self.assertEqual(fake_client.calls, 3)
+
+    def test_raises_after_exhausting_all_retries(self):
+        fake_client = _FlakyRateLimitedClient(fail_times=999)
+        with patch.object(embedder, "_get_client", return_value=fake_client):
+            with self.assertRaises(cohere.TooManyRequestsError):
+                embedder.embed_texts(["một đoạn văn bản"])
+
+        self.assertEqual(fake_client.calls, embedder._MAX_RATE_LIMIT_RETRIES)
 
 
 if __name__ == "__main__":
