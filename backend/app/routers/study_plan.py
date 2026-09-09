@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.ingestion.outline import is_plausible_topic
 from app.models import DocumentTopic, MasteryScore, Topic
 from app.services.mastery import decay_unpractised
 from app.services.study_planner import TopicPriority, generate_plan
@@ -21,6 +22,12 @@ def get_study_plan(user_id: str, days: int, course_name: str | None = None, db: 
     if course_name:
         topics_query = topics_query.filter(Topic.course_name == course_name)
     topics = topics_query.all()
+
+    # Cùng lớp lọc chất lượng với chat capability (app/routers/chat.py::
+    # _build_study_plan_result, BUG-001) — cả hai lối vào phải xử lý nhất
+    # quán để không lộ ra "kế hoạch" ghép từ Topic nhiễu ở nơi này trong khi
+    # nơi kia đã chặn.
+    topics = [t for t in topics if is_plausible_topic(t.name)]
 
     scores_by_topic_id = {
         s.topic_id: decay_unpractised(s.score, s.updated_at)

@@ -55,11 +55,18 @@ class Document(Base):
     status = Column(String, default="đang xử lý")  # đang xử lý | sẵn sàng | lỗi
     error_reason = Column(Text, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
-    # Versioning: khi upload lại cùng file_name+course_name, bản cũ được đánh
-    # dấu is_latest=False thay vì xoá, để hỏi đáp/quiz chỉ dùng bản mới nhất
-    # (xem app/routers/documents.py) nhưng vẫn giữ lịch sử.
+    # Versioning: khi upload lại CÙNG NỘI DUNG (content_hash) trong cùng
+    # course_name, bản cũ được đánh dấu is_latest=False thay vì xoá, để hỏi
+    # đáp/quiz chỉ dùng bản mới nhất (xem app/routers/documents.py) nhưng vẫn
+    # giữ lịch sử.
     version = Column(Integer, default=1)
     is_latest = Column(Boolean, default=True)
+    # SHA-256 nội dung file (BUG-005) — nhận diện bản trùng bằng NỘI DUNG THẬT,
+    # không phải file_name: hai file khác nhau có thể trùng tên, và cùng một
+    # file có thể đổi tên giữa hai lần tải lên. Nullable vì tài liệu tạo trước
+    # khi cột này tồn tại không có giá trị hồi tố (không migrate ngược dữ liệu
+    # cũ — xem migration thêm cột).
+    content_hash = Column(String, nullable=True, index=True)
 
     user = relationship("User", back_populates="documents")
 

@@ -66,6 +66,7 @@ export default function UploadPage() {
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [openOutlineId, setOpenOutlineId] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const refresh = async () => {
     try {
@@ -108,8 +109,15 @@ export default function UploadPage() {
     if (uploading || !file) return;
     setUploading(true);
     setError(null);
+    setNotice(null);
     try {
-      await uploadDocument(file, courseName);
+      const res = await uploadDocument(file, courseName);
+      // BUG-005: backend giờ nhận diện trùng bằng nội dung file (content_hash),
+      // không chỉ tên — báo cho người dùng biết đây là bản thay thế, không
+      // phải một tài liệu độc lập mới.
+      if (res?.is_duplicate) {
+        setNotice(`Đã phát hiện tài liệu trùng nội dung — lưu thành phiên bản ${res.version}, bản cũ vẫn giữ trong lịch sử.`);
+      }
       setFile(null);
       await refresh();
     } catch (e) {
@@ -170,6 +178,7 @@ export default function UploadPage() {
             </Button>
           </form>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+          {notice && <p className="mt-3 text-sm text-primary">{notice}</p>}
         </CardContent>
       </Card>
 
@@ -188,7 +197,14 @@ export default function UploadPage() {
                 <li key={d.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{d.course_name || d.file_name}</p>
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {d.course_name || d.file_name}
+                        {d.version > 1 && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            phiên bản {d.version}
+                          </span>
+                        )}
+                      </p>
                       {d.course_name && (
                         <p className="truncate text-xs text-muted-foreground">{d.file_name}</p>
                       )}

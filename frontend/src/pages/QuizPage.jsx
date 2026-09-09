@@ -16,6 +16,7 @@ export default function QuizPage() {
   const [numQuestions, setNumQuestions] = useState(5);
   const [difficulty, setDifficulty] = useState(""); // "" = để backend tự quyết theo hồ sơ
   const [quizItems, setQuizItems] = useState([]);
+  const [partialNotice, setPartialNotice] = useState(null);
   const [results, setResults] = useState({}); // quiz_item_id -> {is_correct, correct_answer, explanation}
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -35,9 +36,16 @@ export default function QuizPage() {
     setLoading(true);
     setError(null);
     setResults({});
+    setPartialNotice(null);
     try {
       const res = await generateQuiz(documentId, topicName, numQuestions, difficulty);
       setQuizItems(res.items);
+      // BUG-003: backend giờ báo rõ khi tạo được ít câu hơn yêu cầu (thay vì
+      // trả 200 im lặng với mảng items ngắn hơn) — hiện cảnh báo thay vì để
+      // người dùng tự đếm số câu.
+      if (res.partial) {
+        setPartialNotice(`Chỉ tạo được ${res.generated}/${res.requested} câu hỏi dựa trên nội dung tài liệu.`);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -126,6 +134,12 @@ export default function QuizPage() {
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
+
+      {partialNotice && (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2.5 text-sm text-warning">
+          {partialNotice}
+        </p>
+      )}
 
       {quizItems.length === 0 ? (
         <EmptyState

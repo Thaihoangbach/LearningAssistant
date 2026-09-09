@@ -111,16 +111,29 @@ def _strip_json_fence(text: str) -> str:
     return text.strip()
 
 
-def generate_quiz(
+def _build_avoid_duplicates_note(asked_questions: List[str]) -> str:
+    if not asked_questions:
+        return ""
+    numbered = "\n".join(f"- {q}" for q in asked_questions)
+    return (
+        "\n\nKHÔNG lặp lại (kể cả diễn đạt lại) các câu hỏi đã có sau đây:\n"
+        f"{numbered}"
+    )
+
+
+def _generate_verified_batch(
     chunks: List[RetrievedChunk],
     llm_client: LLMClient,
-    num_questions: int = 5,
-    difficulty: Optional[str] = None,
+    count: int,
+    difficulty: Optional[str],
+    asked_questions: List[str],
 ) -> List[QuizItem]:
-    if not chunks:
-        return []
-
-    raw_response = llm_client.complete(_build_generator_prompt(chunks, num_questions, difficulty=difficulty))
+    """Một lượt sinh + verify — tách khỏi `generate_quiz` để hàm đó gọi lại
+    được nhiều lần khi thiếu câu hỏi (BUG-003)."""
+    prompt = _build_generator_prompt(chunks, count, difficulty=difficulty) + _build_avoid_duplicates_note(
+        asked_questions
+    )
+    raw_response = llm_client.complete(prompt)
     try:
         raw_items = json.loads(_strip_json_fence(raw_response))
     except (json.JSONDecodeError, TypeError):
@@ -163,3 +176,46 @@ def generate_quiz(
         )
 
     return verified_items
+
+
+# BUG-003: LLM/verifier có thể loại bớt câu hỏi (JSON hỏng, thiếu field, chunk
+# không hợp lệ, verifier từ chối) khiến kết quả ít hơn num_questions yêu cầu
+# mà không có cảnh báo. Bù lại bằng MỘT lượt gọi lại (không phải vòng lặp vô
+# hạn) khi lượt đầu có kết quả THẬT (>0) nhưng vẫn thiếu — 0 kết quả nghĩa là
+# có vấn đề sâu hơn (prompt/định dạng), gọi lại với cùng ngữ cảnh khó có khả
+# năng khác đi, và đã có nhánh lỗi 500 riêng ở router khi kết quả rỗng hoàn
+# toàn (app/routers/quiz.py).
+_MAX_GENERATION_ATTEMPTS = 2
+
+
+def generate_quiz(
+    chunks: List[RetrievedChunk],
+    llm_client: LLMClient,
+    num_questions: int = 5,
+    difficulty: Optional[str] = None,
+) -> List[QuizItem]:
+    if not chunks:
+        return []
+
+    collected: List[QuizItem] = []
+    seen_questions: set = set()
+
+    for attempt in range(_MAX_GENERATION_ATTEMPTS):
+        remaining = num_questions - len(collected)
+        if remaining <= 0:
+            break
+        if attempt > 0 and not collected:
+            # Lượt đầu ra 0 câu hoàn toàn -> không bù, xem docstring hằng số ở trên.
+            break
+
+        batch = _generate_verified_batch(
+            chunks, llm_client, remaining, difficulty, [c.question for c in collected]
+        )
+        for item in batch:
+            key = item.question.strip().lower()
+            if key in seen_questions:
+                continue  # LLM lặp lại câu hỏi giữa các lượt -> bỏ, không tính trùng vào kết quả
+            seen_questions.add(key)
+            collected.append(item)
+
+    return collected

@@ -61,6 +61,89 @@ _CITATION_LIKE_RE = re.compile(
 # liệu thật (kể cả sách/giáo trình dài) hiếm khi có quá chừng này đề mục thật.
 _MAX_OUTLINE_ENTRIES = 30
 
+# Dòng mở đầu bằng "BY ..."/"Bởi ..."/"Tác giả:..." là byline tác giả — không
+# bao giờ là một chủ đề học được, dù OCR có đọc đúng tên hay không (vd bản
+# scan lỗi "BY A. M. TUBING" thay vì "BY A. M. TURING"). Đây là quy tắc CẤU
+# TRÚC chung cho mọi byline, không phải hardcode riêng một chuỗi lỗi cụ thể.
+_BYLINE_RE = re.compile(r"^(by|bởi|tác giả)\b", re.IGNORECASE)
+
+# Một dòng thật sự bị cắt giữa câu (do pypdf ngắt theo độ rộng trang) thường
+# kết thúc bằng một từ nối/giới từ dang dở thay vì một danh từ/cụm từ hoàn
+# chỉnh — tín hiệu chung, không đoán riêng cho một tài liệu nào.
+_TRAILING_STOPWORD_RE = re.compile(
+    r"\b(và|hoặc|với|của|cho|là|trong|những|các|một|ở|về|như|để|mà|thì|the|a|"
+    r"an|of|in|on|and|or|with|to|for|is|are|as|by)$",
+    re.IGNORECASE,
+)
+
+_MIN_TOPIC_CHARS = 3
+_MAX_TOPIC_CHARS = 100
+# Một chuỗi nội dung thật (kể cả thuật ngữ kỹ thuật) hiếm khi có tỉ lệ ký tự
+# KHÔNG PHẢI chữ cái (số, ký hiệu, dấu câu vụn — dấu hiệu OCR nát) vượt quá
+# mức này trên tổng ký tự không-khoảng-trắng.
+_MIN_ALPHA_RATIO = 0.6
+
+
+_BIBLIOGRAPHY_LINE_RATIO = 0.5
+
+
+def is_bibliography_like_chunk(text: str) -> bool:
+    """Đoạn trích được coi là "khu vực tham khảo/trích dẫn" khi PHẦN LỚN các
+    dòng của nó khớp mẫu trích dẫn học thuật (`_CITATION_LIKE_RE` — năm trong
+    ngoặc, ISBN/DOI, tr./pp.), dùng chung với `is_plausible_topic` ở trên.
+
+    Dùng để HẠ ƯU TIÊN (không xoá khỏi corpus, không chặn hỏi đáp) khi sinh
+    flashcard (BUG-007) — flashcard nên dạy nội dung cốt lõi trước, còn hỏi
+    đáp tài liệu vẫn có thể cần trích dẫn một mục tham khảo cụ thể. Đo theo TỈ
+    LỆ DÒNG thay vì một dòng đơn lẻ khớp là đủ, để không hạ nhầm một đoạn nội
+    dung bình thường chỉ tình cờ nhắc một năm trong ngoặc."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return False
+    hits = sum(1 for ln in lines if _CITATION_LIKE_RE.search(ln))
+    return (hits / len(lines)) >= _BIBLIOGRAPHY_LINE_RATIO
+
+
+def is_plausible_topic(text: str) -> bool:
+    """Lọc chất lượng DÙNG CHUNG cho mọi nơi hiển thị tên chủ đề cho người
+    dùng — kế hoạch ôn tập (app/routers/chat.py, app/routers/study_plan.py)
+    và gợi ý chủ đề khi từ chối trả lời (app/routers/chat.py::_suggest_topics).
+
+    Cần một lớp lọc Ở ĐIỂM TIÊU THỤ, tách biệt với `_looks_like_heading` ở
+    điểm TRÍCH XUẤT, vì hai lý do. Một, ngay cả heuristic trích xuất đã siết
+    chặt vẫn có thể lọt vài dòng nhiễu — phòng thủ hai lớp. Hai, quan trọng
+    hơn: `Topic`/`DocumentTopic` đã LƯU SẴN trong DB từ TRƯỚC khi
+    `_looks_like_heading` được siết lại (xem lịch sử git — heuristic cũ từng
+    sinh ra 68-851 "heading" giả/tài liệu) vẫn còn nguyên trong dữ liệu người
+    dùng đã tồn tại. Sửa heuristic trích xuất KHÔNG tự động dọn lại các hàng
+    đã lưu trước đó (chỉ áp dụng cho tài liệu tải lên/xử lý lại sau này), nên
+    nơi tiêu thụ dữ liệu phải tự vệ thay vì tin thẳng vào những gì đã có sẵn
+    trong DB.
+
+    Cố tình bảo thủ (permissive hơn `_looks_like_heading`): mục tiêu ở đây là
+    chặn nhiễu RÕ RÀNG (OCR vỡ, trích dẫn, byline, dòng bị cắt giữa câu, dòng
+    dài bất thường), không phải tái hiện toàn bộ logic "có phải heading PDF
+    không" — một Topic hợp lệ có thể không phải heading PDF gốc (vd người
+    dùng tự gõ tên chủ đề lúc sinh quiz)."""
+    stripped = (text or "").strip()
+    if not (_MIN_TOPIC_CHARS <= len(stripped) <= _MAX_TOPIC_CHARS):
+        return False
+    if _CITATION_LIKE_RE.search(stripped):
+        return False
+    if _BYLINE_RE.match(stripped):
+        return False
+    if _TRAILING_STOPWORD_RE.search(stripped):
+        return False
+
+    non_space = sum(1 for ch in stripped if not ch.isspace())
+    if non_space == 0:
+        return False
+    letters = sum(1 for ch in stripped if ch.isalpha())
+    if letters / non_space < _MIN_ALPHA_RATIO:
+        return False
+
+    return True
+
 
 def _is_title_case_or_caps(stripped: str) -> bool:
     """Hầu hết các từ viết hoa chữ cái đầu, hoặc toàn bộ viết hoa — cách viết
