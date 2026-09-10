@@ -16,6 +16,7 @@ from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
 from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic
 from app.services.flashcard import board, due_items, latest_review_by_item
+from app.services.generation_mode import VALID_GENERATION_MODES
 from app.services.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule_next_review
 from app.vectorstore.pgvector_store import PgVectorStore
 
@@ -35,10 +36,16 @@ class GenerateFlashcardRequest(BaseModel):
     document_id: str
     topic_name: str | None = None
     num_cards: int = 10
+    # "learn" | "review" | "exam" | "weak_topics" | None — Learning Loop Phase 3,
+    # xem app/services/generation_mode.py.
+    generation_mode: str | None = None
 
 
 @router.post("/generate")
 def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
+    if req.generation_mode is not None and req.generation_mode not in VALID_GENERATION_MODES:
+        raise HTTPException(400, f"Chế độ sinh không hợp lệ. Chỉ nhận: {', '.join(VALID_GENERATION_MODES)}.")
+
     doc = (
         db.query(Document)
         .filter(Document.id == req.document_id, Document.user_id == req.user_id, Document.status == "sẵn sàng")
@@ -94,7 +101,7 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
         db.add(topic)
         db.commit()
 
-    fset = FlashcardSet(user_id=req.user_id, document_id=doc.id)
+    fset = FlashcardSet(user_id=req.user_id, document_id=doc.id, generation_mode=req.generation_mode)
     db.add(fset)
     db.commit()
 

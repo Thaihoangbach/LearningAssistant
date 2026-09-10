@@ -16,6 +16,7 @@ from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
 from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
+from app.services.generation_mode import VALID_GENERATION_MODES
 from app.services.learner_context import build_learner_context
 from app.services.mastery import Attempt as MasteryAttempt, compute_mastery
 from app.vectorstore.pgvector_store import PgVectorStore
@@ -40,6 +41,9 @@ class GenerateQuizRequest(BaseModel):
     topic_name: str | None = None
     num_questions: int = 5
     difficulty: str | None = None  # "beginner" | "advanced" | None — xem app/llm/quiz_generator.py
+    # "learn" | "review" | "exam" | "weak_topics" | None — Learning Loop Phase 3,
+    # xem app/services/generation_mode.py.
+    generation_mode: str | None = None
 
 
 @router.post("/generate")
@@ -47,6 +51,8 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     requested_ids = req.document_ids or ([req.document_id] if req.document_id else [])
     if not requested_ids:
         raise HTTPException(400, "Cần cung cấp document_id hoặc document_ids.")
+    if req.generation_mode is not None and req.generation_mode not in VALID_GENERATION_MODES:
+        raise HTTPException(400, f"Chế độ sinh không hợp lệ. Chỉ nhận: {', '.join(VALID_GENERATION_MODES)}.")
 
     docs = (
         db.query(Document)
@@ -126,7 +132,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     # Quiz.document_id giữ 1 FK (không đổi schema) — với quiz đa tài liệu, lưu tài liệu
     # đầu tiên làm tham chiếu chính; nguồn thật của TỪNG câu hỏi vẫn đúng qua
     # QuizItem.source_document/source_position (lấy từ chunk tương ứng).
-    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id)
+    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id, generation_mode=req.generation_mode)
     db.add(quiz)
     db.commit()
 

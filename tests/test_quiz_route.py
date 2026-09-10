@@ -272,6 +272,90 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
         self.assertEqual(len(topics), 2)
         self.assertEqual(sorted(t.course_name for t in topics), ["CSDL", "Mạng máy tính"])
 
+    def test_generation_mode_is_persisted_on_the_quiz(self):
+        """Learning Loop Phase 3 — generation_mode (cột đã thêm ở Phase 0)
+        phải được ghi vào Quiz khi người dùng chọn ở form, để sau này phân
+        tích lineage theo mục tiêu học (Học mới/Ôn tập/Luyện thi/Chủ đề yếu)."""
+        fake_item = type(
+            "FakeItem",
+            (),
+            {
+                "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
+                "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+            },
+        )()
+
+        with patch("app.routers.quiz.get_llm_client", return_value=object()), \
+             patch("app.routers.quiz.embed_query", side_effect=_fake_embed_query), \
+             patch("app.routers.quiz.generate_quiz", return_value=[fake_item]), \
+             patch("app.routers.quiz.PgVectorStore") as store_cls:
+            store_cls.return_value.search.return_value = [
+                (
+                    type("C", (), {
+                        "text": "nội dung", "document_name": "b.pdf", "position_ref": "Trang 1",
+                        "chunk_id": "c1", "document_id": self.doc_mmt_id,
+                    })(),
+                    0.9,
+                )
+            ]
+            res = self.client.post(
+                "/quiz/generate",
+                json={
+                    "user_id": self.user_id,
+                    "document_id": self.doc_mmt_id,
+                    "num_questions": 1,
+                    "generation_mode": "weak_topics",
+                },
+            )
+
+        self.assertEqual(res.status_code, 200)
+        quiz_id = res.json()["quiz_id"]
+
+        db = self.SessionLocal()
+        try:
+            quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
+        finally:
+            db.close()
+
+        self.assertEqual(quiz.generation_mode, "weak_topics")
+
+    def test_invalid_generation_mode_is_rejected(self):
+        # Mock y hệt test ở trên (chunk hợp lệ, LLM giả) để lỗi 400 chắc chắn
+        # đến từ việc validate generation_mode, không phải vì retrieval rỗng.
+        fake_item = type(
+            "FakeItem",
+            (),
+            {
+                "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
+                "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+            },
+        )()
+
+        with patch("app.routers.quiz.get_llm_client", return_value=object()), \
+             patch("app.routers.quiz.embed_query", side_effect=_fake_embed_query), \
+             patch("app.routers.quiz.generate_quiz", return_value=[fake_item]), \
+             patch("app.routers.quiz.PgVectorStore") as store_cls:
+            store_cls.return_value.search.return_value = [
+                (
+                    type("C", (), {
+                        "text": "nội dung", "document_name": "b.pdf", "position_ref": "Trang 1",
+                        "chunk_id": "c1", "document_id": self.doc_mmt_id,
+                    })(),
+                    0.9,
+                )
+            ]
+            res = self.client.post(
+                "/quiz/generate",
+                json={
+                    "user_id": self.user_id,
+                    "document_id": self.doc_mmt_id,
+                    "num_questions": 1,
+                    "generation_mode": "not-a-real-mode",
+                },
+            )
+
+        self.assertEqual(res.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()
