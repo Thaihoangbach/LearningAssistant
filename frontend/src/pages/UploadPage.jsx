@@ -6,6 +6,7 @@ import {
   listDocuments,
   deleteDocument,
   getDocumentOutline,
+  listCourses,
 } from "../api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -59,6 +60,8 @@ function DocumentOutline({ documentId }) {
 
 export default function UploadPage() {
   const [courseName, setCourseName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [courseOptions, setCourseOptions] = useState([]);
   const [file, setFile] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
@@ -78,6 +81,16 @@ export default function UploadPage() {
     }
   };
 
+  const refreshCourseOptions = async () => {
+    try {
+      const res = await listCourses();
+      setCourseOptions(res.courses.map((c) => c.course_name));
+    } catch {
+      // Gợi ý autocomplete là tiện ích phụ — lỗi tải danh sách môn không nên
+      // chặn người dùng tải tài liệu, họ vẫn gõ tay tên môn được.
+    }
+  };
+
   const pollIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -85,6 +98,10 @@ export default function UploadPage() {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    refreshCourseOptions();
   }, []);
 
   // F1 AC: trạng thái xử lý cập nhật theo thời gian thực -> poll mỗi 2s, NHƯNG
@@ -111,7 +128,12 @@ export default function UploadPage() {
     setError(null);
     setNotice(null);
     try {
-      const res = await uploadDocument(file, courseName);
+      // Trim trước khi gửi — "CSDL" và "CSDL " (khoảng trắng cuối) sẽ thành
+      // hai môn khác nhau ở backend (course_name là cột free-text không tự
+      // trim), phá hỏng mục đích chống trùng tên của autocomplete phía trên.
+      const trimmedCourseName = courseName.trim();
+      const trimmedDisplayName = displayName.trim();
+      const res = await uploadDocument(file, trimmedCourseName, trimmedDisplayName);
       // BUG-005: backend giờ nhận diện trùng bằng nội dung file (content_hash),
       // không chỉ tên — báo cho người dùng biết đây là bản thay thế, không
       // phải một tài liệu độc lập mới.
@@ -119,7 +141,9 @@ export default function UploadPage() {
         setNotice(`Đã phát hiện tài liệu trùng nội dung — lưu thành phiên bản ${res.version}, bản cũ vẫn giữ trong lịch sử.`);
       }
       setFile(null);
+      setDisplayName("");
       await refresh();
+      await refreshCourseOptions();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -155,9 +179,26 @@ export default function UploadPage() {
               </label>
               <Input
                 id="course-name"
+                list="course-name-options"
                 placeholder="VD: Cơ sở dữ liệu"
                 value={courseName}
                 onChange={(e) => setCourseName(e.target.value)}
+              />
+              <datalist id="course-name-options">
+                {courseOptions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </div>
+            <div className="flex-1">
+              <label htmlFor="display-name" className="mb-1.5 block text-sm font-medium text-foreground">
+                Tên tài liệu (tuỳ chọn)
+              </label>
+              <Input
+                id="display-name"
+                placeholder="VD: Slide chương 3"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
               />
             </div>
             <div className="flex-1">
@@ -198,15 +239,17 @@ export default function UploadPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {d.course_name || d.file_name}
+                        {d.display_name || d.file_name}
                         {d.version > 1 && (
                           <span className="ml-2 text-xs font-normal text-muted-foreground">
                             phiên bản {d.version}
                           </span>
                         )}
                       </p>
-                      {d.course_name && (
-                        <p className="truncate text-xs text-muted-foreground">{d.file_name}</p>
+                      {(d.course_name || (d.display_name && d.file_name)) && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {[d.course_name, d.display_name && d.file_name].filter(Boolean).join(" · ")}
+                        </p>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

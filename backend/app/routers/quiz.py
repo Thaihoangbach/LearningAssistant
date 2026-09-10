@@ -92,7 +92,15 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     else:
         topic_name = docs[0].course_name or "Ôn tập tổng hợp"
 
-    topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == topic_name).first()
+    topic = (
+        db.query(Topic)
+        .filter(
+            Topic.user_id == req.user_id,
+            Topic.course_name == docs[0].course_name,
+            Topic.name == topic_name,
+        )
+        .first()
+    )
     if not topic:
         topic = Topic(user_id=req.user_id, name=topic_name, course_name=docs[0].course_name)
         db.add(topic)

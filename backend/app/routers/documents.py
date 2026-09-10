@@ -106,7 +106,13 @@ def _save_outline(db: Session, document_id: str, user_id: str, file_path: str, c
             )
         )
         existing = (
-            db.query(Topic).filter(Topic.user_id == user_id, Topic.name == entry.title).first()
+            db.query(Topic)
+            .filter(
+                Topic.user_id == user_id,
+                Topic.course_name == course_name,
+                Topic.name == entry.title,
+            )
+            .first()
         )
         if not existing:
             db.add(Topic(user_id=user_id, name=entry.title, course_name=course_name))
@@ -164,6 +170,7 @@ async def upload_document(
     file: UploadFile,
     user_id: str,
     course_name: str | None = None,
+    display_name: str | None = None,
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
 ):
@@ -227,6 +234,7 @@ async def upload_document(
         id=document_id,
         user_id=user_id,
         file_name=file.filename,
+        display_name=display_name.strip() if display_name and display_name.strip() else None,
         course_name=course_name,
         status="đang xử lý",
         version=version,
@@ -263,6 +271,7 @@ def list_documents(user_id: str, include_old_versions: bool = False, db: Session
         {
             "id": d.id,
             "file_name": d.file_name,
+            "display_name": d.display_name,
             "course_name": d.course_name,
             "status": d.status,
             "error_reason": d.error_reason,

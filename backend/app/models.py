@@ -10,6 +10,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -50,6 +51,12 @@ class Document(Base):
     id = Column(String, primary_key=True, default=_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     file_name = Column(String, nullable=False)
+    # Tên hiển thị người dùng tự đặt lúc upload, tách khỏi `file_name` (tên
+    # file OS gốc, có thể là chuỗi khó đọc kiểu "slide_ch3_v2_final.pdf").
+    # Nullable — UI hiển thị display_name nếu có, fallback về file_name nếu
+    # không (frontend/src/pages/UploadPage.jsx và mọi nơi khác đang hiển thị
+    # d.file_name).
+    display_name = Column(String, nullable=True)
     doc_type = Column(String, nullable=True)  # "slide" | "giáo trình" | "ghi chú"
     course_name = Column(String, nullable=True)
     status = Column(String, default="đang xử lý")  # đang xử lý | sẵn sàng | lỗi
@@ -135,6 +142,33 @@ class Topic(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     course_name = Column(String, nullable=True)
     name = Column(String, nullable=False)
+
+
+class CourseDeadline(Base):
+    """Ngày thi riêng của một môn học, khoá theo (user_id, course_name) — dùng
+    để lập kế hoạch ôn tập đa môn (app/services/study_planner.py::
+    generate_multi_course_plan, app/routers/study_plan.py). `course_name`
+    vẫn là chuỗi tự do như trên Document/Topic, KHÔNG có bảng Course riêng
+    với khoá ngoại — bảng này chỉ lưu thêm một thuộc tính (ngày thi) mà
+    course_name không suy ra được từ dữ liệu khác, khác với kết quả kế hoạch
+    (luôn tính lại, không lưu — xem docstring app/services/study_planner.py).
+
+    `exam_date` dùng kiểu Date (không phải DateTime như phần còn lại của
+    models.py) vì đây là một NGÀY LỊCH thuần tuý — giờ trong ngày không có ý
+    nghĩa với "còn bao nhiêu ngày tới kỳ thi", và DateTime dễ lệch 1 ngày khi
+    so sánh qua ranh giới múi giờ.
+    """
+
+    __tablename__ = "course_deadlines"
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_name", name="uq_course_deadlines_user_course"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    course_name = Column(String, nullable=False)
+    exam_date = Column(Date, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Quiz(Base):

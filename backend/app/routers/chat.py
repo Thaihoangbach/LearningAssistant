@@ -184,10 +184,40 @@ def _classify_question_event(question: str, result: AnswerResult) -> tuple[str, 
     return "question_asked", f"Đã hỏi \"{preview}\""
 
 
-def _build_study_plan_result(db: Session, user_id: str, course_name: str | None, days: int) -> AnswerResult:
-    """Lập kế hoạch ôn tập ngay trong hội thoại. Trước đây năng lực này chỉ gọi
-    được qua endpoint riêng, nên hỏi "còn 5 ngày nữa thi, ôn thế nào?" trong
-    chat rơi vào nhánh hỏi đáp tài liệu và không bao giờ trả lời được."""
+_REDIRECT_TO_CALENDAR_MESSAGE = (
+    "Có vẻ bạn cần lên kế hoạch cho nhiều môn cùng lúc — vào trang Kế hoạch ôn để "
+    "chọn từng môn kèm ngày thi riêng, kế hoạch sẽ chính xác hơn một câu hỏi chat."
+)
+
+
+def _mentions_multiple_known_courses(question: str, known_course_names: list[str]) -> bool:
+    lowered = question.lower()
+    return sum(1 for name in known_course_names if name and name.lower() in lowered) > 1
+
+
+def _build_study_plan_result(
+    db: Session,
+    user_id: str,
+    course_name: str | None,
+    days: int,
+    question: str,
+    multiple_days_mentioned: bool,
+) -> AnswerResult:
+    """Lập kế hoạch ôn tập ngay trong hội thoại — CHỈ cho ca đơn-môn-đơn-hạn.
+    Câu hỏi nhắc nhiều hơn 1 hạn ("N ngày") hoặc nhiều hơn 1 môn đã có của
+    người dùng được nhường sang trang Kế hoạch ôn (spec §10) — chat
+    capability này cố tình KHÔNG dùng LLM để tách nhiều thực thể tự do, giữ
+    đúng nguyên tắc điều phối rẻ-trước-đắt-sau của module này."""
+    known_course_names = [
+        c
+        for (c,) in db.query(Document.course_name)
+        .filter(Document.user_id == user_id, Document.course_name.isnot(None))
+        .distinct()
+        .all()
+    ]
+    if multiple_days_mentioned or _mentions_multiple_known_courses(question, known_course_names):
+        return AnswerResult(answer=_REDIRECT_TO_CALENDAR_MESSAGE, is_grounded=True, sources=[])
+
     topics_query = db.query(Topic).filter(Topic.user_id == user_id)
     if course_name:
         topics_query = topics_query.filter(Topic.course_name == course_name)
@@ -312,7 +342,12 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         # lịch ôn) nên không có gì để bịa và không cần qua verifier.
         if capability.name == "study_plan":
             result = _build_study_plan_result(
-                db, req.user_id, req.course_name, capability.params["days"]
+                db,
+                req.user_id,
+                req.course_name,
+                capability.params["days"],
+                req.question,
+                capability.params["multiple_days_mentioned"],
             )
         elif capability.name == "flashcard_due":
             result = _build_flashcard_due_result(db, req.user_id)

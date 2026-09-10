@@ -21,6 +21,7 @@ from typing import List
 
 from app.models import (
     Attempt,
+    Document,
     DocumentTopic,
     FlashcardItem,
     MasteryScore,
@@ -52,6 +53,12 @@ def cleanup_document_topics(db, document_id: str, user_id: str) -> List[str]:
     if not outline_rows:
         return []
 
+    # Topic được định danh theo (user_id, course_name, name) — cùng một tên
+    # chủ đề có thể tồn tại hợp lệ ở hai môn khác nhau, nên phải khoá theo môn
+    # của CHÍNH tài liệu đang dọn, không phải chỉ theo tên.
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    course_name = doc.course_name if doc else None
+
     titles = [row.title for row in outline_rows]
     for row in outline_rows:
         db.delete(row)
@@ -59,16 +66,29 @@ def cleanup_document_topics(db, document_id: str, user_id: str) -> List[str]:
 
     removed: List[str] = []
     for title in set(titles):
-        # Tài liệu KHÁC còn nhắc tới chủ đề này thì giữ lại.
+        # Tài liệu KHÁC còn nhắc tới chủ đề này (CÙNG môn) thì giữ lại.
         still_referenced = (
             db.query(DocumentTopic)
-            .filter(DocumentTopic.user_id == user_id, DocumentTopic.title == title)
+            .join(Document, Document.id == DocumentTopic.document_id)
+            .filter(
+                DocumentTopic.user_id == user_id,
+                DocumentTopic.title == title,
+                Document.course_name == course_name,
+            )
             .first()
         )
         if still_referenced is not None:
             continue
 
-        topic = db.query(Topic).filter(Topic.user_id == user_id, Topic.name == title).first()
+        topic = (
+            db.query(Topic)
+            .filter(
+                Topic.user_id == user_id,
+                Topic.course_name == course_name,
+                Topic.name == title,
+            )
+            .first()
+        )
         if topic is None or _topic_is_used(db, topic.id):
             continue
 
