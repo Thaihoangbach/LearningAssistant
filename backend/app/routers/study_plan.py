@@ -15,7 +15,7 @@ from app.ingestion.outline import filter_topic_titles
 from app.memory.service import record_event
 from app.models import CourseDeadline, Document, DocumentTopic, MasteryScore, MemoryEvent, Topic
 from app.services.learning_policy import recommend_action
-from app.services.learning_state import get_learning_state
+from app.services.learning_state import get_learning_states
 from app.services.mastery import decay_unpractised
 from app.services.study_planner import CoursePlanInput, TopicPriority, generate_multi_course_plan
 
@@ -128,9 +128,9 @@ def get_study_plan(
     # topic_id (không phải mỗi lần chủ đề đó xuất hiện lặp lại qua các ngày
     # trong kế hoạch) — Comprehension/Retention của một topic không đổi theo
     # ngày được xếp lịch.
+    learning_states = get_learning_states(db, user_id, list(set(topic_id_by_key.values())))
     recommendation_by_topic_id = {
-        topic_id: recommend_action(get_learning_state(db, user_id, topic_id))
-        for topic_id in set(topic_id_by_key.values())
+        topic_id: recommend_action(state) for topic_id, state in learning_states.items()
     }
 
     return {

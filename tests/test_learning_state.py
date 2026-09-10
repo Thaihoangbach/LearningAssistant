@@ -112,5 +112,54 @@ class TestGetLearningState(LearningStateTestCase):
         self.assertIsNone(state.retention)
 
 
+class TestGetLearningStatesBulk(LearningStateTestCase):
+    """get_learning_states() phải trả kết quả GIỐNG HỆT việc gọi
+    get_learning_state() cho từng topic — chỉ khác ở số truy vấn (2 cố định
+    thay vì 2 mỗi topic, xem docstring trong learning_state.py)."""
+
+    def test_empty_topic_ids_returns_empty_dict(self):
+        from app.services.learning_state import get_learning_states
+
+        self.assertEqual(get_learning_states(self.db, "u1", []), {})
+
+    def test_matches_single_topic_lookup_for_each_topic(self):
+        from app.services.learning_state import get_learning_state, get_learning_states
+
+        self.db.add(MasteryScore(user_id="u1", topic_id=self.topic.id, score=0.5, updated_at=NOW))
+        self.db.commit()
+        item = self._flashcard_item(self.other_topic.id)
+        self._review(item, "easy", NOW)
+
+        bulk = get_learning_states(self.db, "u1", [self.topic.id, self.other_topic.id], now=NOW)
+        self.assertAlmostEqual(
+            bulk[self.topic.id].comprehension,
+            get_learning_state(self.db, "u1", self.topic.id, now=NOW).comprehension,
+            places=4,
+        )
+        self.assertAlmostEqual(
+            bulk[self.other_topic.id].retention,
+            get_learning_state(self.db, "u1", self.other_topic.id, now=NOW).retention,
+            places=4,
+        )
+
+    def test_every_requested_topic_id_is_present_even_without_data(self):
+        from app.services.learning_state import get_learning_states
+
+        bulk = get_learning_states(self.db, "u1", [self.topic.id, self.other_topic.id], now=NOW)
+        self.assertEqual(set(bulk.keys()), {self.topic.id, self.other_topic.id})
+        self.assertIsNone(bulk[self.topic.id].comprehension)
+        self.assertIsNone(bulk[self.topic.id].retention)
+
+    def test_reviews_do_not_leak_between_topics_in_bulk_call(self):
+        from app.services.learning_state import get_learning_states
+
+        item = self._flashcard_item(self.topic.id)
+        self._review(item, "easy", NOW)
+
+        bulk = get_learning_states(self.db, "u1", [self.topic.id, self.other_topic.id], now=NOW)
+        self.assertGreaterEqual(bulk[self.topic.id].retention, 0.9)
+        self.assertIsNone(bulk[self.other_topic.id].retention)
+
+
 if __name__ == "__main__":
     unittest.main()
