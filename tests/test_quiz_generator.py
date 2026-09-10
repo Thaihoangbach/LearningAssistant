@@ -160,6 +160,66 @@ class TestBoundedRetryOnUndergeneration(unittest.TestCase):
         self.assertEqual(len(llm.prompts_received), 3)  # không có lượt bù
 
 
+class TestDuplicateDetection(unittest.TestCase):
+    """Learning Loop Phase 4 — phát hiện trùng lặp DETERMINISTIC (so từ khoá,
+    không dùng LLM-judge — việc đó để Phase 5), mở rộng dedup đã có
+    (test_top_up_attempt_does_not_duplicate_already_collected_questions) từ
+    so khớp CHÍNH XÁC sang phát hiện câu hỏi GẦN GIỐNG (diễn đạt lại), và
+    chặn TRƯỚC khi gọi verifier để đỡ tốn quota thay vì lọc sau khi đã verify."""
+
+    def test_exact_duplicate_within_same_batch_is_dropped_without_extra_verifier_call(self):
+        # num_questions=1 (không phải 2): đủ ngay từ câu đầu, không kích hoạt
+        # lượt bù BUG-003 — cô lập đúng hành vi đang test (dedup TRƯỚC verify),
+        # không lẫn với cơ chế bù thiếu vốn đã có sẵn.
+        json_with_exact_dup = """
+        [
+          {"question": "RAG là gì?", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "vì...", "chunk_index": 0},
+          {"question": "RAG là gì?", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "vì...", "chunk_index": 0}
+        ]
+        """
+        llm = FakeLLMClient(scripted_responses=[json_with_exact_dup, "CÓ"])
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=1)
+
+        self.assertEqual(len(result), 1)
+        # 1 lượt gọi generator + 1 lượt verify (câu 2 bị bỏ TRƯỚC khi verify vì
+        # trùng câu 1) = 2, không phải 3.
+        self.assertEqual(len(llm.prompts_received), 2)
+
+    def test_paraphrased_duplicate_within_same_batch_is_dropped(self):
+        json_with_paraphrase = """
+        [
+          {"question": "RAG là kỹ thuật gì trong xử lý ngôn ngữ tự nhiên?", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "vì...", "chunk_index": 0},
+          {"question": "Kỹ thuật RAG trong xử lý ngôn ngữ tự nhiên là gì?", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "vì...", "chunk_index": 0}
+        ]
+        """
+        llm = FakeLLMClient(scripted_responses=[json_with_paraphrase, "CÓ"])
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=1)
+
+        self.assertEqual(len(result), 1)
+
+    def test_questions_about_different_things_are_both_kept(self):
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "CÓ"])
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
+
+        self.assertEqual(len(result), 2)
+
+    def test_paraphrased_duplicate_against_earlier_top_up_batch_is_dropped(self):
+        # Mirror test_top_up_attempt_does_not_duplicate_already_collected_questions
+        # nhưng câu ở lượt bù được DIỄN ĐẠT LẠI thay vì lặp y hệt — dedup chỉ
+        # so chuỗi chính xác sẽ bỏ lọt trường hợp này.
+        paraphrased_top_up_json = (
+            '[{"question": "Định nghĩa của RAG là gì?", "options": ["A","B","C","D"], '
+            '"correct_answer": "A", "explanation": "x", "chunk_index": 0}]'
+        )
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", paraphrased_top_up_json]
+        )
+        result = generate_quiz(chunks=[make_chunk()], llm_client=llm, num_questions=2)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].question, "RAG là gì?")
+
+
 class TestIntermediateDifficulty(unittest.TestCase):
     def test_intermediate_instruction_is_included_in_prompt(self):
         llm = FakeLLMClient(scripted_responses=["[]"])
