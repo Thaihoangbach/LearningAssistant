@@ -8,7 +8,6 @@ import QuizPage from "./pages/QuizPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
 import StudyPlanPage from "./pages/StudyPlanPage";
 import ProfilePage from "./pages/ProfilePage";
-import MemoryPage from "./pages/MemoryPage";
 
 const PAGE_TITLES = {
   "/": "Tổng quan",
@@ -18,7 +17,6 @@ const PAGE_TITLES = {
   "/flashcards": "Flashcard ôn tập",
   "/study-plan": "Kế hoạch ôn tập",
   "/profile": "Hồ sơ học tập",
-  "/memory": "Ký ức hệ thống",
 };
 
 function Layout() {
@@ -48,7 +46,6 @@ export default function App() {
           <Route path="/flashcards" element={<FlashcardsPage />} />
           <Route path="/study-plan" element={<StudyPlanPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/memory" element={<MemoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
