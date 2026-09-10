@@ -18,3 +18,14 @@ export const MASTERY_LEVEL = Object.freeze({
   MEDIUM: "trung bình",
   WEAK: "yếu",
 });
+
+// Khớp VALID_GENERATION_MODES (app/services/generation_mode.py) — mục tiêu
+// học người dùng tự chọn khi sinh Quiz/Flashcard (Learning Loop Phase 3).
+// Dùng chung giữa QuizPage/FlashcardsPage (form chọn) và StudyPlanPage (gợi ý
+// điền sẵn theo recommended_action, người dùng vẫn sửa được).
+export const GENERATION_MODES = Object.freeze([
+  { value: "learn", label: "Học mới" },
+  { value: "review", label: "Ôn tập" },
+  { value: "exam", label: "Luyện thi" },
+  { value: "weak_topics", label: "Chủ đề yếu" },
+]);

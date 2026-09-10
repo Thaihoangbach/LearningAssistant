@@ -10,6 +10,7 @@ Test bằng fake LLM client — xem tests/test_quiz_generator.py.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -111,6 +112,35 @@ def _strip_json_fence(text: str) -> str:
     return text.strip()
 
 
+# Phase 4 (Learning Loop) — dedup DETERMINISTIC bằng độ trùng từ khoá, không
+# dùng LLM-judge (việc đó để Phase 5). Đo bằng OVERLAP COEFFICIENT (giao / độ
+# dài tập nhỏ hơn), KHÔNG phải Jaccard (giao / hợp) — Jaccard bị pha loãng khi
+# một câu chỉ thêm vài từ tiền tố vào câu kia (vd "Định nghĩa của RAG là gì?"
+# so với "RAG là gì?": Jaccard chỉ 0.5 dù thực chất là hỏi lại y hệt), còn
+# overlap coefficient cho ra 1.0 đúng cho trường hợp đó. Ngưỡng 0.8 vẫn đủ cao
+# để không đánh trượt hai câu hỏi thật khác nhau chỉ tình cờ dùng chung vài từ
+# khoá miền (vd "RAG là gì?" vs "RAG dùng để làm gì?" ~ 0.67).
+_DUPLICATE_SIMILARITY_THRESHOLD = 0.8
+
+
+def _question_words(question: str) -> set:
+    return set(re.findall(r"\w+", question.lower(), flags=re.UNICODE))
+
+
+def _is_near_duplicate(question: str, existing_questions: List[str]) -> bool:
+    words = _question_words(question)
+    if not words:
+        return False
+    for other in existing_questions:
+        other_words = _question_words(other)
+        if not other_words:
+            continue
+        overlap = len(words & other_words) / min(len(words), len(other_words))
+        if overlap >= _DUPLICATE_SIMILARITY_THRESHOLD:
+            return True
+    return False
+
+
 def _build_avoid_duplicates_note(asked_questions: List[str]) -> str:
     if not asked_questions:
         return ""
@@ -143,6 +173,10 @@ def _generate_verified_batch(
         return []
 
     verified_items: List[QuizItem] = []
+    # Bắt đầu từ các câu đã có TRƯỚC lượt này (lượt bù trước đó) để dedup xuyên
+    # suốt cả lượt hiện tại lẫn các câu vừa verify được TRONG lượt này — không
+    # chỉ so đầu-cuối một lượt riêng lẻ.
+    seen_questions = list(asked_questions)
     for raw in raw_items:
         if not isinstance(raw, dict):
             continue
@@ -159,11 +193,15 @@ def _generate_verified_batch(
         if not isinstance(chunk_index, int) or not (0 <= chunk_index < len(chunks)):
             continue  # tham chiếu chunk không hợp lệ -> bỏ qua, KHÔNG gọi verifier
 
+        if _is_near_duplicate(question, seen_questions):
+            continue  # trùng hoặc gần trùng (kể cả diễn đạt lại) -> bỏ, KHÔNG gọi verifier
+
         chunk = chunks[chunk_index]
         verdict = llm_client.complete(_build_item_verifier_prompt(question, correct_answer, chunk.text))
         if not verdict.strip().upper().startswith(("CÓ", "YES")):
             continue
 
+        seen_questions.append(question)
         verified_items.append(
             QuizItem(
                 question=question,
@@ -198,7 +236,6 @@ def generate_quiz(
         return []
 
     collected: List[QuizItem] = []
-    seen_questions: set = set()
 
     for attempt in range(_MAX_GENERATION_ATTEMPTS):
         remaining = num_questions - len(collected)
@@ -208,14 +245,12 @@ def generate_quiz(
             # Lượt đầu ra 0 câu hoàn toàn -> không bù, xem docstring hằng số ở trên.
             break
 
+        # Dedup (trùng y hệt LẪN diễn đạt lại) đã xảy ra BÊN TRONG
+        # _generate_verified_batch, xuyên suốt các lượt nhờ asked_questions —
+        # batch trả về ở đây chắc chắn không trùng collected.
         batch = _generate_verified_batch(
             chunks, llm_client, remaining, difficulty, [c.question for c in collected]
         )
-        for item in batch:
-            key = item.question.strip().lower()
-            if key in seen_questions:
-                continue  # LLM lặp lại câu hỏi giữa các lượt -> bỏ, không tính trùng vào kết quả
-            seen_questions.add(key)
-            collected.append(item)
+        collected.extend(batch)
 
     return collected

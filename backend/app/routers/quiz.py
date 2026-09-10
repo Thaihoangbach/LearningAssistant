@@ -10,16 +10,28 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
+from app.ingestion.outline import is_bibliography_like_chunk
 from app.llm.client_factory import get_llm_client
 from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
 from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
+from app.services.generation_mode import VALID_GENERATION_MODES
 from app.services.learner_context import build_learner_context
 from app.services.mastery import Attempt as MasteryAttempt, compute_mastery
 from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
+
+
+def _prioritize_core_content(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
+    """Learning Loop Phase 0.5 — cùng vá với BUG-007 bên flashcard
+    (app/routers/flashcard.py::_prioritize_core_content): đẩy các đoạn giống
+    khu vực tham khảo/trích dẫn xuống CUỐI danh sách (KHÔNG xoá) trước khi đưa
+    vào generator, để quiz ưu tiên hỏi nội dung cốt lõi thay vì bịa câu hỏi
+    quanh một mục trích dẫn. Tách thành hàm thuần để test được không cần
+    Postgres thật (xem tests/test_quiz_prioritization.py)."""
+    return sorted(chunks, key=lambda c: is_bibliography_like_chunk(c.text))
 
 
 class GenerateQuizRequest(BaseModel):
@@ -29,6 +41,9 @@ class GenerateQuizRequest(BaseModel):
     topic_name: str | None = None
     num_questions: int = 5
     difficulty: str | None = None  # "beginner" | "advanced" | None — xem app/llm/quiz_generator.py
+    # "learn" | "review" | "exam" | "weak_topics" | None — Learning Loop Phase 3,
+    # xem app/services/generation_mode.py.
+    generation_mode: str | None = None
 
 
 @router.post("/generate")
@@ -36,6 +51,8 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     requested_ids = req.document_ids or ([req.document_id] if req.document_id else [])
     if not requested_ids:
         raise HTTPException(400, "Cần cung cấp document_id hoặc document_ids.")
+    if req.generation_mode is not None and req.generation_mode not in VALID_GENERATION_MODES:
+        raise HTTPException(400, f"Chế độ sinh không hợp lệ. Chỉ nhận: {', '.join(VALID_GENERATION_MODES)}.")
 
     docs = (
         db.query(Document)
@@ -66,6 +83,12 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
         )
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh quiz từ (các) tài liệu này.")
+
+    # Hạ ưu tiên (KHÔNG xoá) các đoạn giống khu vực tham khảo/trích dẫn, cùng
+    # vá với BUG-007 bên flashcard — quiz nên hỏi nội dung cốt lõi trước.
+    # sort() ổn định nên thứ tự tương đối trong từng nhóm (theo điểm truy hồi)
+    # được giữ nguyên.
+    retrieved_chunks = _prioritize_core_content(retrieved_chunks)
 
     # KHÔNG truyền `query` — sinh quiz không cần truy hồi ký ức theo câu hỏi,
     # tránh tốn một lượt embed vô ích.
@@ -109,7 +132,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     # Quiz.document_id giữ 1 FK (không đổi schema) — với quiz đa tài liệu, lưu tài liệu
     # đầu tiên làm tham chiếu chính; nguồn thật của TỪNG câu hỏi vẫn đúng qua
     # QuizItem.source_document/source_position (lấy từ chunk tương ứng).
-    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id)
+    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id, generation_mode=req.generation_mode)
     db.add(quiz)
     db.commit()
 
@@ -251,4 +274,9 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
         "correct_answer": quiz_item.correct_answer,
         "explanation": quiz_item.explanation,
         "updated_mastery_score": new_score,
+        # Learning Loop Phase 2a — màn tổng kết cần trích được nguồn của câu
+        # sai khi đưa vào Flashcard ("Thêm vào Flashcard") hoặc mở hỏi AI kèm
+        # ngữ cảnh ("Hỏi AI"), cùng 2 trường QuizItem đã lưu sẵn lúc sinh quiz.
+        "source_document": quiz_item.source_document,
+        "source_position": quiz_item.source_position,
     }

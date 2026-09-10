@@ -6,7 +6,7 @@ import os
 import sys
 import unittest
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
@@ -17,7 +17,18 @@ from fastapi.testclient import TestClient
 
 from app.database import get_db
 from app.main import app
-from app.models import CourseDeadline, Document, DocumentTopic, MasteryScore, MemoryEvent, Topic, User
+from app.models import (
+    CourseDeadline,
+    Document,
+    DocumentTopic,
+    FlashcardItem,
+    FlashcardReview,
+    FlashcardSet,
+    MasteryScore,
+    MemoryEvent,
+    Topic,
+    User,
+)
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -381,6 +392,111 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
         dup_topic_count = sum(len(d["topics"]) for d in res_dup.json()["days"])
         single_topic_count = sum(len(d["topics"]) for d in res_single.json()["days"])
         self.assertEqual(dup_topic_count, single_topic_count)
+
+
+class StudyPlanReasonFieldTest(unittest.TestCase):
+    """GET /study-plan (Phase 1, Learning Loop): mỗi chủ đề trả thêm
+    `recommended_action`/`reason` từ app/services/learning_policy.py, tính
+    từ Learning State (app/services/learning_state.py) — Comprehension đọc
+    MasteryScore, Retention đọc FlashcardReview."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
+        embed_patcher = patch("app.ingestion.embedder.embed_query", side_effect=_fake_embed_query)
+        embed_patcher.start()
+        self.addCleanup(embed_patcher.stop)
+
+        self.user_id = str(uuid.uuid4())
+        db = self.SessionLocal()
+        try:
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Fiona"))
+            db.flush()
+            db.add(
+                CourseDeadline(
+                    user_id=self.user_id, course_name="CSDL", exam_date=date.today() + timedelta(days=3)
+                )
+            )
+            self.topic_weak = Topic(user_id=self.user_id, name="CSDL yếu", course_name="CSDL")
+            self.topic_fresh = Topic(user_id=self.user_id, name="CSDL mới", course_name="CSDL")
+            db.add_all([self.topic_weak, self.topic_fresh])
+            db.commit()
+            self.topic_weak_id = self.topic_weak.id
+        finally:
+            db.close()
+
+    def _get_plan(self):
+        res = self.client.get(
+            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+        )
+        self.assertEqual(res.status_code, 200)
+        by_name = {t["name"]: t for d in res.json()["days"] for t in d["topics"]}
+        return by_name
+
+    def test_weak_comprehension_recommends_quiz_with_a_vietnamese_reason(self):
+        db = self.SessionLocal()
+        try:
+            db.add(MasteryScore(user_id=self.user_id, topic_id=self.topic_weak_id, score=0.1))
+            db.commit()
+        finally:
+            db.close()
+
+        by_name = self._get_plan()
+        self.assertEqual(by_name["CSDL yếu"]["recommended_action"], "quiz")
+        self.assertIn("hiểu", by_name["CSDL yếu"]["reason"])
+
+    def test_no_data_recommends_learn(self):
+        by_name = self._get_plan()
+        self.assertEqual(by_name["CSDL mới"]["recommended_action"], "learn")
+        self.assertTrue(by_name["CSDL mới"]["reason"])
+
+    def test_strong_topic_has_no_recommended_action(self):
+        db = self.SessionLocal()
+        try:
+            db.add(MasteryScore(user_id=self.user_id, topic_id=self.topic_weak_id, score=0.9))
+            doc = Document(user_id=self.user_id, file_name="a.pdf", course_name="CSDL")
+            db.add(doc)
+            db.flush()
+            fset = FlashcardSet(user_id=self.user_id, document_id=doc.id)
+            db.add(fset)
+            db.flush()
+            item = FlashcardItem(flashcard_set_id=fset.id, topic_id=self.topic_weak_id, front="f", back="b")
+            db.add(item)
+            db.flush()
+            db.add(
+                FlashcardReview(
+                    user_id=self.user_id,
+                    flashcard_item_id=item.id,
+                    rating="easy",
+                    reviewed_at=datetime.utcnow(),
+                    interval_days=4,
+                    ease=2.6,
+                    next_due_at=datetime.utcnow() + timedelta(days=4),
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        by_name = self._get_plan()
+        self.assertIsNone(by_name["CSDL yếu"]["recommended_action"])
 
 
 if __name__ == "__main__":

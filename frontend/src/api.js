@@ -50,7 +50,7 @@ export async function deleteDocument(documentId) {
   return res.json();
 }
 
-export async function generateQuiz(documentId, topicName, numQuestions = 5, difficulty) {
+export async function generateQuiz(documentId, topicName, numQuestions = 5, difficulty, generationMode) {
   const res = await fetch(`${API_BASE}/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,6 +62,9 @@ export async function generateQuiz(documentId, topicName, numQuestions = 5, diff
       // Không gửi difficulty khi người dùng để "Tự động" — backend sẽ dùng
       // trình độ đã lưu hoặc suy từ mastery (app/services/learner_context.py).
       ...(difficulty ? { difficulty } : {}),
+      // Không gửi generation_mode khi để "Tự động" — cùng lý do difficulty ở
+      // trên (Learning Loop Phase 3).
+      ...(generationMode ? { generation_mode: generationMode } : {}),
     }),
   });
   if (!res.ok) await raiseFriendlyError(res);
@@ -135,7 +138,7 @@ export async function getDocumentOutline(documentId) {
   return res.json();
 }
 
-export async function generateFlashcards(documentId, topicName, numCards = 10) {
+export async function generateFlashcards(documentId, topicName, numCards = 10, generationMode) {
   const res = await fetch(`${API_BASE}/flashcard/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -144,6 +147,8 @@ export async function generateFlashcards(documentId, topicName, numCards = 10) {
       document_id: documentId,
       topic_name: topicName || null,
       num_cards: numCards,
+      // Không gửi generation_mode khi để "Tự động" (Learning Loop Phase 3).
+      ...(generationMode ? { generation_mode: generationMode } : {}),
     }),
   });
   if (!res.ok) await raiseFriendlyError(res);
@@ -176,6 +181,28 @@ export async function saveFlashcardFromAnswer({
 export async function listDueFlashcards(limit = 20) {
   const res = await fetch(
     `${API_BASE}/flashcard/due?user_id=${CURRENT_USER_ID}&limit=${limit}`
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function getFlashcardBoard() {
+  const res = await fetch(`${API_BASE}/flashcard/board?user_id=${CURRENT_USER_ID}`);
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function getFlashcardMistakes(limit = 20) {
+  const res = await fetch(
+    `${API_BASE}/flashcard/mistakes?user_id=${CURRENT_USER_ID}&limit=${limit}`
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function getFlashcardHistory(itemId) {
+  const res = await fetch(
+    `${API_BASE}/flashcard/${itemId}/history?user_id=${CURRENT_USER_ID}`
   );
   if (!res.ok) await raiseFriendlyError(res);
   return res.json();

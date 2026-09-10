@@ -48,8 +48,11 @@ class TestGenerateFlashcards(unittest.TestCase):
         self.assertEqual(len(llm.prompts_received), 3)
 
     def test_item_failing_verification_is_filtered_out(self):
+        # num_cards=1 (không phải 2): đủ ngay từ thẻ đầu, không kích hoạt lượt
+        # bù (xem TestBoundedRetryOnUndergeneration bên dưới) — cô lập đúng
+        # hành vi đang test.
         llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG"])
-        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].front, "CNN là gì?")
 
@@ -80,6 +83,73 @@ class TestGenerateFlashcards(unittest.TestCase):
         self.assertIn("Đoạn A", prompt)
         self.assertIn("Đoạn B", prompt)
         self.assertIn("8", prompt)
+
+
+ONE_ITEM_JSON = """
+[{"front": "Thẻ bù thêm?", "back": "Đáp án.", "chunk_index": 0}]
+"""
+
+
+class TestBoundedRetryOnUndergeneration(unittest.TestCase):
+    """Mirror tests/test_quiz_generator.py::TestBoundedRetryOnUndergeneration
+    (BUG-003) — flashcard dùng chung app/llm/rag.py::LLMClient nhưng trước
+    Phase 4 chưa có cơ chế bù khi verifier loại bớt thẻ."""
+
+    def test_partial_result_triggers_one_top_up_attempt(self):
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+        )
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual({r.front for r in result}, {"CNN là gì?", "Thẻ bù thêm?"})
+
+    def test_retry_is_bounded_not_infinite(self):
+        llm = FakeLLMClient(
+            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+        )
+        generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=5)
+        self.assertEqual(len(llm.prompts_received), 5)
+
+    def test_zero_items_on_first_attempt_does_not_retry(self):
+        llm = FakeLLMClient(scripted_responses=["không phải JSON"])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=3)
+        self.assertEqual(result, [])
+        self.assertEqual(len(llm.prompts_received), 1)
+
+    def test_exact_count_on_first_attempt_does_not_trigger_retry(self):
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "CÓ"])
+        generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
+        self.assertEqual(len(llm.prompts_received), 3)
+
+
+class TestDuplicateDetection(unittest.TestCase):
+    """Mirror tests/test_quiz_generator.py::TestDuplicateDetection."""
+
+    def test_exact_duplicate_within_same_batch_is_dropped_without_extra_verifier_call(self):
+        json_with_exact_dup = """
+        [
+          {"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0},
+          {"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0}
+        ]
+        """
+        llm = FakeLLMClient(scripted_responses=[json_with_exact_dup, "CÓ"])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(len(llm.prompts_received), 2)
+
+    def test_paraphrased_duplicate_within_same_batch_is_dropped(self):
+        json_with_paraphrase = """
+        [
+          {"front": "CNN là kỹ thuật gì trong xử lý ảnh?", "back": "A", "chunk_index": 0},
+          {"front": "Kỹ thuật CNN trong xử lý ảnh là gì?", "back": "A", "chunk_index": 0}
+        ]
+        """
+        llm = FakeLLMClient(scripted_responses=[json_with_paraphrase, "CÓ"])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+
+        self.assertEqual(len(result), 1)
 
 
 if __name__ == "__main__":
