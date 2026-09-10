@@ -10,7 +10,7 @@ import {
   listDueFlashcards,
   reviewFlashcard,
 } from "../api";
-import { DOCUMENT_STATUS } from "../lib/constants";
+import { DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -42,6 +42,8 @@ export default function FlashcardsPage() {
   // trang, không theo dõi thay đổi searchParams sau đó (cùng lý do QuizPage).
   const [recommendationReason] = useState(() => searchParams.get("reason") || "");
   const [numCards, setNumCards] = useState(10);
+  // Learning Loop Phase 3 — cùng lý do/hành vi với QuizPage.
+  const [generationMode, setGenerationMode] = useState(() => searchParams.get("mode") || "");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -111,7 +113,7 @@ export default function FlashcardsPage() {
     setGenerating(true);
     setError(null);
     try {
-      await generateFlashcards(documentId, topicName, numCards);
+      await generateFlashcards(documentId, topicName, numCards, generationMode);
       await loadDue();
       await loadProgress();
     } catch (e) {
@@ -195,6 +197,23 @@ export default function FlashcardsPage() {
                 {[5, 10, 15, 20].map((n) => (
                   <option key={n} value={n}>
                     {n} thẻ
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-40">
+              <label htmlFor="fc-mode" className="mb-1.5 block text-sm font-medium text-foreground">
+                Mục tiêu
+              </label>
+              <Select
+                id="fc-mode"
+                value={generationMode}
+                onChange={(e) => setGenerationMode(e.target.value)}
+              >
+                <option value="">Tự động</option>
+                {GENERATION_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
                   </option>
                 ))}
               </Select>

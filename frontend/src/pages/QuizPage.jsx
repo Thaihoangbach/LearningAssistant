@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookmarkPlus, Check, ListChecks, MessageCircle, Sparkles, Target, Trophy, X } from "lucide-react";
 import { listDocuments, generateQuiz, saveFlashcardFromAnswer, submitAttempt } from "../api";
-import { DOCUMENT_STATUS } from "../lib/constants";
+import { DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -21,6 +21,9 @@ export default function QuizPage() {
   const [recommendationReason] = useState(() => searchParams.get("reason") || "");
   const [numQuestions, setNumQuestions] = useState(5);
   const [difficulty, setDifficulty] = useState(""); // "" = để backend tự quyết theo hồ sơ
+  // Learning Loop Phase 3 — điền sẵn từ Study Plan (?mode=) nhưng vẫn sửa
+  // được ("AI đề xuất, học sinh kiểm soát", cùng nguyên tắc document/topic).
+  const [generationMode, setGenerationMode] = useState(() => searchParams.get("mode") || "");
   const [quizItems, setQuizItems] = useState([]);
   const [partialNotice, setPartialNotice] = useState(null);
   const [results, setResults] = useState({}); // quiz_item_id -> {is_correct, correct_answer, explanation}
@@ -44,7 +47,7 @@ export default function QuizPage() {
     setResults({});
     setPartialNotice(null);
     try {
-      const res = await generateQuiz(documentId, topicName, numQuestions, difficulty);
+      const res = await generateQuiz(documentId, topicName, numQuestions, difficulty, generationMode);
       setQuizItems(res.items);
       // BUG-003: backend giờ báo rõ khi tạo được ít câu hơn yêu cầu (thay vì
       // trả 200 im lặng với mảng items ngắn hơn) — hiện cảnh báo thay vì để
@@ -161,6 +164,23 @@ export default function QuizPage() {
                 <option value="beginner">Cơ bản</option>
                 <option value="intermediate">Vận dụng</option>
                 <option value="advanced">Nâng cao</option>
+              </Select>
+            </div>
+            <div className="w-40">
+              <label htmlFor="quiz-mode" className="mb-1.5 block text-sm font-medium text-foreground">
+                Mục tiêu
+              </label>
+              <Select
+                id="quiz-mode"
+                value={generationMode}
+                onChange={(e) => setGenerationMode(e.target.value)}
+              >
+                <option value="">Tự động</option>
+                {GENERATION_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
               </Select>
             </div>
             <Button onClick={handleGenerate} disabled={!documentId} loading={loading} className="shrink-0">

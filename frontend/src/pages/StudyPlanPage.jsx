@@ -95,13 +95,16 @@ function sortTopicsForDisplay(topics) {
   });
 }
 
-function topicActionHref(base, topic, reason) {
+function topicActionHref(base, topic, reason, mode) {
   const params = new URLSearchParams({ topic: topic.name });
   if (topic.document_id) params.set("document", topic.document_id);
   // `reason` chỉ gắn khi TRUYỀN VÀO (do caller quyết định action nào khớp
   // topic.recommended_action) — tránh hiện nhầm lý do "nên làm quiz" trên
   // link Ôn flashcard và ngược lại (Learning Loop Phase 1).
   if (reason) params.set("reason", reason);
+  // Cùng logic cho `mode` (Learning Loop Phase 3) — chỉ điền sẵn mục tiêu
+  // khi nút này KHỚP đề xuất, người dùng luôn sửa lại được ở form.
+  if (mode) params.set("mode", mode);
   return `${base}?${params}`;
 }
 
@@ -470,6 +473,11 @@ export default function StudyPlanPage() {
               // "learn"/null ở backend (app/services/learning_policy.py).
               const quizReason = topic.recommended_action === "quiz" ? topic.reason : null;
               const flashcardReason = topic.recommended_action === "flashcard" ? topic.reason : null;
+              // Suy mục tiêu gợi ý từ CHÍNH tín hiệu đã quyết định
+              // recommended_action (Comprehension yếu -> quiz -> tập trung
+              // đúng chủ đề yếu; Retention yếu -> flashcard -> ôn lại).
+              const quizMode = quizReason ? "weak_topics" : null;
+              const flashcardMode = flashcardReason ? "review" : null;
               return (
                 <div
                   key={key}
@@ -495,7 +503,7 @@ export default function StudyPlanPage() {
                   ) : (
                     <div className="flex shrink-0 flex-wrap gap-2">
                       <Link
-                        to={topicActionHref("/quiz", topic, quizReason)}
+                        to={topicActionHref("/quiz", topic, quizReason, quizMode)}
                         className={cn(
                           "flex h-9 items-center rounded-lg border px-3 text-sm font-medium",
                           quizReason
@@ -506,7 +514,7 @@ export default function StudyPlanPage() {
                         Làm quiz
                       </Link>
                       <Link
-                        to={topicActionHref("/flashcards", topic, flashcardReason)}
+                        to={topicActionHref("/flashcards", topic, flashcardReason, flashcardMode)}
                         className={cn(
                           "flex h-9 items-center rounded-lg border px-3 text-sm font-medium",
                           flashcardReason
