@@ -90,7 +90,7 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             (),
             {
                 "front": "Q?", "back": "A.",
-                "source_document": "b.pdf", "source_position": "Trang 1",
+                "source_document": "b.pdf", "source_position": "Trang 1", "content_type": "concept",
             },
         )()
 
@@ -134,7 +134,7 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
         fake_item = type(
             "FakeItem",
             (),
-            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1"},
+            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1", "content_type": "concept"},
         )()
 
         with patch("app.routers.flashcard.get_llm_client", return_value=object()), \
@@ -168,7 +168,7 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
         fake_item = type(
             "FakeItem",
             (),
-            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1"},
+            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1", "content_type": "concept"},
         )()
 
         with patch("app.routers.flashcard.get_llm_client", return_value=object()), \
@@ -209,7 +209,7 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
         fake_item = type(
             "FakeItem",
             (),
-            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1"},
+            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1", "content_type": "concept"},
         )()
 
         with patch("app.routers.flashcard.get_llm_client", return_value=object()), \

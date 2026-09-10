@@ -21,6 +21,7 @@ class FlashcardItem:
     back: str
     source_document: str
     source_position: str
+    content_type: str
 
 
 def _build_generator_prompt(chunks: List[RetrievedChunk], num_cards: int) -> str:
@@ -40,9 +41,10 @@ def _build_generator_prompt(chunks: List[RetrievedChunk], num_cards: int) -> str
 
 
 # Phase 4 (Learning Loop) — mirror app/llm/quiz_generator.py: dedup
-# DETERMINISTIC bằng overlap coefficient (giao / độ dài tập nhỏ hơn), không
-# dùng LLM-judge. Xem docstring cùng tên bên quiz_generator.py để biết lý do
-# chọn overlap coefficient thay vì Jaccard.
+# DETERMINISTIC bằng overlap coefficient (giao / độ dài tập nhỏ hơn), rẻ hơn
+# LLM-judge (_build_item_judge_prompt, Phase 5) nên giữ nguyên cách làm này.
+# Xem docstring cùng tên bên quiz_generator.py để biết lý do chọn overlap
+# coefficient thay vì Jaccard.
 _DUPLICATE_SIMILARITY_THRESHOLD = 0.8
 
 
@@ -74,15 +76,41 @@ def _build_avoid_duplicates_note(asked_fronts: List[str]) -> str:
     )
 
 
-def _build_item_verifier_prompt(front: str, back: str, chunk_text: str) -> str:
+# Learning Loop Phase 5 — LLM-judge cho "không mơ hồ"/phân loại nội dung
+# (khái niệm/định nghĩa/công thức/...), gộp CHUNG một lượt gọi với việc xác
+# minh nội dung đã có từ trước thay vì thêm một lượt gọi LLM riêng — mirror
+# app/llm/quiz_generator.py::_build_item_judge_prompt (xem docstring ở đó để
+# biết lý do gộp thay vì thêm lượt gọi mới). Flashcard không có khái niệm
+# "độ khó yêu cầu" như quiz nên không có trường difficulty_match.
+def _build_item_judge_prompt(front: str, back: str, chunk_text: str) -> str:
     return (
-        "Đọc đoạn trích tài liệu và flashcard (mặt trước/mặt sau) dưới đây. Trả lời DUY NHẤT "
-        "'CÓ' nếu nội dung mặt sau được nêu trực tiếp/suy ra rõ ràng từ đoạn trích, hoặc "
-        "'KHÔNG' nếu không.\n\n"
+        "Đọc đoạn trích tài liệu và flashcard (mặt trước/mặt sau) dưới đây, rồi đánh giá "
+        "chất lượng flashcard.\n\n"
         f"Đoạn trích tài liệu:\n{chunk_text}\n\n"
         f"Mặt trước: {front}\nMặt sau: {back}\n\n"
-        "Đáp án (chỉ 'CÓ' hoặc 'KHÔNG'):"
+        'Đánh giá "valid": true nếu nội dung mặt sau được nêu trực tiếp/suy ra rõ ràng từ '
+        "đoạn trích, false nếu không.\n"
+        '"ambiguous": true nếu mặt trước có thể hiểu theo nhiều cách hoặc có nhiều câu trả '
+        "lời hợp lý khác với mặt sau, false nếu mặt trước rõ ràng, chỉ ứng với một câu trả "
+        "lời.\n"
+        '"content_type": phân loại flashcard vào MỘT trong các giá trị sau: "concept" (khái '
+        'niệm), "definition" (định nghĩa), "formula" (công thức), "fact" (sự kiện), '
+        '"procedure" (quy trình/các bước).\n\n'
+        'Trả lời DUY NHẤT bằng JSON dạng {"valid": bool, "ambiguous": bool, "content_type": '
+        'string}. Không thêm text nào khác ngoài JSON.'
     )
+
+
+def _parse_judgment(raw_response: str) -> dict | None:
+    try:
+        data = json.loads(_strip_json_fence(raw_response))
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    if not all(key in data for key in ("valid", "ambiguous", "content_type")):
+        return None
+    return data
 
 
 def _strip_json_fence(text: str) -> str:
@@ -136,9 +164,9 @@ def _generate_verified_batch(
             continue  # trùng hoặc gần trùng (kể cả diễn đạt lại) -> bỏ, KHÔNG gọi verifier
 
         chunk = chunks[chunk_index]
-        verdict = llm_client.complete(_build_item_verifier_prompt(front, back, chunk.text))
-        if not verdict.strip().upper().startswith(("CÓ", "YES")):
-            continue
+        judgment = _parse_judgment(llm_client.complete(_build_item_judge_prompt(front, back, chunk.text)))
+        if judgment is None or not judgment["valid"] or judgment["ambiguous"]:
+            continue  # JSON hỏng, thiếu field, nội dung sai, hoặc mặt trước mơ hồ -> loại
 
         seen_fronts.append(front)
         verified_items.append(
@@ -147,6 +175,7 @@ def _generate_verified_batch(
                 back=back,
                 source_document=chunk.document_name,
                 source_position=chunk.position_ref,
+                content_type=judgment["content_type"],
             )
         )
 

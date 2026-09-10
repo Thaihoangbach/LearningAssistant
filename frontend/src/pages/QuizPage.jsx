@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookmarkPlus, Check, ListChecks, MessageCircle, Sparkles, Target, Trophy, X } from "lucide-react";
 import { listDocuments, generateQuiz, saveFlashcardFromAnswer, submitAttempt } from "../api";
-import { DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
+import { CONTENT_TYPE_LABEL, DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -236,9 +236,16 @@ export default function QuizPage() {
             return (
               <Card key={item.id} id={`q-${i}`}>
                 <CardContent className="flex flex-col gap-3 pt-5">
-                  <p className="font-semibold text-foreground">
-                    Câu {i + 1}: {item.question}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-foreground">
+                      Câu {i + 1}: {item.question}
+                    </p>
+                    {CONTENT_TYPE_LABEL[item.content_type] && (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {CONTENT_TYPE_LABEL[item.content_type]}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col gap-2">
                     {item.options.map((opt) => {
                       const isCorrectOption = result && opt === result.correct_answer;

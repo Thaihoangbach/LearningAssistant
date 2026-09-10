@@ -25,6 +25,7 @@ class QuizItem:
     explanation: str
     source_document: str
     source_position: str
+    content_type: str
 
 
 # Trình độ truyền vào tường minh mỗi lần sinh quiz (giống num_questions) — xem
@@ -89,14 +90,58 @@ def _build_generator_prompt(
     )
 
 
-def _build_item_verifier_prompt(question: str, correct_answer: str, chunk_text: str) -> str:
-    return (
-        "Đọc đoạn trích tài liệu và câu hỏi trắc nghiệm kèm đáp án dưới đây. Trả lời DUY NHẤT "
-        "'CÓ' nếu đáp án được nêu trực tiếp/suy ra rõ ràng từ đoạn trích, hoặc 'KHÔNG' nếu không.\n\n"
-        f"Đoạn trích tài liệu:\n{chunk_text}\n\n"
-        f"Câu hỏi: {question}\nĐáp án: {correct_answer}\n\n"
-        "Đáp án (chỉ 'CÓ' hoặc 'KHÔNG'):"
+# Learning Loop Phase 5 — LLM-judge cho "không mơ hồ"/"độ khó phù hợp"/phân
+# loại nội dung (khái niệm/định nghĩa/công thức/...), gộp CHUNG một lượt gọi
+# với việc xác minh nội dung đã có từ trước (verdict CÓ/KHÔNG cũ) thay vì
+# thêm một lượt gọi LLM riêng — nếu thêm lượt riêng, mỗi câu hỏi sẽ tốn thêm
+# một lượt gọi LLM nữa (bên cạnh generator + verify hiện có), tăng đáng kể
+# latency/cost; đây chính là lý do phase này từng bị hoãn lại khi thiết kế
+# roadmap ban đầu.
+_CONTENT_TYPES = ("concept", "definition", "formula", "fact", "procedure")
+
+
+def _build_item_judge_prompt(
+    question: str,
+    options: List[str],
+    correct_answer: str,
+    chunk_text: str,
+    difficulty: Optional[str],
+) -> str:
+    difficulty_clause = (
+        f'Câu hỏi này được yêu cầu ở mức độ khó "{difficulty}". Đặt "difficulty_match": true nếu '
+        "câu hỏi phù hợp mức đó, false nếu không."
+        if difficulty
+        else 'Không có yêu cầu độ khó cụ thể cho câu hỏi này — luôn đặt "difficulty_match": true.'
     )
+    options_text = "\n".join(f"- {o}" for o in options)
+    return (
+        "Đọc đoạn trích tài liệu và câu hỏi trắc nghiệm (kèm các lựa chọn, đáp án) dưới đây, "
+        "rồi đánh giá chất lượng câu hỏi.\n\n"
+        f"Đoạn trích tài liệu:\n{chunk_text}\n\n"
+        f"Câu hỏi: {question}\nCác lựa chọn:\n{options_text}\nĐáp án: {correct_answer}\n\n"
+        'Đánh giá "valid": true nếu đáp án được nêu trực tiếp/suy ra rõ ràng từ đoạn trích, '
+        "false nếu không.\n"
+        '"ambiguous": true nếu câu hỏi có thể hiểu theo nhiều cách hoặc có hơn một lựa chọn hợp '
+        "lý đúng, false nếu câu hỏi rõ ràng và chỉ một đáp án đúng.\n"
+        f"{difficulty_clause}\n"
+        '"content_type": phân loại câu hỏi vào MỘT trong các giá trị sau: "concept" (khái niệm), '
+        '"definition" (định nghĩa), "formula" (công thức), "fact" (sự kiện), "procedure" '
+        "(quy trình/các bước).\n\n"
+        'Trả lời DUY NHẤT bằng JSON dạng {"valid": bool, "ambiguous": bool, "difficulty_match": '
+        'bool, "content_type": string}. Không thêm text nào khác ngoài JSON.'
+    )
+
+
+def _parse_judgment(raw_response: str) -> Optional[dict]:
+    try:
+        data = json.loads(_strip_json_fence(raw_response))
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    if not all(key in data for key in ("valid", "ambiguous", "difficulty_match", "content_type")):
+        return None
+    return data
 
 
 def _strip_json_fence(text: str) -> str:
@@ -112,8 +157,10 @@ def _strip_json_fence(text: str) -> str:
     return text.strip()
 
 
-# Phase 4 (Learning Loop) — dedup DETERMINISTIC bằng độ trùng từ khoá, không
-# dùng LLM-judge (việc đó để Phase 5). Đo bằng OVERLAP COEFFICIENT (giao / độ
+# Phase 4 (Learning Loop) — dedup DETERMINISTIC bằng độ trùng từ khoá; phát
+# hiện trùng lặp vẫn rẻ hơn LLM-judge (_build_item_judge_prompt, Phase 5) nên
+# giữ nguyên cách làm này thay vì chuyển sang hỏi LLM. Đo bằng OVERLAP
+# COEFFICIENT (giao / độ
 # dài tập nhỏ hơn), KHÔNG phải Jaccard (giao / hợp) — Jaccard bị pha loãng khi
 # một câu chỉ thêm vài từ tiền tố vào câu kia (vd "Định nghĩa của RAG là gì?"
 # so với "RAG là gì?": Jaccard chỉ 0.5 dù thực chất là hỏi lại y hệt), còn
@@ -197,9 +244,15 @@ def _generate_verified_batch(
             continue  # trùng hoặc gần trùng (kể cả diễn đạt lại) -> bỏ, KHÔNG gọi verifier
 
         chunk = chunks[chunk_index]
-        verdict = llm_client.complete(_build_item_verifier_prompt(question, correct_answer, chunk.text))
-        if not verdict.strip().upper().startswith(("CÓ", "YES")):
-            continue
+        judgment = _parse_judgment(
+            llm_client.complete(
+                _build_item_judge_prompt(question, options, correct_answer, chunk.text, difficulty)
+            )
+        )
+        if judgment is None or not judgment["valid"] or judgment["ambiguous"]:
+            continue  # JSON hỏng, thiếu field, nội dung sai, hoặc câu hỏi mơ hồ -> loại
+        if difficulty is not None and not judgment["difficulty_match"]:
+            continue  # có yêu cầu độ khó cụ thể nhưng câu hỏi không phù hợp -> loại
 
         seen_questions.append(question)
         verified_items.append(
@@ -210,6 +263,7 @@ def _generate_verified_batch(
                 explanation=explanation,
                 source_document=chunk.document_name,
                 source_position=chunk.position_ref,
+                content_type=judgment["content_type"],
             )
         )
 

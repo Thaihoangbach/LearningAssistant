@@ -202,6 +202,10 @@ class QuizItem(Base):
     # Độ khó lúc sinh câu hỏi — dùng để cân trọng số mastery (app/services/mastery.py).
     # Không lưu thì trả lời đúng một câu dễ cộng điểm y hệt một câu khó.
     difficulty = Column(String, nullable=True)
+    # Phân loại của LLM-judge (Learning Loop Phase 5): "concept" | "definition"
+    # | "formula" | "fact" | "procedure". NULL cho câu hỏi sinh trước Phase 5.
+    # Xem app/llm/quiz_generator.py::_build_item_judge_prompt.
+    content_type = Column(String, nullable=True)
 
     quiz = relationship("Quiz", back_populates="items")
 
@@ -236,6 +240,8 @@ class FlashcardItem(Base):
     back = Column(Text, nullable=False)
     source_document = Column(String, nullable=True)
     source_position = Column(String, nullable=True)
+    # Xem docstring cùng tên trên QuizItem — cùng lý do, cùng giá trị dự kiến.
+    content_type = Column(String, nullable=True)
 
     flashcard_set = relationship("FlashcardSet", back_populates="items")
 
