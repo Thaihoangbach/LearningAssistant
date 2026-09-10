@@ -178,6 +178,11 @@ class Quiz(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     document_id = Column(String, ForeignKey("documents.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Chế độ sinh (Phase 3, roadmap Learning Loop): "learn" | "review" |
+    # "exam" | "weak_topics". Nullable — thêm cột sớm ở Phase 0 để tránh
+    # migrate schema lần hai khi Phase 3 cần lưu lineage này; chưa có nơi
+    # nào ghi giá trị khác NULL cho tới khi UI goal/mode được xây.
+    generation_mode = Column(String, nullable=True)
 
     items = relationship("QuizItem", back_populates="quiz")
 
@@ -210,6 +215,8 @@ class FlashcardSet(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     document_id = Column(String, ForeignKey("documents.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Xem docstring cùng tên trên Quiz — cùng lý do, cùng giá trị dự kiến.
+    generation_mode = Column(String, nullable=True)
 
     items = relationship("FlashcardItem", back_populates="flashcard_set")
 
