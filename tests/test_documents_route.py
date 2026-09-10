@@ -119,5 +119,126 @@ class UploadSizeLimitTest(unittest.TestCase):
         self.assertLess(res.status_code, 500)
 
 
+class UploadDisplayNameTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.TestingSessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        TestingSessionLocal = self.TestingSessionLocal
+
+        def override_get_db():
+            db = TestingSessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
+        seed_db = TestingSessionLocal()
+        seed_db.query(Document).filter(Document.user_id == "bob").delete()
+        seed_db.query(User).filter(User.id == "bob").delete()
+        seed_db.add(User(id="bob", email="bob@test.local", display_name="Bob"))
+        seed_db.commit()
+        seed_db.close()
+
+        save_patcher = patch.object(documents_router.storage, "save_file")
+        self.save_file_mock = save_patcher.start()
+        self.addCleanup(save_patcher.stop)
+
+    def test_upload_stores_custom_display_name(self):
+        res = self.client.post(
+            "/documents",
+            params={"user_id": "bob", "display_name": "Chương 3 - Chuẩn hoá dữ liệu"},
+            files={"file": ("slide_ch3_v2_final.pdf", io.BytesIO(b"%PDF-1.4 noi dung"), "application/pdf")},
+        )
+        self.assertEqual(res.status_code, 200)
+
+        listed = self.client.get("/documents", params={"user_id": "bob"})
+        docs = listed.json()
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0]["display_name"], "Chương 3 - Chuẩn hoá dữ liệu")
+        self.assertEqual(docs[0]["file_name"], "slide_ch3_v2_final.pdf")
+
+    def test_upload_without_display_name_leaves_it_null(self):
+        res = self.client.post(
+            "/documents",
+            params={"user_id": "bob"},
+            files={"file": ("notes.pdf", io.BytesIO(b"%PDF-1.4 noi dung"), "application/pdf")},
+        )
+        self.assertEqual(res.status_code, 200)
+
+        listed = self.client.get("/documents", params={"user_id": "bob"})
+        self.assertIsNone(listed.json()[0]["display_name"])
+
+
+class TopicCourseScopingTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.TestingSessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        from app.models import DocumentTopic, Topic
+
+        self.db = self.TestingSessionLocal()
+        self.addCleanup(self.db.close)
+        # DocumentTopic có FK tới Document — phải dọn TRƯỚC khi xoá Document,
+        # nếu không lần chạy test thứ hai trong class này (test order không
+        # đảm bảo, và _save_outline ở test đầu đã tạo ra các dòng
+        # DocumentTopic) sẽ vỡ ForeignKeyViolation khi xoá Document của carol.
+        self.db.query(DocumentTopic).filter(DocumentTopic.user_id == "carol").delete()
+        self.db.query(Topic).delete()
+        self.db.query(Document).filter(Document.user_id == "carol").delete()
+        self.db.query(User).filter(User.id == "carol").delete()
+        self.db.add(User(id="carol", email="carol@test.local", display_name="Carol"))
+        self.db.commit()
+
+    def test_same_heading_in_different_courses_creates_separate_topics(self):
+        from app.ingestion.outline import OutlineEntry
+        from app.models import Topic
+
+        doc_a = Document(user_id="carol", file_name="a.pdf", course_name="CSDL")
+        doc_b = Document(user_id="carol", file_name="b.pdf", course_name="Mạng máy tính")
+        self.db.add_all([doc_a, doc_b])
+        self.db.commit()
+
+        entries = [OutlineEntry(title="Giới thiệu", position_ref="Trang 1", order=0)]
+        with patch.object(documents_router, "extract_outline", return_value=entries):
+            documents_router._save_outline(self.db, doc_a.id, "carol", "/fake/a.pdf", "CSDL")
+            documents_router._save_outline(self.db, doc_b.id, "carol", "/fake/b.pdf", "Mạng máy tính")
+
+        topics = self.db.query(Topic).filter(Topic.user_id == "carol", Topic.name == "Giới thiệu").all()
+        self.assertEqual(len(topics), 2)
+        self.assertEqual(sorted(t.course_name for t in topics), ["CSDL", "Mạng máy tính"])
+
+    def test_same_heading_in_same_course_reuses_one_topic(self):
+        from app.ingestion.outline import OutlineEntry
+        from app.models import Topic
+
+        doc_a = Document(user_id="carol", file_name="a.pdf", course_name="CSDL")
+        doc_b = Document(user_id="carol", file_name="a2.pdf", course_name="CSDL")
+        self.db.add_all([doc_a, doc_b])
+        self.db.commit()
+
+        entries = [OutlineEntry(title="Giới thiệu", position_ref="Trang 1", order=0)]
+        with patch.object(documents_router, "extract_outline", return_value=entries):
+            documents_router._save_outline(self.db, doc_a.id, "carol", "/fake/a.pdf", "CSDL")
+            documents_router._save_outline(self.db, doc_b.id, "carol", "/fake/a2.pdf", "CSDL")
+
+        topics = self.db.query(Topic).filter(Topic.user_id == "carol", Topic.name == "Giới thiệu").all()
+        self.assertEqual(len(topics), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

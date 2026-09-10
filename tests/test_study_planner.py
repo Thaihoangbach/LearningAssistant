@@ -139,5 +139,70 @@ class TestMaxPlanTopicsSafetyCap(unittest.TestCase):
         self.assertEqual(total, 5)
 
 
+class TestGenerateMultiCoursePlan(unittest.TestCase):
+    def test_no_courses_returns_empty_plan(self):
+        from app.services.study_planner import generate_multi_course_plan
+
+        self.assertEqual(generate_multi_course_plan([]), [])
+
+    def test_single_course_matches_plain_generate_plan(self):
+        from app.services.study_planner import CoursePlanInput, generate_multi_course_plan
+
+        topics = [TopicPriority(topic_name="A", score=0.1), TopicPriority(topic_name="B", score=0.9)]
+        result = generate_multi_course_plan(
+            [CoursePlanInput(course_name="CSDL", topics=topics, days_left=2)]
+        )
+        self.assertEqual(len(result), 2)
+        self.assertEqual([t.name for t in result[0].topics], ["A"])
+        self.assertEqual([t.course_name for t in result[0].topics], ["CSDL"])
+
+    def test_near_deadline_course_is_denser_than_far_deadline_course(self):
+        """Môn thi gần (days_left nhỏ) phải dồn nhiều chủ đề/ngày hơn môn thi
+        xa có cùng số lượng chủ đề — đúng nguyên tắc mật độ đã thống nhất khi
+        thiết kế (spec §6), không phải áp dụng luật chia đều."""
+        from app.services.study_planner import CoursePlanInput, generate_multi_course_plan
+
+        near_topics = [TopicPriority(topic_name=f"CSDL-{i}", score=None) for i in range(4)]
+        far_topics = [TopicPriority(topic_name=f"MMT-{i}", score=None) for i in range(4)]
+        result = generate_multi_course_plan(
+            [
+                CoursePlanInput(course_name="CSDL", topics=near_topics, days_left=2),
+                CoursePlanInput(course_name="Mạng máy tính", topics=far_topics, days_left=4),
+            ]
+        )
+
+        day1_csdl = [t for t in result[0].topics if t.course_name == "CSDL"]
+        day1_mmt = [t for t in result[0].topics if t.course_name == "Mạng máy tính"]
+        self.assertGreater(len(day1_csdl), len(day1_mmt))
+
+    def test_multiple_courses_can_share_a_day(self):
+        from app.services.study_planner import CoursePlanInput, generate_multi_course_plan
+
+        result = generate_multi_course_plan(
+            [
+                CoursePlanInput(course_name="CSDL", topics=[TopicPriority(topic_name="A", score=None)], days_left=3),
+                CoursePlanInput(course_name="MMT", topics=[TopicPriority(topic_name="B", score=None)], days_left=3),
+            ]
+        )
+        day1_courses = {t.course_name for t in result[0].topics}
+        self.assertEqual(day1_courses, {"CSDL", "MMT"})
+
+    def test_course_past_its_own_deadline_stops_contributing(self):
+        """days_left=1 chỉ góp mặt ở ngày 1 của lịch gộp, không tràn sang các
+        ngày sau dù lịch tổng dài hơn (vì môn khác có deadline xa hơn)."""
+        from app.services.study_planner import CoursePlanInput, generate_multi_course_plan
+
+        result = generate_multi_course_plan(
+            [
+                CoursePlanInput(course_name="CSDL", topics=[TopicPriority(topic_name="A", score=None)], days_left=1),
+                CoursePlanInput(course_name="MMT", topics=[TopicPriority(topic_name="B", score=None)], days_left=3),
+            ]
+        )
+        self.assertEqual(len(result), 3)
+        courses_by_day = [{t.course_name for t in d.topics} for d in result]
+        self.assertNotIn("CSDL", courses_by_day[1])
+        self.assertNotIn("CSDL", courses_by_day[2])
+
+
 if __name__ == "__main__":
     unittest.main()

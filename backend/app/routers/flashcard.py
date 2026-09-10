@@ -80,7 +80,15 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
         raise HTTPException(500, "Không sinh được flashcard nào xác minh được từ tài liệu.")
 
     topic_name = req.topic_name.strip() if req.topic_name and req.topic_name.strip() else os.path.splitext(doc.file_name)[0]
-    topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == topic_name).first()
+    topic = (
+        db.query(Topic)
+        .filter(
+            Topic.user_id == req.user_id,
+            Topic.course_name == doc.course_name,
+            Topic.name == topic_name,
+        )
+        .first()
+    )
     if not topic:
         topic = Topic(user_id=req.user_id, name=topic_name, course_name=doc.course_name)
         db.add(topic)

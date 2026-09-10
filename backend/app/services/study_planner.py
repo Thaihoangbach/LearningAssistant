@@ -75,3 +75,55 @@ def generate_plan(topics: List[TopicPriority], days: int) -> List[DayPlan]:
         plan[i % days].topics.append(topic.topic_name)
 
     return [d for d in plan if d.topics]
+
+
+@dataclass
+class CoursePlanInput:
+    course_name: str
+    topics: List[TopicPriority]
+    days_left: int  # >= 1 — số ngày còn lại tới hạn thi CỦA MÔN NÀY
+
+
+@dataclass
+class MergedTopic:
+    name: str
+    course_name: str
+
+
+@dataclass
+class MergedDayPlan:
+    day: int
+    topics: List[MergedTopic]
+
+
+def generate_multi_course_plan(courses: List[CoursePlanInput]) -> List[MergedDayPlan]:
+    """Gộp kế hoạch nhiều môn, mỗi môn có hạn thi riêng, thành MỘT lịch theo
+    ngày — một ngày có thể chứa chủ đề của nhiều môn cùng lúc.
+
+    Chạy generate_plan() ĐỘC LẬP cho từng môn với days=days_left riêng của
+    môn đó, rồi nối kết quả theo ngày — KHÔNG viết lại thuật toán phân bổ.
+    Môn thi gần (days_left nhỏ) tự nhiên dồn dày chủ đề vào ít ngày hơn vì
+    round-robin của generate_plan() chia trên ít ngày hơn — đúng nguyên tắc
+    mật độ mong muốn (spec §6) mà không cần công thức ưu tiên liên-môn nào
+    khác.
+
+    KHÁC với generate_plan() (hàm đó CẮT bớt các ngày không có chủ đề nào):
+    hàm này trả về ĐỦ mọi ngày từ 1 tới max(days_left của tất cả các môn),
+    kể cả những ngày hoàn toàn TRỐNG (topics=[]) — có chủ đích, để bên gọi
+    muốn hiển thị lịch theo đúng số ngày/canh đúng ngày trong tuần (kể cả
+    ngày nghỉ không có gì để ôn) vẫn có đủ một mục cho mỗi ngày mà không phải
+    tự suy ra ngày nào bị thiếu.
+    """
+    if not courses:
+        return []
+
+    max_days = max(c.days_left for c in courses)
+    merged = [MergedDayPlan(day=d, topics=[]) for d in range(1, max_days + 1)]
+
+    for course in courses:
+        for day_plan in generate_plan(course.topics, days=course.days_left):
+            merged[day_plan.day - 1].topics.extend(
+                MergedTopic(name=name, course_name=course.course_name) for name in day_plan.topics
+            )
+
+    return merged

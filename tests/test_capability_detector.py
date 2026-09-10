@@ -78,5 +78,19 @@ class TestRegistryShape(unittest.TestCase):
             self.assertIn(match.name, CAPABILITY_NAMES)
 
 
+class TestMultipleDeadlinesSignal(unittest.TestCase):
+    def test_single_deadline_mention_is_not_flagged(self):
+        match = detect_capability("còn 5 ngày nữa thi, ôn thế nào cho kịp?")
+        self.assertFalse(match.params["multiple_days_mentioned"])
+
+    def test_two_deadline_mentions_are_flagged(self):
+        # "còn" ở đầu là cần thiết để câu khớp _PLAN_INTENT_RE (xem
+        # "còn\s+\d+\s*(ngày|hôm)") — nếu không thì detect_capability trả về
+        # None trước khi kịp chạy tới _detect_study_plan, bất kể
+        # multiple_days_mentioned được cài đúng hay không.
+        match = detect_capability("còn 5 ngày nữa thi CSDL, 10 ngày nữa thi Mạng máy tính, ôn sao đây?")
+        self.assertTrue(match.params["multiple_days_mentioned"])
+
+
 if __name__ == "__main__":
     unittest.main()

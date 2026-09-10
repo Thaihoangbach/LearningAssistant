@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Layers, Sparkles } from "lucide-react";
 import {
   generateFlashcards,
@@ -23,9 +24,10 @@ const RATINGS = [
 ];
 
 export default function FlashcardsPage() {
+  const [searchParams] = useSearchParams();
   const [documents, setDocuments] = useState([]);
-  const [documentId, setDocumentId] = useState("");
-  const [topicName, setTopicName] = useState("");
+  const [documentId, setDocumentId] = useState(() => searchParams.get("document") || "");
+  const [topicName, setTopicName] = useState(() => searchParams.get("topic") || "");
   const [numCards, setNumCards] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Check, ListChecks, Sparkles, X } from "lucide-react";
 import { listDocuments, generateQuiz, submitAttempt } from "../api";
 import { DOCUMENT_STATUS } from "../lib/constants";
@@ -10,9 +11,10 @@ import EmptyState from "../components/ui/EmptyState";
 import { cn } from "../lib/cn";
 
 export default function QuizPage() {
+  const [searchParams] = useSearchParams();
   const [documents, setDocuments] = useState([]);
-  const [documentId, setDocumentId] = useState("");
-  const [topicName, setTopicName] = useState("");
+  const [documentId, setDocumentId] = useState(() => searchParams.get("document") || "");
+  const [topicName, setTopicName] = useState(() => searchParams.get("topic") || "");
   const [numQuestions, setNumQuestions] = useState(5);
   const [difficulty, setDifficulty] = useState(""); // "" = để backend tự quyết theo hồ sơ
   const [quizItems, setQuizItems] = useState([]);

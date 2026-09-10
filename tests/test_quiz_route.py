@@ -158,5 +158,104 @@ class QuizSubmitRouteTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
 
 
+class QuizTopicCourseScopingTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
+        self.user_id = str(uuid.uuid4())
+        db = self.SessionLocal()
+        try:
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Grace"))
+            db.flush()
+            self.doc_csdl = Document(user_id=self.user_id, file_name="a.pdf", course_name="CSDL", status="sẵn sàng")
+            self.doc_mmt = Document(user_id=self.user_id, file_name="b.pdf", course_name="Mạng máy tính", status="sẵn sàng")
+            db.add_all([self.doc_csdl, self.doc_mmt])
+            db.flush()
+            # Chụp lại id dạng chuỗi thuần TRƯỚC khi đóng session — sau
+            # db.commit() (expire_on_commit=True mặc định), truy cập lại
+            # self.doc_mmt.id trong test method (session đã đóng) sẽ ném
+            # DetachedInstanceError vì SQLAlchemy cần refresh từ DB.
+            self.doc_mmt_id = self.doc_mmt.id
+            self.doc_csdl_id = self.doc_csdl.id
+            # Topic CÙNG TÊN đã tồn tại sẵn cho môn CSDL, TRƯỚC khi quiz sinh
+            # cho môn Mạng máy tính chạy — mô phỏng đúng kịch bản bug: nếu
+            # lookup không lọc theo course_name, quiz Mạng máy tính sẽ tái sử
+            # dụng nhầm Topic của CSDL.
+            db.add(Topic(user_id=self.user_id, name="Bài tập", course_name="CSDL"))
+            db.commit()
+        finally:
+            db.close()
+
+    def test_same_topic_name_in_different_course_does_not_reuse_other_courses_topic(self):
+        # generate() gọi TRỰC TIẾP các tên đã import vào module app.routers.quiz
+        # (`from ... import embed_query/generate_quiz/PgVectorStore/get_llm_client`)
+        # — patch phải nhắm vào namespace app.routers.quiz, KHÔNG PHẢI module gốc
+        # định nghĩa chúng, nếu không patch sẽ không chặn được lệnh gọi thật (đã
+        # xác nhận bằng cách đọc lại backend/app/routers/quiz.py dòng 1-100:
+        # dòng 51-55 gọi PgVectorStore(...).search(...), dòng 54 gọi embed_query(...),
+        # dòng 75-81 gọi get_llm_client()/generate_quiz(...) — mọi tên này đều được
+        # bind trực tiếp vào namespace module lúc import, patch tại nguồn không có
+        # tác dụng theo đúng cơ chế unittest.mock.patch).
+        fake_item = type(
+            "FakeItem",
+            (),
+            {
+                "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
+                "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+            },
+        )()
+
+        with patch("app.routers.quiz.get_llm_client", return_value=object()), \
+             patch("app.routers.quiz.embed_query", side_effect=_fake_embed_query), \
+             patch("app.routers.quiz.generate_quiz", return_value=[fake_item]), \
+             patch("app.routers.quiz.PgVectorStore") as store_cls:
+            store_cls.return_value.search.return_value = [
+                (
+                    type("C", (), {
+                        "text": "nội dung", "document_name": "b.pdf", "position_ref": "Trang 1",
+                        "chunk_id": "c1", "document_id": self.doc_mmt_id,
+                    })(),
+                    0.9,
+                )
+            ]
+            res = self.client.post(
+                "/quiz/generate",
+                json={
+                    "user_id": self.user_id,
+                    "document_id": self.doc_mmt_id,
+                    "topic_name": "Bài tập",
+                    "num_questions": 1,
+                },
+            )
+
+        self.assertEqual(res.status_code, 200)
+
+        db = self.SessionLocal()
+        try:
+            topics = db.query(Topic).filter(Topic.user_id == self.user_id, Topic.name == "Bài tập").all()
+        finally:
+            db.close()
+
+        self.assertEqual(len(topics), 2)
+        self.assertEqual(sorted(t.course_name for t in topics), ["CSDL", "Mạng máy tính"])
+
+
 if __name__ == "__main__":
     unittest.main()

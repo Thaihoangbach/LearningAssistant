@@ -25,7 +25,7 @@ from app.models import (
 )
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
-from app.ingestion.outline import is_plausible_topic
+from app.ingestion.outline import filter_topic_titles
 from app.services.capability_detector import detect_capability
 from app.services.citation import _content_words, supporting_sentences
 from app.services.flashcard import count_due
@@ -184,10 +184,40 @@ def _classify_question_event(question: str, result: AnswerResult) -> tuple[str, 
     return "question_asked", f"Đã hỏi \"{preview}\""
 
 
-def _build_study_plan_result(db: Session, user_id: str, course_name: str | None, days: int) -> AnswerResult:
-    """Lập kế hoạch ôn tập ngay trong hội thoại. Trước đây năng lực này chỉ gọi
-    được qua endpoint riêng, nên hỏi "còn 5 ngày nữa thi, ôn thế nào?" trong
-    chat rơi vào nhánh hỏi đáp tài liệu và không bao giờ trả lời được."""
+_REDIRECT_TO_CALENDAR_MESSAGE = (
+    "Có vẻ bạn cần lên kế hoạch cho nhiều môn cùng lúc — vào trang Kế hoạch ôn để "
+    "chọn từng môn kèm ngày thi riêng, kế hoạch sẽ chính xác hơn một câu hỏi chat."
+)
+
+
+def _mentions_multiple_known_courses(question: str, known_course_names: list[str]) -> bool:
+    lowered = question.lower()
+    return sum(1 for name in known_course_names if name and name.lower() in lowered) > 1
+
+
+def _build_study_plan_result(
+    db: Session,
+    user_id: str,
+    course_name: str | None,
+    days: int,
+    question: str,
+    multiple_days_mentioned: bool,
+) -> AnswerResult:
+    """Lập kế hoạch ôn tập ngay trong hội thoại — CHỈ cho ca đơn-môn-đơn-hạn.
+    Câu hỏi nhắc nhiều hơn 1 hạn ("N ngày") hoặc nhiều hơn 1 môn đã có của
+    người dùng được nhường sang trang Kế hoạch ôn (spec §10) — chat
+    capability này cố tình KHÔNG dùng LLM để tách nhiều thực thể tự do, giữ
+    đúng nguyên tắc điều phối rẻ-trước-đắt-sau của module này."""
+    known_course_names = [
+        c
+        for (c,) in db.query(Document.course_name)
+        .filter(Document.user_id == user_id, Document.course_name.isnot(None))
+        .distinct()
+        .all()
+    ]
+    if multiple_days_mentioned or _mentions_multiple_known_courses(question, known_course_names):
+        return AnswerResult(answer=_REDIRECT_TO_CALENDAR_MESSAGE, is_grounded=True, sources=[])
+
     topics_query = db.query(Topic).filter(Topic.user_id == user_id)
     if course_name:
         topics_query = topics_query.filter(Topic.course_name == course_name)
@@ -204,11 +234,14 @@ def _build_study_plan_result(db: Session, user_id: str, course_name: str | None,
         )
 
     # Lọc chất lượng TẠI ĐIỂM TIÊU THỤ (app/ingestion/outline.py::
-    # is_plausible_topic) — không tin thẳng Topic.name, vì bảng này có thể còn
-    # chứa dữ liệu rút từ TRƯỚC khi heuristic trích xuất outline được siết
-    # chặt (BUG-001). Nếu không còn chủ đề nào hợp lệ, thà từ chối rõ ràng còn
-    # hơn trả về một "kế hoạch" ghép từ nội dung nhiễu.
-    topics = [t for t in topics if is_plausible_topic(t.name)]
+    # filter_topic_titles) — không tin thẳng Topic.name, vì bảng này có thể
+    # còn chứa dữ liệu rút từ TRƯỚC khi heuristic trích xuất outline được siết
+    # chặt (BUG-001). Dùng filter_topic_titles (không chỉ is_plausible_topic
+    # từng dòng) vì loại nhiễu chính trong dữ liệu thật là HEADER/FOOTER LẶP
+    # LẠI theo từng trang scan — mỗi biến thể lỗi OCR khác nhau đủ để không
+    # dòng nào tự nó trông bất thường, chỉ lộ ra khi so cả danh sách với nhau.
+    plausible_names = set(filter_topic_titles([t.name for t in topics]))
+    topics = [t for t in topics if t.name in plausible_names]
     if not topics:
         return AnswerResult(
             answer="Không đủ dữ liệu để tạo kế hoạch học tập đáng tin cậy từ tài liệu hiện tại.",
@@ -309,7 +342,12 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         # lịch ôn) nên không có gì để bịa và không cần qua verifier.
         if capability.name == "study_plan":
             result = _build_study_plan_result(
-                db, req.user_id, req.course_name, capability.params["days"]
+                db,
+                req.user_id,
+                req.course_name,
+                capability.params["days"],
+                req.question,
+                capability.params["multiple_days_mentioned"],
             )
         elif capability.name == "flashcard_due":
             result = _build_flashcard_due_result(db, req.user_id)
@@ -360,8 +398,10 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                 # Cùng lớp lọc chất lượng với kế hoạch ôn tập
                 # (_build_study_plan_result ở trên, BUG-006) — DocumentTopic
                 # cũng có thể còn dòng nhiễu rút từ trước khi heuristic outline
-                # được siết chặt (vd OCR vỡ "BY A. M. TUBING").
-                rows = [r for r in rows if is_plausible_topic(r.title)]
+                # được siết chặt (vd OCR vỡ "BY A. M. TUBING", hoặc header/
+                # footer scan lặp lại theo trang).
+                plausible_titles = set(filter_topic_titles([r.title for r in rows]))
+                rows = [r for r in rows if r.title in plausible_titles]
                 if not rows:
                     return []
 

@@ -71,7 +71,14 @@ def _extract_days(question: str) -> int:
 def _detect_study_plan(question: str) -> Optional[dict]:
     if not _PLAN_INTENT_RE.search(question):
         return None
-    return {"days": _extract_days(question)}
+    return {
+        "days": _extract_days(question),
+        # Nhiều hơn 1 lần nhắc "N ngày" trong cùng câu hỏi là dấu hiệu người
+        # dùng cần lịch cho NHIỀU môn/nhiều hạn khác nhau — vượt khả năng một
+        # chat capability đơn-hạn (app/routers/chat.py::
+        # _build_study_plan_result). Vẫn thuần regex, không LLM.
+        "multiple_days_mentioned": len(_DAYS_RE.findall(question)) > 1,
+    }
 
 
 def _detect_recommendation(question: str) -> Optional[dict]:

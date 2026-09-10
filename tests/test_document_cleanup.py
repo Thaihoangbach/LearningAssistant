@@ -11,6 +11,7 @@ from app.services.document_cleanup import cleanup_document_topics
 from app.models import (
     Attempt,
     Base,
+    Document,
     DocumentTopic,
     FlashcardItem,
     FlashcardSet,
@@ -32,19 +33,36 @@ class CleanupTestCase(unittest.TestCase):
     def tearDown(self):
         self.db.close()
 
-    def _outline(self, document_id, titles):
+    def _outline(self, document_id, titles, course_name=None):
+        if not self.db.query(Document).filter(Document.id == document_id).first():
+            self.db.add(
+                Document(
+                    id=document_id,
+                    user_id=USER,
+                    file_name=f"{document_id}.pdf",
+                    course_name=course_name,
+                )
+            )
         for i, title in enumerate(titles):
             self.db.add(
                 DocumentTopic(
                     document_id=document_id, user_id=USER, title=title, order_index=i
                 )
             )
-            if not self.db.query(Topic).filter(Topic.user_id == USER, Topic.name == title).first():
-                self.db.add(Topic(user_id=USER, name=title))
+            if not (
+                self.db.query(Topic)
+                .filter(Topic.user_id == USER, Topic.course_name == course_name, Topic.name == title)
+                .first()
+            ):
+                self.db.add(Topic(user_id=USER, name=title, course_name=course_name))
         self.db.commit()
 
-    def _topic(self, name):
-        return self.db.query(Topic).filter(Topic.user_id == USER, Topic.name == name).first()
+    def _topic(self, name, course_name=None):
+        return (
+            self.db.query(Topic)
+            .filter(Topic.user_id == USER, Topic.course_name == course_name, Topic.name == name)
+            .first()
+        )
 
 
 class TestCleanupDocumentTopics(CleanupTestCase):
@@ -145,6 +163,50 @@ class TestCleanupDocumentTopics(CleanupTestCase):
     def test_unknown_document_is_safe(self):
         cleanup_document_topics(self.db, document_id="khong-ton-tai", user_id=USER)
         self.assertEqual(self.db.query(DocumentTopic).count(), 0)
+
+
+class TestCleanupDocumentTopicsCourseScoping(CleanupTestCase):
+    """Topic được định danh theo (user_id, course_name, name) — cùng tên chủ đề
+    có thể tồn tại hợp lệ ở hai môn khác nhau. cleanup_document_topics phải
+    khoá CẢ việc tra Topic lẫn kiểm tra still_referenced theo course_name của
+    tài liệu đang dọn, không chỉ theo tên."""
+
+    def test_orphan_not_blocked_by_same_named_topic_in_other_course(self):
+        """Doc B (môn khác) vẫn còn nhắc "Bài tập" — trước đây khiến
+        still_referenced (không lọc theo môn) trả về sai, bỏ sót không xoá
+        Topic mồ côi thật sự của môn CSDL."""
+        self._outline("doc-a", ["Bài tập"], course_name="CSDL")
+        self._outline("doc-b", ["Bài tập"], course_name="Mạng máy tính")
+
+        cleanup_document_topics(self.db, document_id="doc-a", user_id=USER)
+
+        self.assertIsNone(self._topic("Bài tập", course_name="CSDL"))
+        self.assertIsNotNone(self._topic("Bài tập", course_name="Mạng máy tính"))
+        self.assertEqual(
+            self.db.query(DocumentTopic).filter(DocumentTopic.document_id == "doc-b").count(), 1
+        )
+
+    def test_same_named_orphan_topic_in_other_course_is_never_touched(self):
+        """Một Topic "Bài tập" mồ côi sẵn ở môn Mạng máy tính (không tài liệu
+        nào của môn đó nhắc tới) không được đụng tới khi dọn tài liệu của môn
+        CSDL — trước đây tra Topic không lọc theo môn có thể xoá NHẦM Topic
+        của môn khác."""
+        self.db.add(Topic(user_id=USER, name="Bài tập", course_name="Mạng máy tính"))
+        self.db.commit()
+        self._outline("doc-a", ["Bài tập"], course_name="CSDL")
+
+        cleanup_document_topics(self.db, document_id="doc-a", user_id=USER)
+
+        self.assertIsNone(self._topic("Bài tập", course_name="CSDL"))
+        self.assertIsNotNone(self._topic("Bài tập", course_name="Mạng máy tính"))
+
+    def test_keeps_topic_referenced_by_another_document_in_same_course(self):
+        self._outline("doc-a", ["Chủ đề chung"], course_name="CSDL")
+        self._outline("doc-c", ["Chủ đề chung"], course_name="CSDL")
+
+        cleanup_document_topics(self.db, document_id="doc-a", user_id=USER)
+
+        self.assertIsNotNone(self._topic("Chủ đề chung", course_name="CSDL"))
 
 
 if __name__ == "__main__":

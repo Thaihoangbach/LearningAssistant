@@ -10,6 +10,7 @@ from docx import Document as DocxDocument
 from app.ingestion.outline import (
     OutlineEntry,
     extract_outline,
+    filter_topic_titles,
     is_bibliography_like_chunk,
     is_plausible_topic,
 )
@@ -139,6 +140,72 @@ class TestIsPlausibleTopic(unittest.TestCase):
         # Bảo thủ: không loại thuật ngữ kỹ thuật hợp lệ chỉ vì trông lạ.
         self.assertTrue(is_plausible_topic("Positional Encoding"))
         self.assertTrue(is_plausible_topic("Backpropagation"))
+
+    def test_numbered_heading_with_colon_is_still_plausible(self):
+        # Dấu hai chấm KHÔNG bị coi là dấu hiệu câu văn (khác dấu phẩy/chấm
+        # phẩy) — nhiều heading thật hợp lệ dùng nó, vd tiêu đề bài báo thật:
+        self.assertTrue(is_plausible_topic("Deep Learning in Neural Networks: An Overview"))
+
+    def test_numbered_sentence_fragment_with_internal_comma_is_rejected(self):
+        # Retest QA (BUG-001): bước chứng minh hình học bị đánh số vẫn lọt
+        # trước fix — dấu phẩy giữa câu là tín hiệu "đây là một câu văn, không
+        # phải tiêu đề", không phụ thuộc nội dung tài liệu cụ thể nào.
+        self.assertFalse(
+            is_plausible_topic("1. Nếu hai tam giác có hai cạnh tương ứng bằng nhau,")
+        )
+        self.assertFalse(
+            is_plausible_topic("7. Vì AB bằng FB và BD bằng BC, do đó hai tam giác bằng nhau.")
+        )
+
+
+class TestFilterTopicTitles(unittest.TestCase):
+    """BUG-001 retest — QA quan sát được filter theo TỪNG dòng không đủ, vì
+    header/footer lặp trên mỗi trang scan sinh ra một biến thể lỗi OCR KHÁC
+    NHAU mỗi lần (không dòng nào tự nó trông bất thường). filter_topic_titles
+    phải bắt được điều này ở CẤP DANH SÁCH."""
+
+    def test_repeated_near_duplicate_running_header_is_dropped(self):
+        titles = [
+            "1. The Imitation Game.",
+            "COMPUTING MACHINERY AND INTELLIGENCE 435",
+            "COMPUTING MACKINBBY AND INTELLIGENCE 437",
+            "OOMPUTING MACHWIBY AND INTK1X1OENCK 439",
+            "COMPUTING MACHINERY AND INTELLIGENCE 441",
+            "2. Critique of the New Problem.",
+        ]
+        result = filter_topic_titles(titles)
+        self.assertIn("1. The Imitation Game.", result)
+        self.assertIn("2. Critique of the New Problem.", result)
+        for garbage in titles[1:5]:
+            self.assertNotIn(garbage, result)
+
+    def test_two_occurrences_of_similar_text_are_kept(self):
+        # Cần LẶP LẠI ÍT NHẤT 3 LẦN mới coi là header/footer — 2 lần giống
+        # nhau ngẫu nhiên không đủ bằng chứng, tránh loại nhầm heading thật.
+        titles = ["Gradient Descent", "Gradient Descend"]  # 1 lỗi chính tả tình cờ
+        result = filter_topic_titles(titles)
+        self.assertEqual(sorted(result), sorted(titles))
+
+    def test_distinct_legitimate_headings_are_all_kept(self):
+        titles = ["1 Introduction", "2 Background", "3 Model Architecture", "Positional Encoding"]
+        self.assertEqual(filter_topic_titles(titles), titles)
+
+    def test_empty_list_returns_empty(self):
+        self.assertEqual(filter_topic_titles([]), [])
+
+    def test_real_scanned_document_noise_is_mostly_eliminated(self):
+        """Bằng chứng thực nghiệm cho retest QA — chạy trên chính file OCR lỗi
+        thật trong repo (không phải fixture tự tạo), xác nhận khối lượng nhiễu
+        giảm mạnh thay vì chỉ tin vào lý thuyết của heuristic."""
+        path = os.path.join(
+            os.path.dirname(__file__), "..", "real_test_documents", "03_edge_turing_1950_scanned.pdf"
+        )
+        if not os.path.exists(path):
+            self.skipTest("real_test_documents/03_edge_turing_1950_scanned.pdf không có trong checkout này")
+        entries = [e.title for e in extract_outline(path)]
+        final = filter_topic_titles(entries)
+        # Trước fix: 26/27 dòng lọt qua is_plausible_topic từng dòng riêng lẻ.
+        self.assertLess(len(final), len(entries) * 0.3, "khối lượng nhiễu phải giảm mạnh, không chỉ lọt vài dòng")
 
 
 class TestIsBibliographyLikeChunk(unittest.TestCase):

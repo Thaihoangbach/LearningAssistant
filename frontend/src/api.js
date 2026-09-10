@@ -24,10 +24,13 @@ async function raiseFriendlyError(res) {
 }
 
 
-export async function uploadDocument(file, courseName) {
+export async function uploadDocument(file, courseName, displayName) {
   const form = new FormData();
   form.append("file", file);
-  const url = `${API_BASE}/documents?user_id=${CURRENT_USER_ID}&course_name=${encodeURIComponent(courseName || "")}`;
+  const params = new URLSearchParams({ user_id: CURRENT_USER_ID });
+  if (courseName) params.set("course_name", courseName);
+  if (displayName) params.set("display_name", displayName);
+  const url = `${API_BASE}/documents?${params}`;
   const res = await fetch(url, { method: "POST", body: form });
   if (!res.ok) await raiseFriendlyError(res);
   return res.json();
@@ -192,10 +195,57 @@ export async function reviewFlashcard(flashcardItemId, rating) {
   return res.json();
 }
 
-export async function getStudyPlan(days, courseName) {
-  const params = new URLSearchParams({ user_id: CURRENT_USER_ID, days: String(days) });
-  if (courseName) params.set("course_name", courseName);
+export async function listCourses() {
+  const res = await fetch(`${API_BASE}/courses?user_id=${CURRENT_USER_ID}`);
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function setCourseExamDate(courseName, examDateIso) {
+  const res = await fetch(
+    `${API_BASE}/courses/${encodeURIComponent(courseName)}/exam-date`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: CURRENT_USER_ID, exam_date: examDateIso }),
+    }
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function deleteCourseExamDate(courseName) {
+  const res = await fetch(
+    `${API_BASE}/courses/${encodeURIComponent(courseName)}/exam-date?user_id=${CURRENT_USER_ID}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+// courseNames: string[] — mỗi tên môn thành một cặp course_names= riêng, khớp
+// FastAPI `course_names: list[str] = Query(...)` ở backend
+// (app/routers/study_plan.py). Môn chưa đặt ngày thi làm backend trả 400 với
+// thông báo liệt kê rõ tên môn còn thiếu — để nguyên lỗi đó nổi lên UI qua
+// raiseFriendlyError, không đoán/ẩn.
+export async function getStudyPlan(courseNames) {
+  const params = new URLSearchParams({ user_id: CURRENT_USER_ID });
+  for (const name of courseNames) params.append("course_names", name);
   const res = await fetch(`${API_BASE}/study-plan?${params}`);
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function markTopicReviewed(topicName, courseName) {
+  const res = await fetch(`${API_BASE}/study-plan/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: CURRENT_USER_ID,
+      topic_name: topicName,
+      course_name: courseName ?? null,
+    }),
+  });
   if (!res.ok) await raiseFriendlyError(res);
   return res.json();
 }

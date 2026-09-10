@@ -18,6 +18,7 @@ logger = logging.getLogger("edututor")
 
 from app.routers import (
     chat,
+    courses,
     documents,
     flashcard,
     mastery,
@@ -77,6 +78,7 @@ app.include_router(flashcard.router)
 app.include_router(memory.router)
 app.include_router(study_plan.router)
 app.include_router(profile.router)
+app.include_router(courses.router)
 
 # ============================================================
 # Exception handler
