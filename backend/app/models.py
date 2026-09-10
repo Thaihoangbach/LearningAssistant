@@ -213,7 +213,12 @@ class FlashcardSet(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    document_id = Column(String, ForeignKey("documents.id"), nullable=False, index=True)
+    # NULL = bộ "lưu từ câu trả lời hỏi đáp/quiz sai" (app/routers/flashcard.py
+    # ::save_from_answer) — thẻ loại này không gắn với một tài liệu cụ thể nào.
+    # Trước đây cột này NOT NULL và save_from_answer() ghi sentinel string
+    # "saved-from-answers" thay cho document_id thật, vi phạm FK NGAY khi chạy
+    # trên Postgres (SQLite không ép FK theo mặc định nên lỗi không lộ ra).
+    document_id = Column(String, ForeignKey("documents.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     # Xem docstring cùng tên trên Quiz — cùng lý do, cùng giá trị dự kiến.
     generation_mode = Column(String, nullable=True)

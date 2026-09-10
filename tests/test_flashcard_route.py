@@ -128,5 +128,74 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
         self.assertEqual(sorted(t.course_name for t in topics), ["CSDL", "Mạng máy tính"])
 
 
+class SaveFromAnswerRouteTest(unittest.TestCase):
+    """POST /flashcard/save (lưu thẻ từ câu trả lời hỏi đáp/quiz sai — không
+    gắn với tài liệu nào cụ thể) — chưa từng có test nào chạy trên Postgres
+    THẬT trước đây. FlashcardSet.document_id có FK NOT NULL tới documents.id
+    (app/models.py); route lại dùng sentinel string "saved-from-answers" làm
+    document_id, không phải id thật của bảng documents -> vi phạm FK ngay khi
+    Postgres ép ràng buộc (SQLite mặc định không ép FK nên lỗi này không lộ ra
+    nếu test bằng SQLite)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
+        self.user_id = str(uuid.uuid4())
+        db = self.SessionLocal()
+        try:
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Ivan"))
+            db.commit()
+        finally:
+            db.close()
+
+    def test_save_from_answer_does_not_violate_document_fk(self):
+        res = self.client.post(
+            "/flashcard/save",
+            json={"user_id": self.user_id, "front": "Câu hỏi?", "back": "Câu trả lời."},
+        )
+
+        self.assertEqual(res.status_code, 200)
+
+    def test_second_save_reuses_the_same_flashcard_set(self):
+        """save_from_answer() tra cứu bộ "saved-from-answers" đã có trước khi
+        tạo mới — 2 lượt lưu của CÙNG user phải rơi vào CÙNG một FlashcardSet,
+        không tạo set mới mỗi lần."""
+        from app.models import FlashcardSet
+
+        self.client.post(
+            "/flashcard/save",
+            json={"user_id": self.user_id, "front": "Q1?", "back": "A1."},
+        )
+        self.client.post(
+            "/flashcard/save",
+            json={"user_id": self.user_id, "front": "Q2?", "back": "A2."},
+        )
+
+        db = self.SessionLocal()
+        try:
+            sets = db.query(FlashcardSet).filter(FlashcardSet.user_id == self.user_id).all()
+        finally:
+            db.close()
+
+        self.assertEqual(len(sets), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

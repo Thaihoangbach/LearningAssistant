@@ -136,11 +136,6 @@ class SaveFlashcardRequest(BaseModel):
     topic_name: str | None = None
 
 
-# Bộ chứa các thẻ người dùng tự lưu từ câu trả lời hỏi đáp, tách khỏi các bộ
-# sinh tự động từ tài liệu.
-SAVED_SET_DOCUMENT_ID = "saved-from-answers"
-
-
 @router.post("/save")
 def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
     """Biến một câu trả lời hỏi đáp thành thẻ ôn tập.
@@ -151,16 +146,18 @@ def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
     if not req.front.strip() or not req.back.strip():
         raise HTTPException(400, "Thẻ phải có cả mặt trước và mặt sau.")
 
+    # document_id = NULL đánh dấu bộ "lưu từ câu trả lời" (không gắn tài liệu
+    # nào cụ thể) — xem docstring FlashcardSet.document_id (app/models.py).
     fset = (
         db.query(FlashcardSet)
         .filter(
             FlashcardSet.user_id == req.user_id,
-            FlashcardSet.document_id == SAVED_SET_DOCUMENT_ID,
+            FlashcardSet.document_id.is_(None),
         )
         .first()
     )
     if not fset:
-        fset = FlashcardSet(user_id=req.user_id, document_id=SAVED_SET_DOCUMENT_ID)
+        fset = FlashcardSet(user_id=req.user_id, document_id=None)
         db.add(fset)
         db.commit()
 
