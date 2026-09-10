@@ -10,7 +10,7 @@ import {
   listDueFlashcards,
   reviewFlashcard,
 } from "../api";
-import { DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
+import { CONTENT_TYPE_LABEL, DOCUMENT_STATUS, GENERATION_MODES } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -295,6 +295,11 @@ export default function FlashcardsPage() {
                   <p className="mt-4 text-xs text-muted-foreground">Bấm vào thẻ để lật</p>
                 </div>
                 <div className="flip-card__face flip-card__face--back">
+                  {CONTENT_TYPE_LABEL[card.content_type] && (
+                    <span className="mx-auto mb-2 w-fit rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
+                      {CONTENT_TYPE_LABEL[card.content_type]}
+                    </span>
+                  )}
                   <p className="text-sm leading-relaxed text-foreground">{card.back}</p>
                   {card.source_document && (
                     <p className="mt-3 text-xs text-muted-foreground">

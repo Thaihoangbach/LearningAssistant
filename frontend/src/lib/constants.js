@@ -29,3 +29,15 @@ export const GENERATION_MODES = Object.freeze([
   { value: "exam", label: "Luyện thi" },
   { value: "weak_topics", label: "Chủ đề yếu" },
 ]);
+
+// Phân loại của LLM-judge (Learning Loop Phase 5) — xem
+// app/llm/quiz_generator.py::_build_item_judge_prompt. content_type có thể
+// null cho câu hỏi/thẻ sinh trước Phase 5, các nơi dùng map này phải tự xử
+// lý trường hợp đó (không index thẳng bằng null).
+export const CONTENT_TYPE_LABEL = Object.freeze({
+  concept: "Khái niệm",
+  definition: "Định nghĩa",
+  formula: "Công thức",
+  fact: "Sự kiện",
+  procedure: "Quy trình",
+});
