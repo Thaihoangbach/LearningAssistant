@@ -275,26 +275,37 @@ export default function FlashcardsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
-              <p className="text-base font-medium text-foreground">{card.front}</p>
-              {flipped && (
-                <>
-                  <hr className="my-4 border-border" />
+            <div
+              role="button"
+              tabIndex={0}
+              aria-pressed={flipped}
+              aria-label="Bấm để lật thẻ"
+              onClick={() => setFlipped((f) => !f)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setFlipped((f) => !f);
+                }
+              }}
+              className={`flip-card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${flipped ? "flip-card--flipped" : ""}`}
+            >
+              <div className="flip-card__inner">
+                <div className="flip-card__face">
+                  <p className="text-base font-medium text-foreground">{card.front}</p>
+                  <p className="mt-4 text-xs text-muted-foreground">Bấm vào thẻ để lật</p>
+                </div>
+                <div className="flip-card__face flip-card__face--back">
                   <p className="text-sm leading-relaxed text-foreground">{card.back}</p>
                   {card.source_document && (
                     <p className="mt-3 text-xs text-muted-foreground">
                       Nguồn: {card.source_document} — {card.source_position}
                     </p>
                   )}
-                </>
-              )}
+                </div>
+              </div>
             </div>
 
-            {!flipped ? (
-              <Button onClick={() => setFlipped(true)} className="self-center">
-                Lật thẻ
-              </Button>
-            ) : (
+            {flipped && (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {RATINGS.map((r) => (
                   <button

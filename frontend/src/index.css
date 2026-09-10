@@ -69,6 +69,40 @@ body {
   color: var(--color-foreground);
 }
 
+.flip-card {
+  perspective: 1000px;
+}
+
+.flip-card__inner {
+  position: relative;
+  min-height: 12rem;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.flip-card--flipped .flip-card__inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
+  padding: 1.5rem;
+  text-align: center;
+  backface-visibility: hidden;
+}
+
+.flip-card__face--back {
+  transform: rotateY(180deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
