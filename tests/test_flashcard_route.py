@@ -128,6 +128,39 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
         self.assertEqual(len(topics), 2)
         self.assertEqual(sorted(t.course_name for t in topics), ["CSDL", "Mạng máy tính"])
 
+    def test_response_reports_partial_when_fewer_cards_generated_than_requested(self):
+        """Mirror BUG-003 bên quiz — POST /flashcard/generate giờ báo rõ khi
+        tạo được ít thẻ hơn yêu cầu thay vì trả 200 im lặng với items ngắn hơn."""
+        fake_item = type(
+            "FakeItem",
+            (),
+            {"front": "Q?", "back": "A.", "source_document": "b.pdf", "source_position": "Trang 1"},
+        )()
+
+        with patch("app.routers.flashcard.get_llm_client", return_value=object()), \
+             patch("app.routers.flashcard.embed_query", side_effect=_fake_embed_query), \
+             patch("app.routers.flashcard.generate_flashcards", return_value=[fake_item]), \
+             patch("app.routers.flashcard.PgVectorStore") as store_cls:
+            store_cls.return_value.search.return_value = [
+                (
+                    type("C", (), {
+                        "text": "nội dung", "document_name": "b.pdf", "position_ref": "Trang 1",
+                        "chunk_id": "c1", "document_id": self.doc_mmt_id,
+                    })(),
+                    0.9,
+                )
+            ]
+            res = self.client.post(
+                "/flashcard/generate",
+                json={"user_id": self.user_id, "document_id": self.doc_mmt_id, "num_cards": 3},
+            )
+
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["requested"], 3)
+        self.assertEqual(body["generated"], 1)
+        self.assertTrue(body["partial"])
+
     def test_generation_mode_is_persisted_on_the_flashcard_set(self):
         """Learning Loop Phase 3 — mirror test cùng tên ở test_quiz_route.py."""
         from app.models import FlashcardSet

@@ -46,6 +46,9 @@ export default function FlashcardsPage() {
   const [generationMode, setGenerationMode] = useState(() => searchParams.get("mode") || "");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
+  // Phase 4 — mirror QuizPage: backend giờ báo rõ khi tạo được ít thẻ hơn yêu
+  // cầu (BUG-003 mở rộng sang flashcard) thay vì để người dùng tự đếm.
+  const [partialNotice, setPartialNotice] = useState(null);
 
   const [due, setDue] = useState([]);
   const [dueLoading, setDueLoading] = useState(true);
@@ -112,8 +115,12 @@ export default function FlashcardsPage() {
     if (!documentId) return;
     setGenerating(true);
     setError(null);
+    setPartialNotice(null);
     try {
-      await generateFlashcards(documentId, topicName, numCards, generationMode);
+      const res = await generateFlashcards(documentId, topicName, numCards, generationMode);
+      if (res.partial) {
+        setPartialNotice(`Chỉ tạo được ${res.generated}/${res.requested} thẻ dựa trên nội dung tài liệu.`);
+      }
       await loadDue();
       await loadProgress();
     } catch (e) {
@@ -231,6 +238,12 @@ export default function FlashcardsPage() {
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
+
+      {partialNotice && (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2.5 text-sm text-warning">
+          {partialNotice}
+        </p>
+      )}
 
       {board && (
         <div className="flex flex-wrap gap-3">

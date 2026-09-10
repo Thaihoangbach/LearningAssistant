@@ -119,8 +119,14 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
     db.commit()
 
     saved = db.query(FlashcardItem).filter(FlashcardItem.flashcard_set_id == fset.id).all()
+    # Mirror BUG-003 bên quiz (app/routers/quiz.py) — verifier có thể loại bớt
+    # thẻ nên `saved` có thể ngắn hơn req.num_cards; trả rõ 3 trường này thay
+    # vì để frontend tự đoán từ độ dài items.
     return {
         "flashcard_set_id": fset.id,
+        "requested": req.num_cards,
+        "generated": len(saved),
+        "partial": len(saved) < req.num_cards,
         "items": [
             {
                 "id": i.id,

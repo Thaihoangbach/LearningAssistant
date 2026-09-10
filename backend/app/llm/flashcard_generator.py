@@ -8,6 +8,7 @@ Test bằng fake LLM client — xem tests/test_flashcard_generator.py.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from typing import List
 
@@ -38,6 +39,41 @@ def _build_generator_prompt(chunks: List[RetrievedChunk], num_cards: int) -> str
     )
 
 
+# Phase 4 (Learning Loop) — mirror app/llm/quiz_generator.py: dedup
+# DETERMINISTIC bằng overlap coefficient (giao / độ dài tập nhỏ hơn), không
+# dùng LLM-judge. Xem docstring cùng tên bên quiz_generator.py để biết lý do
+# chọn overlap coefficient thay vì Jaccard.
+_DUPLICATE_SIMILARITY_THRESHOLD = 0.8
+
+
+def _card_words(front: str) -> set:
+    return set(re.findall(r"\w+", front.lower(), flags=re.UNICODE))
+
+
+def _is_near_duplicate(front: str, existing_fronts: List[str]) -> bool:
+    words = _card_words(front)
+    if not words:
+        return False
+    for other in existing_fronts:
+        other_words = _card_words(other)
+        if not other_words:
+            continue
+        overlap = len(words & other_words) / min(len(words), len(other_words))
+        if overlap >= _DUPLICATE_SIMILARITY_THRESHOLD:
+            return True
+    return False
+
+
+def _build_avoid_duplicates_note(asked_fronts: List[str]) -> str:
+    if not asked_fronts:
+        return ""
+    numbered = "\n".join(f"- {f}" for f in asked_fronts)
+    return (
+        "\n\nKHÔNG lặp lại (kể cả diễn đạt lại) các flashcard đã có sau đây:\n"
+        f"{numbered}"
+    )
+
+
 def _build_item_verifier_prompt(front: str, back: str, chunk_text: str) -> str:
     return (
         "Đọc đoạn trích tài liệu và flashcard (mặt trước/mặt sau) dưới đây. Trả lời DUY NHẤT "
@@ -61,15 +97,17 @@ def _strip_json_fence(text: str) -> str:
     return text.strip()
 
 
-def generate_flashcards(
+def _generate_verified_batch(
     chunks: List[RetrievedChunk],
     llm_client: LLMClient,
-    num_cards: int = 10,
+    count: int,
+    asked_fronts: List[str],
 ) -> List[FlashcardItem]:
-    if not chunks:
-        return []
-
-    raw_response = llm_client.complete(_build_generator_prompt(chunks, num_cards))
+    """Một lượt sinh + verify — tách khỏi `generate_flashcards` để hàm đó gọi
+    lại được nhiều lần khi thiếu thẻ (mirror app/llm/quiz_generator.py::
+    _generate_verified_batch, BUG-003)."""
+    prompt = _build_generator_prompt(chunks, count) + _build_avoid_duplicates_note(asked_fronts)
+    raw_response = llm_client.complete(prompt)
     try:
         raw_items = json.loads(_strip_json_fence(raw_response))
     except (json.JSONDecodeError, TypeError):
@@ -79,6 +117,7 @@ def generate_flashcards(
         return []
 
     verified_items: List[FlashcardItem] = []
+    seen_fronts = list(asked_fronts)
     for raw in raw_items:
         if not isinstance(raw, dict):
             continue
@@ -93,11 +132,15 @@ def generate_flashcards(
         if not isinstance(chunk_index, int) or not (0 <= chunk_index < len(chunks)):
             continue  # tham chiếu chunk không hợp lệ -> bỏ qua, KHÔNG gọi verifier
 
+        if _is_near_duplicate(front, seen_fronts):
+            continue  # trùng hoặc gần trùng (kể cả diễn đạt lại) -> bỏ, KHÔNG gọi verifier
+
         chunk = chunks[chunk_index]
         verdict = llm_client.complete(_build_item_verifier_prompt(front, back, chunk.text))
         if not verdict.strip().upper().startswith(("CÓ", "YES")):
             continue
 
+        seen_fronts.append(front)
         verified_items.append(
             FlashcardItem(
                 front=front,
@@ -108,3 +151,31 @@ def generate_flashcards(
         )
 
     return verified_items
+
+
+# Mirror app/llm/quiz_generator.py::_MAX_GENERATION_ATTEMPTS (BUG-003) — xem
+# docstring ở đó để biết lý do chỉ bù MỘT lượt, không lặp vô hạn.
+_MAX_GENERATION_ATTEMPTS = 2
+
+
+def generate_flashcards(
+    chunks: List[RetrievedChunk],
+    llm_client: LLMClient,
+    num_cards: int = 10,
+) -> List[FlashcardItem]:
+    if not chunks:
+        return []
+
+    collected: List[FlashcardItem] = []
+
+    for attempt in range(_MAX_GENERATION_ATTEMPTS):
+        remaining = num_cards - len(collected)
+        if remaining <= 0:
+            break
+        if attempt > 0 and not collected:
+            break  # lượt đầu ra 0 thẻ hoàn toàn -> không bù, xem docstring hằng số ở trên
+
+        batch = _generate_verified_batch(chunks, llm_client, remaining, [c.front for c in collected])
+        collected.extend(batch)
+
+    return collected
