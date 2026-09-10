@@ -22,6 +22,18 @@ def make_chunk(text="Nội dung nguồn về CNN.", doc="cnn.pdf", pos="Trang 1"
     return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=0.9)
 
 
+def make_judge(valid=True, ambiguous=False, content_type="concept"):
+    """Chuỗi JSON phán quyết của LLM-judge (Learning Loop Phase 5) — thay cho
+    verdict CÓ/KHÔNG đơn thuần trước đây, mirror
+    app/llm/quiz_generator.py::_build_item_judge_prompt (flashcard không có
+    khái niệm "độ khó yêu cầu" nên không có trường difficulty_match)."""
+    return '{"valid": %s, "ambiguous": %s, "content_type": "%s"}' % (
+        str(valid).lower(),
+        str(ambiguous).lower(),
+        content_type,
+    )
+
+
 GENERATOR_JSON_TWO_ITEMS = """
 [
   {"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0},
@@ -37,8 +49,8 @@ class TestGenerateFlashcards(unittest.TestCase):
         self.assertEqual(result, [])
         self.assertEqual(len(llm.prompts_received), 0)
 
-    def test_items_passing_verification_are_returned(self):
-        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "CÓ"])
+    def test_items_passing_judge_are_returned(self):
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, make_judge(), make_judge()])
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
 
         self.assertEqual(len(result), 2)
@@ -47,11 +59,11 @@ class TestGenerateFlashcards(unittest.TestCase):
         self.assertEqual(result[0].source_document, "cnn.pdf")
         self.assertEqual(len(llm.prompts_received), 3)
 
-    def test_item_failing_verification_is_filtered_out(self):
+    def test_item_failing_judge_is_filtered_out(self):
         # num_cards=1 (không phải 2): đủ ngay từ thẻ đầu, không kích hoạt lượt
         # bù (xem TestBoundedRetryOnUndergeneration bên dưới) — cô lập đúng
         # hành vi đang test.
-        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG"])
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, make_judge(), make_judge(valid=False)])
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].front, "CNN là gì?")
@@ -61,7 +73,7 @@ class TestGenerateFlashcards(unittest.TestCase):
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
         self.assertEqual(result, [])
 
-    def test_item_with_missing_field_is_skipped_without_extra_verifier_call(self):
+    def test_item_with_missing_field_is_skipped_without_extra_judge_call(self):
         broken_json = '[{"front": "Thiếu back", "chunk_index": 0}]'
         llm = FakeLLMClient(scripted_responses=[broken_json])
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
@@ -97,7 +109,9 @@ class TestBoundedRetryOnUndergeneration(unittest.TestCase):
 
     def test_partial_result_triggers_one_top_up_attempt(self):
         llm = FakeLLMClient(
-            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+            scripted_responses=[
+                GENERATOR_JSON_TWO_ITEMS, make_judge(), make_judge(valid=False), ONE_ITEM_JSON, make_judge()
+            ]
         )
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
 
@@ -106,7 +120,9 @@ class TestBoundedRetryOnUndergeneration(unittest.TestCase):
 
     def test_retry_is_bounded_not_infinite(self):
         llm = FakeLLMClient(
-            scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "KHÔNG", ONE_ITEM_JSON, "CÓ"]
+            scripted_responses=[
+                GENERATOR_JSON_TWO_ITEMS, make_judge(), make_judge(valid=False), ONE_ITEM_JSON, make_judge()
+            ]
         )
         generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=5)
         self.assertEqual(len(llm.prompts_received), 5)
@@ -118,7 +134,7 @@ class TestBoundedRetryOnUndergeneration(unittest.TestCase):
         self.assertEqual(len(llm.prompts_received), 1)
 
     def test_exact_count_on_first_attempt_does_not_trigger_retry(self):
-        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, "CÓ", "CÓ"])
+        llm = FakeLLMClient(scripted_responses=[GENERATOR_JSON_TWO_ITEMS, make_judge(), make_judge()])
         generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=2)
         self.assertEqual(len(llm.prompts_received), 3)
 
@@ -126,14 +142,14 @@ class TestBoundedRetryOnUndergeneration(unittest.TestCase):
 class TestDuplicateDetection(unittest.TestCase):
     """Mirror tests/test_quiz_generator.py::TestDuplicateDetection."""
 
-    def test_exact_duplicate_within_same_batch_is_dropped_without_extra_verifier_call(self):
+    def test_exact_duplicate_within_same_batch_is_dropped_without_extra_judge_call(self):
         json_with_exact_dup = """
         [
           {"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0},
           {"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0}
         ]
         """
-        llm = FakeLLMClient(scripted_responses=[json_with_exact_dup, "CÓ"])
+        llm = FakeLLMClient(scripted_responses=[json_with_exact_dup, make_judge()])
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
 
         self.assertEqual(len(result), 1)
@@ -146,10 +162,39 @@ class TestDuplicateDetection(unittest.TestCase):
           {"front": "Kỹ thuật CNN trong xử lý ảnh là gì?", "back": "A", "chunk_index": 0}
         ]
         """
-        llm = FakeLLMClient(scripted_responses=[json_with_paraphrase, "CÓ"])
+        llm = FakeLLMClient(scripted_responses=[json_with_paraphrase, make_judge()])
         result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
 
         self.assertEqual(len(result), 1)
+
+
+class TestLLMJudgeQualityGate(unittest.TestCase):
+    """Learning Loop Phase 5 — mirror tests/test_quiz_generator.py::
+    TestLLMJudgeQualityGate. Flashcard không có "độ khó yêu cầu" nên chỉ xét
+    ambiguous + content_type, không có difficulty_match."""
+
+    ONE_ITEM_JSON = '[{"front": "CNN là gì?", "back": "Convolutional Neural Network.", "chunk_index": 0}]'
+
+    def test_ambiguous_item_is_filtered_out_even_if_content_valid(self):
+        llm = FakeLLMClient(scripted_responses=[self.ONE_ITEM_JSON, make_judge(ambiguous=True)])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+        self.assertEqual(result, [])
+
+    def test_content_type_is_attached_to_returned_item(self):
+        llm = FakeLLMClient(scripted_responses=[self.ONE_ITEM_JSON, make_judge(content_type="definition")])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+        self.assertEqual(result[0].content_type, "definition")
+
+    def test_malformed_judge_json_filters_item_out(self):
+        llm = FakeLLMClient(scripted_responses=[self.ONE_ITEM_JSON, "không phải JSON"])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+        self.assertEqual(result, [])
+
+    def test_judge_json_missing_required_field_filters_item_out(self):
+        incomplete_judgment = '{"valid": true}'
+        llm = FakeLLMClient(scripted_responses=[self.ONE_ITEM_JSON, incomplete_judgment])
+        result = generate_flashcards(chunks=[make_chunk()], llm_client=llm, num_cards=1)
+        self.assertEqual(result, [])
 
 
 if __name__ == "__main__":
