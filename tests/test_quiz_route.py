@@ -102,6 +102,7 @@ class QuizSubmitRouteTest(unittest.TestCase):
                 QuizItem(
                     id=self.alice_item_id, quiz_id=quiz_id, topic_id=self.alice_topic_id,
                     question="1+1=?", options="[\"1\",\"2\"]", correct_answer="2",
+                    source_document="a.pdf", source_position="Trang 1",
                 )
             )
             db.commit()
@@ -124,6 +125,21 @@ class QuizSubmitRouteTest(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.json()["is_correct"])
+
+    def test_submit_response_includes_source_for_review_loop(self):
+        """Learning Loop Phase 2a — màn tổng kết quiz cần trích dẫn nguồn của
+        câu trả lời sai để đưa vào Flashcard/hỏi AI có ngữ cảnh, giống
+        QuizItem đã lưu source_document/source_position lúc sinh (chỉ chưa
+        từng được trả về ở /submit)."""
+        res = self.client.post(
+            "/quiz/submit",
+            json={"user_id": self.alice_id, "quiz_item_id": self.alice_item_id, "selected_answer": "2"},
+        )
+
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["source_document"], "a.pdf")
+        self.assertEqual(body["source_position"], "Trang 1")
 
     def test_repeated_submits_keep_exactly_one_mastery_row(self):
         """Xác nhận upsert (`INSERT ... ON CONFLICT DO UPDATE` trên

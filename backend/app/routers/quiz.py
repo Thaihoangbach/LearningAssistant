@@ -268,4 +268,9 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
         "correct_answer": quiz_item.correct_answer,
         "explanation": quiz_item.explanation,
         "updated_mastery_score": new_score,
+        # Learning Loop Phase 2a — màn tổng kết cần trích được nguồn của câu
+        # sai khi đưa vào Flashcard ("Thêm vào Flashcard") hoặc mở hỏi AI kèm
+        # ngữ cảnh ("Hỏi AI"), cùng 2 trường QuizItem đã lưu sẵn lúc sinh quiz.
+        "source_document": quiz_item.source_document,
+        "source_position": quiz_item.source_position,
     }
