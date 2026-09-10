@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Check, ListChecks, Sparkles, X } from "lucide-react";
+import { Check, ListChecks, Sparkles, Target, X } from "lucide-react";
 import { listDocuments, generateQuiz, submitAttempt } from "../api";
 import { DOCUMENT_STATUS } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
@@ -15,6 +15,10 @@ export default function QuizPage() {
   const [documents, setDocuments] = useState([]);
   const [documentId, setDocumentId] = useState(() => searchParams.get("document") || "");
   const [topicName, setTopicName] = useState(() => searchParams.get("topic") || "");
+  // Lý do đề xuất từ Study Plan (Learning Loop Phase 1) — chỉ đọc 1 lần lúc
+  // vào trang, KHÔNG theo dõi thay đổi searchParams sau đó, để banner không
+  // biến mất/đổi khi người dùng tự sửa tài liệu/chủ đề trên form.
+  const [recommendationReason] = useState(() => searchParams.get("reason") || "");
   const [numQuestions, setNumQuestions] = useState(5);
   const [difficulty, setDifficulty] = useState(""); // "" = để backend tự quyết theo hồ sơ
   const [quizItems, setQuizItems] = useState([]);
@@ -67,6 +71,12 @@ export default function QuizPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {recommendationReason && (
+        <p className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm text-primary">
+          <Target className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {recommendationReason}
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold text-foreground">Tạo quiz mới</CardTitle>

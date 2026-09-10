@@ -95,9 +95,13 @@ function sortTopicsForDisplay(topics) {
   });
 }
 
-function topicActionHref(base, topic) {
+function topicActionHref(base, topic, reason) {
   const params = new URLSearchParams({ topic: topic.name });
   if (topic.document_id) params.set("document", topic.document_id);
+  // `reason` chỉ gắn khi TRUYỀN VÀO (do caller quyết định action nào khớp
+  // topic.recommended_action) — tránh hiện nhầm lý do "nên làm quiz" trên
+  // link Ôn flashcard và ngược lại (Learning Loop Phase 1).
+  if (reason) params.set("reason", reason);
   return `${base}?${params}`;
 }
 
@@ -461,6 +465,11 @@ export default function StudyPlanPage() {
             ))}
             {sortTopicsForDisplay(topicsByDateKey.get(toDateKey(selectedDate)) || []).map((topic) => {
               const key = `${topic.course_name || ""}::${topic.name}`;
+              // Lý do chỉ gắn vào NÚT KHỚP với đề xuất của Learning State —
+              // topic.recommended_action đã quyết định "quiz"/"flashcard"/
+              // "learn"/null ở backend (app/services/learning_policy.py).
+              const quizReason = topic.recommended_action === "quiz" ? topic.reason : null;
+              const flashcardReason = topic.recommended_action === "flashcard" ? topic.reason : null;
               return (
                 <div
                   key={key}
@@ -474,6 +483,9 @@ export default function StudyPlanPage() {
                     {topic.course_name && (
                       <p className="truncate text-xs text-muted-foreground">{topic.course_name}</p>
                     )}
+                    {!topic.reviewed_today && (quizReason || flashcardReason) && (
+                      <p className="mt-0.5 truncate text-xs text-primary">{quizReason || flashcardReason}</p>
+                    )}
                   </div>
                   {topic.reviewed_today ? (
                     <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-success">
@@ -483,14 +495,24 @@ export default function StudyPlanPage() {
                   ) : (
                     <div className="flex shrink-0 flex-wrap gap-2">
                       <Link
-                        to={topicActionHref("/quiz", topic)}
-                        className="flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted"
+                        to={topicActionHref("/quiz", topic, quizReason)}
+                        className={cn(
+                          "flex h-9 items-center rounded-lg border px-3 text-sm font-medium",
+                          quizReason
+                            ? "border-primary text-primary hover:bg-primary/10"
+                            : "border-border text-foreground hover:bg-muted"
+                        )}
                       >
                         Làm quiz
                       </Link>
                       <Link
-                        to={topicActionHref("/flashcards", topic)}
-                        className="flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:bg-muted"
+                        to={topicActionHref("/flashcards", topic, flashcardReason)}
+                        className={cn(
+                          "flex h-9 items-center rounded-lg border px-3 text-sm font-medium",
+                          flashcardReason
+                            ? "border-primary text-primary hover:bg-primary/10"
+                            : "border-border text-foreground hover:bg-muted"
+                        )}
                       >
                         Ôn flashcard
                       </Link>

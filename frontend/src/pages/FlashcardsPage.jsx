@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Layers, Sparkles } from "lucide-react";
+import { Layers, Sparkles, Target } from "lucide-react";
 import {
   generateFlashcards,
   listDocuments,
@@ -28,6 +28,9 @@ export default function FlashcardsPage() {
   const [documents, setDocuments] = useState([]);
   const [documentId, setDocumentId] = useState(() => searchParams.get("document") || "");
   const [topicName, setTopicName] = useState(() => searchParams.get("topic") || "");
+  // Lý do đề xuất từ Study Plan (Learning Loop Phase 1) — đọc 1 lần lúc vào
+  // trang, không theo dõi thay đổi searchParams sau đó (cùng lý do QuizPage).
+  const [recommendationReason] = useState(() => searchParams.get("reason") || "");
   const [numCards, setNumCards] = useState(10);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -93,6 +96,12 @@ export default function FlashcardsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {recommendationReason && (
+        <p className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm text-primary">
+          <Target className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {recommendationReason}
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold text-foreground">
