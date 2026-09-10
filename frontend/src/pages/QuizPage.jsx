@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Check, ListChecks, Sparkles, Target, X } from "lucide-react";
-import { listDocuments, generateQuiz, submitAttempt } from "../api";
+import { Link, useSearchParams } from "react-router-dom";
+import { BookmarkPlus, Check, ListChecks, MessageCircle, Sparkles, Target, Trophy, X } from "lucide-react";
+import { listDocuments, generateQuiz, saveFlashcardFromAnswer, submitAttempt } from "../api";
 import { DOCUMENT_STATUS } from "../lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -68,6 +68,31 @@ export default function QuizPage() {
       setError(e.message);
     }
   };
+
+  // Câu miss (Comprehension yếu) là tín hiệu mạnh nhất để chuyển ngay sang
+  // Flashcard (Retention) — mặt trước là câu hỏi, mặt sau là đáp án đúng kèm
+  // giải thích, đúng thứ người học cần ôn lại (Learning Loop Phase 2a).
+  const handleSaveToFlashcard = async (item, result) => {
+    try {
+      await saveFlashcardFromAnswer({
+        front: item.question,
+        back: result.explanation ? `${result.correct_answer} — ${result.explanation}` : result.correct_answer,
+        sourceDocument: result.source_document,
+        sourcePosition: result.source_position,
+        topicName: topicName || undefined,
+      });
+      setResults((r) => ({ ...r, [item.id]: { ...r[item.id], savedToFlashcard: true } }));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const answeredCount = Object.keys(results).length;
+  const isQuizComplete = quizItems.length > 0 && answeredCount === quizItems.length;
+  const correctCount = Object.values(results).filter((r) => r.is_correct).length;
+  const wrongIndexes = quizItems
+    .map((item, i) => ({ item, i }))
+    .filter(({ item }) => results[item.id] && !results[item.id].is_correct);
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,6 +178,31 @@ export default function QuizPage() {
         </p>
       )}
 
+      {isQuizComplete && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-5">
+            <p className="flex items-center gap-2 font-semibold text-foreground">
+              <Trophy className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              Kết quả: {correctCount}/{quizItems.length} câu đúng
+            </p>
+            {wrongIndexes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                Xem lại câu sai:
+                {wrongIndexes.map(({ i }) => (
+                  <a
+                    key={i}
+                    href={`#q-${i}`}
+                    className="rounded-md border border-destructive/40 px-2 py-0.5 text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Câu {i + 1}
+                  </a>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {quizItems.length === 0 ? (
         <EmptyState
           icon={ListChecks}
@@ -164,7 +214,7 @@ export default function QuizPage() {
           {quizItems.map((item, i) => {
             const result = results[item.id];
             return (
-              <Card key={item.id}>
+              <Card key={item.id} id={`q-${i}`}>
                 <CardContent className="flex flex-col gap-3 pt-5">
                   <p className="font-semibold text-foreground">
                     Câu {i + 1}: {item.question}
@@ -199,6 +249,26 @@ export default function QuizPage() {
                     <p className={cn("text-sm", result.is_correct ? "text-success" : "text-destructive")}>
                       {result.is_correct ? "Đúng!" : `Sai — đáp án đúng: ${result.correct_answer}`} — {result.explanation}
                     </p>
+                  )}
+                  {result && !result.is_correct && (
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                      <Link
+                        to={`/chat?q=${encodeURIComponent(`Giải thích giúp tôi: ${item.question}`)}`}
+                        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                        Hỏi AI
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveToFlashcard(item, result)}
+                        disabled={result.savedToFlashcard}
+                        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors enabled:cursor-pointer enabled:hover:text-primary disabled:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <BookmarkPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                        {result.savedToFlashcard ? "Đã thêm vào Flashcard" : "Thêm vào Flashcard"}
+                      </button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
