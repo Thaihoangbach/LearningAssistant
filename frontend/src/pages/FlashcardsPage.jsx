@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Layers, Sparkles, Target } from "lucide-react";
+import { History, Layers, Sparkles, Target } from "lucide-react";
 import {
   generateFlashcards,
+  getFlashcardBoard,
+  getFlashcardHistory,
+  getFlashcardMistakes,
   listDocuments,
   listDueFlashcards,
   reviewFlashcard,
@@ -21,6 +24,13 @@ const RATINGS = [
   { value: "hard", label: "Khó", hint: "sớm gặp lại" },
   { value: "good", label: "Được", hint: "lịch bình thường" },
   { value: "easy", label: "Dễ", hint: "để lâu hơn" },
+];
+const RATING_LABEL = Object.fromEntries(RATINGS.map((r) => [r.value, r.label]));
+
+const BOARD_BUCKETS = [
+  { key: "due", label: "Đến hạn" },
+  { key: "learning", label: "Đang học" },
+  { key: "mastered", label: "Đã thuộc" },
 ];
 
 export default function FlashcardsPage() {
@@ -41,6 +51,13 @@ export default function FlashcardsPage() {
   const [flipped, setFlipped] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
+  const [board, setBoard] = useState(null);
+  const [mistakes, setMistakes] = useState([]);
+  // itemId -> mảng lượt ôn đã tải (chưa tải thì không có key) — tránh gọi lại
+  // API mỗi lần đóng/mở lại cùng một thẻ trong danh sách "hay quên".
+  const [historyByItem, setHistoryByItem] = useState({});
+  const [expandedMistakeId, setExpandedMistakeId] = useState(null);
+
   const loadDue = async () => {
     try {
       const res = await listDueFlashcards();
@@ -52,12 +69,42 @@ export default function FlashcardsPage() {
     }
   };
 
+  // Board + mistakes không chặn màn ôn chính (khác loadDue, tách riêng để một
+  // lỗi ở đây không làm hỏng cả trang) — cùng lý do handleAnswer/handleRate
+  // của QuizPage bắt lỗi riêng cho từng hành động phụ.
+  const loadProgress = async () => {
+    try {
+      const [boardRes, mistakesRes] = await Promise.all([getFlashcardBoard(), getFlashcardMistakes()]);
+      setBoard(boardRes);
+      setMistakes(mistakesRes.mistakes);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   useEffect(() => {
     listDocuments()
       .then((docs) => setDocuments(docs.filter((d) => d.status === DOCUMENT_STATUS.READY)))
       .catch((e) => setError(e.message));
     loadDue().catch((e) => setError(e.message));
+    loadProgress();
   }, []);
+
+  const toggleHistory = async (itemId) => {
+    if (expandedMistakeId === itemId) {
+      setExpandedMistakeId(null);
+      return;
+    }
+    setExpandedMistakeId(itemId);
+    if (!historyByItem[itemId]) {
+      try {
+        const res = await getFlashcardHistory(itemId);
+        setHistoryByItem((h) => ({ ...h, [itemId]: res.history }));
+      } catch (e) {
+        setError(e.message);
+      }
+    }
+  };
 
   const handleGenerate = async () => {
     if (!documentId) return;
@@ -66,6 +113,7 @@ export default function FlashcardsPage() {
     try {
       await generateFlashcards(documentId, topicName, numCards);
       await loadDue();
+      await loadProgress();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -87,6 +135,7 @@ export default function FlashcardsPage() {
       } else {
         setCurrent((c) => c + 1);
       }
+      await loadProgress();
     } catch (e) {
       setError(e.message);
     }
@@ -164,6 +213,20 @@ export default function FlashcardsPage() {
         </CardContent>
       </Card>
 
+      {board && (
+        <div className="flex flex-wrap gap-3">
+          {BOARD_BUCKETS.map((b) => (
+            <div
+              key={b.key}
+              className="flex min-w-32 flex-1 flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3"
+            >
+              <span className="text-2xl font-semibold text-foreground">{board[b.key].count}</span>
+              <span className="text-xs text-muted-foreground">{b.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {dueLoading ? (
         <p className="text-sm text-muted-foreground">Đang tải thẻ đến hạn…</p>
       ) : !card ? (
@@ -220,6 +283,44 @@ export default function FlashcardsPage() {
                 Thẻ trước: sẽ gặp lại sau {lastResult.interval_days} ngày.
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {mistakes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-foreground">Thẻ bạn hay quên</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-3">
+              {mistakes.map((m) => (
+                <li key={m.id} className="border-l-2 border-destructive/40 pl-3">
+                  <p className="text-sm font-medium text-foreground">{m.front}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{m.back}</p>
+                  <button
+                    type="button"
+                    onClick={() => toggleHistory(m.id)}
+                    className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <History className="h-3.5 w-3.5" aria-hidden="true" />
+                    {expandedMistakeId === m.id ? "Ẩn lịch sử ôn" : "Xem lịch sử ôn"}
+                  </button>
+                  {expandedMistakeId === m.id && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5">
+                      {(historyByItem[m.id] || []).map((h, i) => (
+                        <li
+                          key={i}
+                          className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          {RATING_LABEL[h.rating] || h.rating}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

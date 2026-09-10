@@ -181,6 +181,28 @@ export async function listDueFlashcards(limit = 20) {
   return res.json();
 }
 
+export async function getFlashcardBoard() {
+  const res = await fetch(`${API_BASE}/flashcard/board?user_id=${CURRENT_USER_ID}`);
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function getFlashcardMistakes(limit = 20) {
+  const res = await fetch(
+    `${API_BASE}/flashcard/mistakes?user_id=${CURRENT_USER_ID}&limit=${limit}`
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
+export async function getFlashcardHistory(itemId) {
+  const res = await fetch(
+    `${API_BASE}/flashcard/${itemId}/history?user_id=${CURRENT_USER_ID}`
+  );
+  if (!res.ok) await raiseFriendlyError(res);
+  return res.json();
+}
+
 export async function reviewFlashcard(flashcardItemId, rating) {
   const res = await fetch(`${API_BASE}/flashcard/review`, {
     method: "POST",
