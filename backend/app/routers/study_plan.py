@@ -14,6 +14,8 @@ from app.database import get_db
 from app.ingestion.outline import filter_topic_titles
 from app.memory.service import record_event
 from app.models import CourseDeadline, Document, DocumentTopic, MasteryScore, MemoryEvent, Topic
+from app.services.learning_policy import recommend_action
+from app.services.learning_state import get_learning_state
 from app.services.mastery import decay_unpractised
 from app.services.study_planner import CoursePlanInput, TopicPriority, generate_multi_course_plan
 
@@ -120,6 +122,17 @@ def get_study_plan(
 
     plan = generate_multi_course_plan(course_inputs)
 
+    # Learning Loop Phase 1: gợi ý hành động tiếp theo (Quiz/Flashcard/Learn)
+    # + lý do, để "Làm quiz"/"Ôn flashcard" trên lịch mang theo ngữ cảnh giải
+    # thích (nguyên tắc AI đề xuất, học sinh kiểm soát). Tính MỘT LẦN mỗi
+    # topic_id (không phải mỗi lần chủ đề đó xuất hiện lặp lại qua các ngày
+    # trong kế hoạch) — Comprehension/Retention của một topic không đổi theo
+    # ngày được xếp lịch.
+    recommendation_by_topic_id = {
+        topic_id: recommend_action(get_learning_state(db, user_id, topic_id))
+        for topic_id in set(topic_id_by_key.values())
+    }
+
     return {
         "days": [
             {
@@ -139,6 +152,9 @@ def get_study_plan(
                             d.day == 1
                             and topic_id_by_key.get((t.course_name, t.name)) in reviewed_today_ids
                         ),
+                        **_recommendation_fields(
+                            recommendation_by_topic_id.get(topic_id_by_key.get((t.course_name, t.name)))
+                        ),
                     }
                     for t in d.topics
                 ],
@@ -146,6 +162,14 @@ def get_study_plan(
             for d in plan
         ]
     }
+
+
+def _recommendation_fields(rec) -> dict:
+    """`rec` là None khi chủ đề không tra được topic_id (không nên xảy ra
+    trong luồng bình thường, nhưng an toàn hơn là để None thay vì KeyError)."""
+    if rec is None:
+        return {"recommended_action": None, "reason": None}
+    return {"recommended_action": rec.action, "reason": rec.reason}
 
 
 TOPIC_REVIEWED_EVENT_TYPE = "topic_reviewed_manual"
