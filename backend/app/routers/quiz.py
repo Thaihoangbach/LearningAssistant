@@ -148,6 +148,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
                 source_document=item.source_document,
                 source_position=item.source_position,
                 difficulty=effective_difficulty,
+                content_type=item.content_type,
             )
         )
     db.commit()
@@ -167,6 +168,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
                 "id": qi.id,
                 "question": qi.question,
                 "options": json.loads(qi.options),
+                "content_type": qi.content_type,
                 # KHÔNG trả correct_answer/explanation ở bước sinh quiz - chỉ trả sau khi nộp bài (/submit)
             }
             for qi in quiz_items

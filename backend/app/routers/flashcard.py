@@ -114,6 +114,7 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
                 back=item.back,
                 source_document=item.source_document,
                 source_position=item.source_position,
+                content_type=item.content_type,
             )
         )
     db.commit()
@@ -134,6 +135,7 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
                 "back": i.back,
                 "source_document": i.source_document,
                 "source_position": i.source_position,
+                "content_type": i.content_type,
             }
             for i in saved
         ],
@@ -218,6 +220,7 @@ def _serialize_item(item: FlashcardItem, review) -> dict:
         "back": item.back,
         "source_document": item.source_document,
         "source_position": item.source_position,
+        "content_type": item.content_type,
         "interval_days": review.interval_days if review else 0,
         "ease": review.ease if review else DEFAULT_EASE,
     }

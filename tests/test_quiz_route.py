@@ -235,6 +235,7 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             {
                 "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
                 "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+                "content_type": "concept",
             },
         )()
 
@@ -282,6 +283,7 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             {
                 "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
                 "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+                "content_type": "concept",
             },
         )()
 
@@ -328,6 +330,7 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             {
                 "question": "Q?", "options": ["1", "2"], "correct_answer": "1",
                 "explanation": "vì...", "source_document": "b.pdf", "source_position": "Trang 1",
+                "content_type": "concept",
             },
         )()
 
