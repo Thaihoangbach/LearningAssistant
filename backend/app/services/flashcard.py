@@ -17,6 +17,11 @@ from app.models import FlashcardItem, FlashcardReview, FlashcardSet
 
 DEFAULT_DUE_LIMIT = 20
 
+# Ngưỡng "đã thuộc lâu dài" kiểu Anki (mature card): interval >= 21 ngày nghĩa
+# là ba lần ôn liên tiếp đều đạt "good" trở lên từ mức khởi điểm, đủ bằng
+# chứng để coi là nhớ chắc thay vì còn đang học.
+MASTERED_INTERVAL_DAYS = 21
+
 
 def _to_naive_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=None) if value.tzinfo is not None else value
@@ -66,3 +71,36 @@ def due_items(
 def count_due(db, user_id: str, now: Optional[datetime] = None) -> int:
     # limit rất lớn để đếm được toàn bộ, không bị chặn bởi DEFAULT_DUE_LIMIT
     return len(due_items(db, user_id, now=now, limit=10**6))
+
+
+def classify_status(review: Optional[FlashcardReview], now: datetime) -> str:
+    """"due" | "learning" | "mastered" — CHIA BA, không chồng lắp, cho MỘT
+    thẻ dựa trên lượt ôn GẦN NHẤT của nó (hoặc None nếu chưa ôn lần nào).
+    Khác due_items() (chỉ lọc thẻ đến hạn), hàm này phân loại MỌI thẻ để dựng
+    bảng tiến độ tổng quan (app/routers/flashcard.py::get_board).
+
+    Đến hạn LUÔN thắng bất kể interval đã dài bao nhiêu — một thẻ "đã thuộc"
+    nhưng tới hạn vẫn cần ôn ngay, không được xếp nhầm sang "mastered" khiến
+    người học tưởng không cần động vào."""
+    if review is None or _to_naive_utc(review.next_due_at) <= now:
+        return "due"
+    if review.interval_days >= MASTERED_INTERVAL_DAYS:
+        return "mastered"
+    return "learning"
+
+
+def board(
+    db, user_id: str, now: Optional[datetime] = None
+) -> Dict[str, List[Tuple[FlashcardItem, Optional[FlashcardReview]]]]:
+    """Toàn bộ thẻ của người dùng, chia vào đúng MỘT trong ba nhóm
+    due/learning/mastered — dùng cho màn tổng quan tiến độ ôn tập."""
+    now = _to_naive_utc(now or datetime.now(timezone.utc))
+    latest = latest_review_by_item(db, user_id)
+
+    buckets: Dict[str, List[Tuple[FlashcardItem, Optional[FlashcardReview]]]] = {
+        "due": [], "learning": [], "mastered": [],
+    }
+    for item in _user_items(db, user_id):
+        review = latest.get(item.id)
+        buckets[classify_status(review, now)].append((item, review))
+    return buckets
