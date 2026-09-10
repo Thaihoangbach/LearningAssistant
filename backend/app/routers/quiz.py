@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.ingestion.embedder import embed_query
+from app.ingestion.outline import is_bibliography_like_chunk
 from app.llm.client_factory import get_llm_client
 from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
@@ -20,6 +21,16 @@ from app.services.mastery import Attempt as MasteryAttempt, compute_mastery
 from app.vectorstore.pgvector_store import PgVectorStore
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
+
+
+def _prioritize_core_content(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
+    """Learning Loop Phase 0.5 — cùng vá với BUG-007 bên flashcard
+    (app/routers/flashcard.py::_prioritize_core_content): đẩy các đoạn giống
+    khu vực tham khảo/trích dẫn xuống CUỐI danh sách (KHÔNG xoá) trước khi đưa
+    vào generator, để quiz ưu tiên hỏi nội dung cốt lõi thay vì bịa câu hỏi
+    quanh một mục trích dẫn. Tách thành hàm thuần để test được không cần
+    Postgres thật (xem tests/test_quiz_prioritization.py)."""
+    return sorted(chunks, key=lambda c: is_bibliography_like_chunk(c.text))
 
 
 class GenerateQuizRequest(BaseModel):
@@ -66,6 +77,12 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
         )
     if not retrieved_chunks:
         raise HTTPException(400, "Không tìm thấy nội dung để sinh quiz từ (các) tài liệu này.")
+
+    # Hạ ưu tiên (KHÔNG xoá) các đoạn giống khu vực tham khảo/trích dẫn, cùng
+    # vá với BUG-007 bên flashcard — quiz nên hỏi nội dung cốt lõi trước.
+    # sort() ổn định nên thứ tự tương đối trong từng nhóm (theo điểm truy hồi)
+    # được giữ nguyên.
+    retrieved_chunks = _prioritize_core_content(retrieved_chunks)
 
     # KHÔNG truyền `query` — sinh quiz không cần truy hồi ký ức theo câu hỏi,
     # tránh tốn một lượt embed vô ích.
