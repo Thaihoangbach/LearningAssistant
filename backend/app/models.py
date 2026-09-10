@@ -378,8 +378,9 @@ class MemoryEvent(Base):
     `importance` gán lúc ghi bằng bảng tra cứu tĩnh trong
     app/memory/scoring.py, không gọi LLM.
 
-    `last_accessed_at`/`access_count` hiện CHỈ để quan sát và hiển thị ở trang
-    Memory — chưa đưa vào công thức chấm điểm truy hồi.
+    `last_accessed_at`/`access_count` hiện CHỈ để quan sát (không có UI hiển
+    thị — MemoryEvent là state nội bộ phục vụ recall, không phải tính năng
+    người dùng xem/xoá trực tiếp) — chưa đưa vào công thức chấm điểm truy hồi.
 
     `embedding` trước đây sống trong một file FAISS riêng theo user_id
     (app/memory/store.py, đã gỡ bỏ) — SQLite không có kiểu vector nên phải

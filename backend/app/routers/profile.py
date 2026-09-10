@@ -1,9 +1,14 @@
 """API routes cho Learning Profile — cá nhân hóa dài hạn.
 
-Gộp lại hai loại dữ liệu cá nhân hóa vốn tách riêng theo thiết kế
-(architecture-diagrams.md): `preferred_level`/`learning_goal` do người dùng
-tự khai báo (tĩnh, lưu trong bảng LEARNING_PROFILE), và `weak_topics` suy ra
-từ MasteryScore (động, không lưu trùng ở đây — luôn đọc lại mới nhất).
+Chỉ chứa phần TĨNH do người dùng tự khai (`preferred_level`, `learning_goal`)
+và trạng thái HIỆU LỰC đang áp dụng ngay bây giờ (`effective_level` +
+`effective_level_source`) — trả lời đúng câu "hệ thống đang coi tôi trình độ
+gì, và vì sao" mà trước đây Profile không hiển thị dù đã tính sẵn ở
+app/services/learning_profile.py.
+
+`weak_topics`/`mastered_topics` đã BỎ khỏi router này — đó là Learning State
+(suy ra từ MasteryScore), đã có màn hình riêng ở app/routers/mastery.py; giữ
+cả ở đây là lặp dữ liệu, tạo cảm giác Profile là "Dashboard thứ hai".
 """
 
 from datetime import datetime
@@ -14,41 +19,45 @@ from sqlalchemy.orm import Session
 
 from app.database import ensure_user, get_db
 from app.llm.guardrail import BLOCKED_MESSAGE, contains_hard_block_pattern
-from app.models import LearningProfile, MasteryScore, Topic
+from app.models import LearningProfile, MasteryScore
+from app.services.learning_profile import infer_level_from_mastery, resolve_effective_level
+from app.services.mastery import decay_unpractised
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-# Cùng ngưỡng với app/llm/recommendation.py::_WEAK_THRESHOLD và
-# app/services/mastery.py::classify_mastery — giữ độc lập thay vì import tên
-# private xuyên module, chấp nhận trùng hằng số nhỏ để không ràng buộc router
-# này vào nội bộ các module khác.
-WEAK_MASTERY_THRESHOLD = 0.4
-GOOD_MASTERY_THRESHOLD = 0.75
-MAX_TOPICS_SHOWN = 3
+
+def _avg_mastery(db: Session, user_id: str) -> float | None:
+    """Trùng logic với app/services/learner_context.py::_avg_mastery — chấp
+    nhận lặp lại một truy vấn nhỏ thay vì import hàm private xuyên module,
+    cùng lý do đã áp dụng cho các ngưỡng mastery ở router khác trong hệ thống
+    (mỗi router tự đứng độc lập, không ràng buộc vào nội bộ module kia)."""
+    rows = db.query(MasteryScore).filter(MasteryScore.user_id == user_id).all()
+    scores = [decay_unpractised(s.score, s.updated_at) for s in rows]
+    return sum(scores) / len(scores) if scores else None
 
 
 @router.get("")
 def get_profile(user_id: str, db: Session = Depends(get_db)):
     profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
+    stored_level = profile.preferred_level if profile else None
 
-    scores = (
-        db.query(MasteryScore, Topic)
-        .join(Topic, MasteryScore.topic_id == Topic.id)
-        .filter(MasteryScore.user_id == user_id)
-        .order_by(MasteryScore.score.asc())
-        .all()
-    )
-    weak_topics = [topic.name for score, topic in scores if score.score < WEAK_MASTERY_THRESHOLD]
-    mastered_topics = [topic.name for score, topic in scores if score.score >= GOOD_MASTERY_THRESHOLD]
+    inferred_level = None
+    if not stored_level:
+        inferred_level = infer_level_from_mastery(_avg_mastery(db, user_id))
+
+    effective_level = resolve_effective_level(None, stored_level, inferred_level)
+    if stored_level:
+        effective_level_source = "declared"
+    elif inferred_level:
+        effective_level_source = "inferred"
+    else:
+        effective_level_source = None
 
     return {
-        "preferred_level": profile.preferred_level if profile else None,
+        "preferred_level": stored_level,
         "learning_goal": profile.learning_goal if profile else None,
-        # weak_topics/mastered_topics suy ra từ MasteryScore NGAY tại thời điểm
-        # gọi, KHÔNG lưu trong LEARNING_PROFILE — tránh hai nguồn dữ liệu lệch
-        # nhau theo thời gian.
-        "weak_topics": weak_topics[:MAX_TOPICS_SHOWN],
-        "mastered_topics": mastered_topics[:MAX_TOPICS_SHOWN],
+        "effective_level": effective_level,
+        "effective_level_source": effective_level_source,
         "updated_at": profile.updated_at.isoformat() if profile else None,
     }
 
@@ -95,3 +104,18 @@ def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
         "learning_goal": profile.learning_goal,
         "updated_at": profile.updated_at.isoformat(),
     }
+
+
+@router.delete("")
+def reset_profile(user_id: str, db: Session = Depends(get_db)):
+    """Đặt lại phần TỰ KHAI (preferred_level, learning_goal) về rỗng.
+
+    Chỉ xoá hàng LearningProfile — KHÔNG đụng MasteryScore/Attempt/MemoryEvent.
+    Ranh giới Profile (tự khai) vs Learning State (hệ thống quan sát/suy ra)
+    phải giữ đúng kể cả ở hành vi reset này; xoá lịch sử học tập không phải
+    việc của nút này."""
+    profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
+    if profile:
+        db.delete(profile)
+        db.commit()
+    return {"status": "reset"}

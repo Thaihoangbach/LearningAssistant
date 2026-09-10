@@ -1,5 +1,7 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun, UserCog } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { cn } from "../../lib/cn";
 
 export default function Topbar({ title, onMenuClick }) {
   const { isDark, toggle } = useDarkMode();
@@ -23,6 +25,18 @@ export default function Topbar({ title, onMenuClick }) {
       >
         {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          cn(
+            "flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            isActive && "bg-primary/10 text-primary"
+          )
+        }
+        aria-label="Hồ sơ học tập"
+      >
+        <UserCog className="h-5 w-5" />
+      </NavLink>
     </header>
   );
 }

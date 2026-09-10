@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 import {
-  Brain,
   CalendarDays,
   FileText,
   GraduationCap,
@@ -8,7 +7,6 @@ import {
   LayoutDashboard,
   ListChecks,
   MessageCircle,
-  UserCog,
   X,
 } from "lucide-react";
 import { cn } from "../../lib/cn";
@@ -20,8 +18,6 @@ const NAV_ITEMS = [
   { to: "/quiz", label: "Quiz", icon: ListChecks },
   { to: "/flashcards", label: "Flashcard", icon: Layers },
   { to: "/study-plan", label: "Kế hoạch ôn", icon: CalendarDays },
-  { to: "/profile", label: "Hồ sơ", icon: UserCog },
-  { to: "/memory", label: "Ký ức", icon: Brain },
 ];
 
 export default function Sidebar({ open, onClose }) {
