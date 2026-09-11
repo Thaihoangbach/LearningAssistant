@@ -26,8 +26,15 @@ from app.models import (
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
 from app.ingestion.outline import filter_topic_titles
+from app.services.apply import build_apply_result, is_apply_request
 from app.services.capability_detector import detect_capability
 from app.services.citation import _content_words, supporting_sentences
+from app.services.compare import (
+    NEEDS_ENTITIES_MESSAGE,
+    build_comparison,
+    extract_comparison_entities,
+    is_compare_request,
+)
 from app.services.context_assembly import assemble_context
 from app.services.flashcard import count_due
 from app.services.learner_context import build_learner_context
@@ -314,6 +321,21 @@ def _build_summarize_result(
         return AnswerResult(answer=UNAVAILABLE_MESSAGE, is_grounded=False, sources=[])
 
 
+def _build_compare_result(
+    db: Session, user_id: str, question: str, document_ids: set[str], llm_client
+) -> AnswerResult:
+    """So sánh hai khái niệm/chủ đề — xem app/services/compare.py cho thiết kế
+    đầy đủ (retrieval riêng từng vế). Ở đây chỉ lo phần đặc thù router: tách 2
+    vế từ câu hỏi, hỏi lại nếu không tách được rõ ràng thay vì đoán bừa."""
+    entities = extract_comparison_entities(question)
+    if entities is None:
+        return AnswerResult(
+            answer=NEEDS_ENTITIES_MESSAGE, is_grounded=False, sources=[], needs_clarification=True
+        )
+    entity_a, entity_b = entities
+    return build_comparison(db, user_id, document_ids, entity_a, entity_b, question, llm_client)
+
+
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
     # Câu hỏi rỗng/toàn khoảng trắng vẫn qua được validation kiểu `str` của
@@ -366,6 +388,14 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             # retrieval) — xem app/services/summarize.py. Vẫn qua guardrail ở
             # trên trước, cùng lý do an toàn với đường hỏi đáp chung bên dưới.
             result = _build_summarize_result(db, req.user_id, req.question, ready_docs, llm_client)
+        elif is_compare_request(req.question):
+            # Intent riêng có output contract khác (retrieval riêng từng vế) —
+            # xem app/services/compare.py.
+            result = _build_compare_result(db, req.user_id, req.question, document_ids, llm_client)
+        elif is_apply_request(req.question):
+            # Intent riêng có output contract khác (3 phần: khái niệm/ví dụ/
+            # giải thích) — xem app/services/apply.py.
+            result = build_apply_result(db, req.user_id, document_ids, req.question, llm_client)
         else:
             learner = build_learner_context(
                 db, req.user_id, requested_level=req.level, query=req.question

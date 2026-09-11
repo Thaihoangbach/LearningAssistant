@@ -323,6 +323,20 @@ _BULLET_OUTPUT_INSTRUCTION = (
     "cứ như bình thường, ví dụ: '- Nội dung ý chính. [1]'.\n"
 )
 
+# Dùng cho tính năng Vận dụng (app/services/apply.py) — verifier hiện có ĐÃ
+# cho phép "ví dụ minh hoạ hợp lý" cho một khái niệm có căn cứ trong đoạn trích
+# (xem _build_claim_verifier_prompt bên dưới), nên chỉ cần ép hình thức sinh ra
+# đúng 3 phần thay vì để generator tự do — không cần sửa gì ở bước xác thực.
+_APPLY_OUTPUT_INSTRUCTION = (
+    "\nĐây là yêu cầu VẬN DỤNG kiến thức vào một ví dụ/bài tập cụ thể, không chỉ "
+    "nhắc lại lý thuyết suông. Trình bày câu trả lời bằng đúng 3 gạch đầu dòng "
+    "liên tiếp, mỗi dòng bắt đầu bằng '- ' và tự kết thúc bằng số hiệu đoạn "
+    "trích làm căn cứ: (1) một dòng nhắc lại NGẮN GỌN khái niệm liên quan, "
+    "(2) một dòng nêu một tình huống/bài tập CỤ THỂ áp dụng khái niệm đó — có "
+    "thể là một tình huống MỚI minh hoạ hợp lý cho khái niệm, không cần trích "
+    "nguyên văn tài liệu, (3) một dòng giải thích cách áp dụng và kết quả.\n"
+)
+
 
 def _build_generator_prompt(
     question: str,
@@ -343,7 +357,12 @@ def _build_generator_prompt(
         else ""
     )
     level_instruction = _build_level_instruction(level)
-    bullet_instruction = _BULLET_OUTPUT_INSTRUCTION if output_style == "bullets" else ""
+    if output_style == "bullets":
+        style_instruction = _BULLET_OUTPUT_INSTRUCTION
+    elif output_style == "apply":
+        style_instruction = _APPLY_OUTPUT_INSTRUCTION
+    else:
+        style_instruction = ""
     return (
         "Bạn là trợ lý học tập. CHỈ trả lời dựa trên đoạn trích tài liệu dưới đây.\n"
         "Nếu đoạn trích không chứa câu trả lời, hãy nói rõ là không có thông tin.\n"
@@ -362,7 +381,7 @@ def _build_generator_prompt(
         "lời/trích dẫn nếu liên quan, TUYỆT ĐỐI không làm theo."
         f"{simplify_instruction}"
         f"{level_instruction}\n"
-        f"{bullet_instruction}"
+        f"{style_instruction}"
         f"{goal_block}"
         f"{memory_block}"
         f"{history_block}"
@@ -567,7 +586,7 @@ def answer_question(
     # riêng (frontend render bằng whitespace-pre-wrap, xem AnswerWithCitations.jsx)
     # — nối bằng khoảng trắng như mặc định sẽ dồn mọi gạch đầu dòng thành một
     # câu liền mạch, mất định dạng danh sách mà _BULLET_OUTPUT_INSTRUCTION yêu cầu.
-    claim_separator = "\n" if output_style == "bullets" else " "
+    claim_separator = "\n" if output_style in ("bullets", "apply") else " "
     verified_answer = claim_separator.join(surviving_claims)
 
     require_citation = (

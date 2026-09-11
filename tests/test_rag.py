@@ -806,5 +806,43 @@ class TestBulletOutputStyle(unittest.TestCase):
         self.assertNotIn("\n", result.answer)
 
 
+class TestApplyOutputStyle(unittest.TestCase):
+    """Tính năng Vận dụng (app/services/apply.py) dùng output_style="apply" —
+    cùng cơ chế nối claim bằng xuống dòng như "bullets" (mỗi phần khái niệm/
+    ví dụ/giải thích giữ một dòng riêng), chỉ khác nội dung chỉ dẫn generator."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_apply_instruction_is_included_in_generator_prompt(self):
+        llm = FakeLLMClient(
+            scripted_responses=["- Khái niệm. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}']
+        )
+        answer_question(
+            question="Áp dụng khái niệm X vào một ví dụ cụ thể.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="apply",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("VẬN DỤNG", generator_prompt)
+
+    def test_surviving_claims_are_joined_by_newline_not_space(self):
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "- Khái niệm. [1]\n- Ví dụ áp dụng. [1]\n- Giải thích. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ", "3": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Áp dụng khái niệm X vào một ví dụ cụ thể.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="apply",
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertEqual(len(result.answer.split("\n")), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
