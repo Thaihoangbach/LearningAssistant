@@ -750,5 +750,61 @@ class TestAnswerAddressesQuestion(unittest.TestCase):
         self.assertEqual(len(llm.prompts_received), 2)
 
 
+class TestBulletOutputStyle(unittest.TestCase):
+    """Tính năng Tóm tắt (app/services/summarize.py) dùng output_style="bullets"
+    để tái sử dụng NGUYÊN generator+verifier — chỉ khác cách nối các claim còn
+    sống sót lại thành câu trả lời cuối (xuống dòng thay vì khoảng trắng, để
+    mỗi ý chính giữ một dòng riêng khi frontend render)."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_bullet_instruction_is_included_in_generator_prompt(self):
+        llm = FakeLLMClient(
+            scripted_responses=["- Ý một. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}']
+        )
+        answer_question(
+            question="Tóm tắt chủ đề X.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="bullets",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("- ", generator_prompt)
+        self.assertIn("danh sách", generator_prompt)
+
+    def test_surviving_bullets_are_joined_by_newline_not_space(self):
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "- Ý một. [1]\n- Ý hai. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Tóm tắt chủ đề X.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="bullets",
+        )
+        self.assertTrue(result.is_grounded)
+        lines = result.answer.split("\n")
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0].startswith("- Ý một."))
+        self.assertTrue(lines[1].startswith("- Ý hai."))
+
+    def test_default_output_style_still_joins_by_space(self):
+        # Hồi quy: KHÔNG truyền output_style phải giữ nguyên hành vi cũ.
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "Câu một. [1] Câu hai. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertNotIn("\n", result.answer)
+
+
 if __name__ == "__main__":
     unittest.main()

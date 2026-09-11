@@ -34,7 +34,16 @@ from app.services.learner_context import build_learner_context
 from app.services.mastery import decay_unpractised
 from app.services.misconception import WrongChoice, find_repeated_misconceptions
 from app.services.qa_pipeline import answer_with_fallback
+from app.services.structural_retrieval import StructuralRetrievalUnavailable
 from app.services.study_planner import TopicPriority, generate_plan
+from app.services.summarize import (
+    NEEDS_TOPIC_MESSAGE,
+    UNAVAILABLE_MESSAGE,
+    TopicCandidate,
+    build_summary,
+    is_summarize_request,
+    resolve_topic,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -274,6 +283,37 @@ def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
     return AnswerResult(answer=answer, is_grounded=True, sources=[])
 
 
+def _build_summarize_result(
+    db: Session, user_id: str, question: str, ready_docs: list[Document], llm_client
+) -> AnswerResult:
+    """Tóm tắt một DocumentTopic — xem app/services/summarize.py cho thiết kế
+    đầy đủ (structural retrieval thay semantic, output dạng bullet). Ở đây chỉ
+    lo phần đặc thù router: lấy danh sách chủ đề ứng viên trong phạm vi tài
+    liệu đã chọn, lọc chất lượng (cùng bộ lọc với gợi ý chủ đề khi từ chối trả
+    lời — BUG-001/BUG-006), rồi giao việc còn lại cho summarize.py."""
+    document_ids = {d.id for d in ready_docs}
+    rows = (
+        db.query(DocumentTopic)
+        .filter(DocumentTopic.user_id == user_id, DocumentTopic.document_id.in_(document_ids))
+        .all()
+    )
+    plausible_titles = set(filter_topic_titles([r.title for r in rows]))
+    candidates = [
+        TopicCandidate(topic_id=r.id, document_id=r.document_id, title=r.title)
+        for r in rows
+        if r.title in plausible_titles
+    ]
+
+    topic = resolve_topic(question, candidates)
+    if topic is None:
+        return AnswerResult(answer=NEEDS_TOPIC_MESSAGE, is_grounded=False, sources=[], needs_clarification=True)
+
+    try:
+        return build_summary(db, user_id, topic, llm_client)
+    except StructuralRetrievalUnavailable:
+        return AnswerResult(answer=UNAVAILABLE_MESSAGE, is_grounded=False, sources=[])
+
+
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
     # Câu hỏi rỗng/toàn khoảng trắng vẫn qua được validation kiểu `str` của
@@ -321,6 +361,11 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         guardrail_result = check_question(req.question, llm_client=llm_client)
         if guardrail_result.blocked:
             result = AnswerResult(answer=guardrail_result.message, is_grounded=False, sources=[])
+        elif is_summarize_request(req.question):
+            # Intent riêng có output contract khác (bullet, structural
+            # retrieval) — xem app/services/summarize.py. Vẫn qua guardrail ở
+            # trên trước, cùng lý do an toàn với đường hỏi đáp chung bên dưới.
+            result = _build_summarize_result(db, req.user_id, req.question, ready_docs, llm_client)
         else:
             learner = build_learner_context(
                 db, req.user_id, requested_level=req.level, query=req.question
