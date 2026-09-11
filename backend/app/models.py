@@ -105,6 +105,14 @@ class DocumentChunk(Base):
     text = Column(Text, nullable=False)
     embedding = Column(Vector(EMBEDDING_DIM), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Chỉ số 0-based của section (trang PDF / nhóm đoạn văn DOCX) mà chunk này
+    # sinh ra từ đó — app/ingestion/chunker.py::Chunk.section_index. Dùng để
+    # lấy lại TOÀN BỘ chunk thuộc một DocumentTopic theo đúng thứ tự đọc gốc
+    # (structural retrieval cho Summarize, app/services/structural_retrieval.py),
+    # khác hẳn truy hồi semantic top-k. Nullable vì chunk của tài liệu tải lên
+    # TRƯỚC khi cột này tồn tại không có giá trị hồi tố (không migrate ngược
+    # dữ liệu cũ — cùng quy ước đã áp dụng cho Document.content_hash).
+    section_index = Column(Integer, nullable=True)
 
 
 class Conversation(Base):
@@ -340,6 +348,11 @@ class DocumentTopic(Base):
     position_ref = Column(String, nullable=True)
     order_index = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # KHÁC với order_index (thứ tự thứ N trong danh sách heading tìm được) —
+    # đây là chỉ số section 0-based dùng để khớp với DocumentChunk.section_index
+    # cùng tài liệu (app/ingestion/outline.py::OutlineEntry.section_index).
+    # Nullable cùng lý do với DocumentChunk.section_index ở trên.
+    section_index = Column(Integer, nullable=True)
 
 
 class FlashcardReview(Base):

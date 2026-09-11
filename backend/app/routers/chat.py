@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import ensure_user, get_db
+from app.database import get_db
 from app.llm.client_factory import get_llm_client
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
@@ -28,6 +28,7 @@ from app.retrieval.query_context import build_retrieval_query
 from app.ingestion.outline import filter_topic_titles
 from app.services.capability_detector import detect_capability
 from app.services.citation import _content_words, supporting_sentences
+from app.services.context_assembly import assemble_context
 from app.services.flashcard import count_due
 from app.services.learner_context import build_learner_context
 from app.services.mastery import decay_unpractised
@@ -36,8 +37,6 @@ from app.services.qa_pipeline import answer_with_fallback
 from app.services.study_planner import TopicPriority, generate_plan
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-MAX_HISTORY_TURNS = 3
 
 # Golden Set (eval/report.md, mục 14) đo được Config A (dense-only, lọc lỏng
 # hơn) đạt Personalization 0.67 trong khi Config B (hybrid+reranker, lọc gắt
@@ -52,26 +51,6 @@ LEVEL_TOP_K_BOOST = 3
 
 # Số chủ đề gợi ý kèm theo khi hệ thống từ chối trả lời.
 MAX_SUGGESTED_TOPICS = 4
-
-
-def _load_conversation_history(db: Session, conversation_id: str) -> list[ConversationTurn]:
-    """Lấy N lượt hỏi-đáp gần nhất của hội thoại, dùng để giải ngữ cảnh câu hỏi
-    tiếp nối (vd: "nó" ám chỉ chủ đề đã hỏi trước đó) — xem app/llm/rag.py."""
-    messages = (
-        db.query(Message)
-        .filter(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
-    turns: list[ConversationTurn] = []
-    pending_question: str | None = None
-    for m in messages:
-        if m.role == "user":
-            pending_question = m.content
-        elif m.role == "assistant" and pending_question is not None:
-            turns.append(ConversationTurn(question=pending_question, answer=m.content))
-            pending_question = None
-    return turns[-MAX_HISTORY_TURNS:]
 
 
 # Loại ký ức dùng làm LÝ DO một chủ đề bị coi là yếu — chỉ lấy các sự kiện
@@ -311,31 +290,11 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
     guardrail_result = None
     qa_result = None
 
-    if capability is None:
-        # Chỉ tìm trong tài liệu "sẵn sàng", phiên bản mới nhất, thuộc quyền
-        # user_id — thực thi AC F2/F5 + ưu tiên bản mới khi tài liệu có version.
-        ready_docs = (
-            db.query(Document)
-            .filter(Document.user_id == req.user_id, Document.status == "sẵn sàng", Document.is_latest == True)
-            .all()
-        )
-        if req.course_name:
-            ready_docs = [d for d in ready_docs if d.course_name == req.course_name]
-
-        if not ready_docs:
-            raise HTTPException(400, "Chưa có tài liệu nào sẵn sàng để hỏi đáp.")
-
-        document_ids = {d.id for d in ready_docs}
-
-    conversation_id = req.conversation_id
-    if not conversation_id:
-        ensure_user(db, req.user_id)
-        convo = Conversation(user_id=req.user_id, course_name=req.course_name)
-        db.add(convo)
-        db.commit()
-        conversation_id = convo.id
-
-    history = _load_conversation_history(db, conversation_id)
+    context = assemble_context(db, req, needs_document_scope=capability is None)
+    ready_docs = context.ready_docs
+    document_ids = context.document_ids
+    conversation_id = context.conversation_id
+    history = context.history
 
     if capability is not None:
         # Các năng lực này chỉ đọc lại dữ liệu đã tính sẵn (mastery, kế hoạch,

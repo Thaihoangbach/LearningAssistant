@@ -47,6 +47,7 @@ def _to_indexed_chunk(row: DocumentChunk) -> IndexedChunk:
         document_name=row.document_name,
         position_ref=row.position_ref,
         text=row.text,
+        section_index=row.section_index,
     )
 
 
@@ -70,6 +71,7 @@ class PgVectorStore:
                     position_ref=chunk.position_ref,
                     text=chunk.text,
                     embedding=embedding,
+                    section_index=chunk.section_index,
                 )
             )
         self.db.flush()

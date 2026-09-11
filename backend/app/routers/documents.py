@@ -103,6 +103,7 @@ def _save_outline(db: Session, document_id: str, user_id: str, file_path: str, c
                 title=entry.title,
                 position_ref=entry.position_ref,
                 order_index=entry.order,
+                section_index=entry.section_index,
             )
         )
         existing = (

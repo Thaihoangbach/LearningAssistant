@@ -27,9 +27,16 @@ class UnsupportedFileType(ValueError):
     pass
 
 
+# Nguồn DUY NHẤT cho hằng số này — app/ingestion/outline.py import từ đây
+# thay vì tự định nghĩa lại, để việc gom section của outline (dùng để suy
+# section_index của một heading) không bao giờ lệch khỏi cách parse_document
+# gom section (dùng để chunk) chỉ vì một bên đổi số mà quên bên kia.
+DEFAULT_PARAGRAPHS_PER_SECTION = 10
+
+
 def parse_document(
     file_path: str,
-    paragraphs_per_section: int = 10,
+    paragraphs_per_section: int = DEFAULT_PARAGRAPHS_PER_SECTION,
 ) -> List[Tuple[str, str]]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Không tìm thấy file: {file_path}")

@@ -54,6 +54,7 @@ def process_document(
             document_name=document_name,
             position_ref=c.position_ref,
             text=c.text,
+            section_index=c.section_index,
         )
         for c in chunks
     ]

@@ -81,6 +81,25 @@ class TestExtractOutlineDocx(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_section_index_matches_parse_document_section_for_same_file(self):
+        # Bằng chứng cross-consistency: section_index một topic trỏ ra PHẢI
+        # đúng section mà app/ingestion/parser.py::parse_document tạo cho
+        # cùng file — đây là điều kiện bắt buộc để structural retrieval (lấy
+        # đúng dải chunk của một DocumentTopic) hoạt động đúng.
+        from app.ingestion.parser import parse_document
+
+        first = ("Chương một", [f"Đoạn số {i}." for i in range(12)])
+        second = ("Chương hai", ["Nội dung chương hai."])
+        path = _make_docx([first, second])
+        try:
+            outline = extract_outline(path)
+            sections = parse_document(path)
+            for entry in outline:
+                self.assertLess(entry.section_index, len(sections))
+                self.assertEqual(sections[entry.section_index][0], entry.position_ref)
+        finally:
+            os.remove(path)
+
     def test_duplicate_headings_are_kept_once(self):
         path = _make_docx([("Trùng", ["A."]), ("Trùng", ["B."])])
         try:

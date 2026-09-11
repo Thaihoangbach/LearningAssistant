@@ -47,6 +47,26 @@ class TestChunkSections(unittest.TestCase):
         self.assertEqual(chunks[0].position_ref, "Trang 1")
         self.assertEqual(chunks[1].position_ref, "Trang 2")
 
+    def test_section_index_matches_position_in_sections_list(self):
+        # section_index dùng cho structural retrieval (lấy hết chunk của một
+        # DocumentTopic) — phải trỏ đúng chỉ số 0-based trong `sections` đầu
+        # vào, không phải theo chunk_index (vốn tăng liên tục xuyên section).
+        sections = [
+            ("Trang 1", "Nội dung một."),
+            ("Trang 2", "Nội dung hai, dài hơn một chút để chắc chắn."),
+            ("Trang 3", "Nội dung ba."),
+        ]
+        chunks = chunk_sections(sections, max_chars=800, overlap_chars=100, bridge_sections=False)
+        self.assertEqual([c.section_index for c in chunks], [0, 1, 2])
+
+    def test_bridge_chunk_gets_left_section_index(self):
+        long_a = " ".join(f"Câu A{i} có nội dung đủ dài để vượt ngưỡng." for i in range(12))
+        long_b = " ".join(f"Câu B{i} có nội dung đủ dài để vượt ngưỡng." for i in range(12))
+        sections = [("Trang 1", long_a), ("Trang 2", long_b)]
+        chunks = chunk_sections(sections, max_chars=300, overlap_chars=100)
+        bridge = next(c for c in chunks if "–" in c.position_ref)
+        self.assertEqual(bridge.section_index, 0)
+
     def test_invalid_overlap_raises(self):
         with self.assertRaises(ValueError):
             chunk_sections([("Trang 1", "abc")], max_chars=50, overlap_chars=50)

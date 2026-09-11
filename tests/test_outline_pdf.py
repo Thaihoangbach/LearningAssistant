@@ -71,6 +71,34 @@ class TestOutlinePdf(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_section_index_matches_chunk_section_index_for_same_page(self):
+        # Cross-consistency PDF: heading tìm thấy ở trang 2 phải có
+        # section_index == 1 (0-based), và một chunk sinh ra từ CÙNG file qua
+        # chunk_sections() ở trang đó cũng phải mang đúng section_index == 1
+        # — hai bên đọc từ cùng một `sections`, không phải suy luận riêng.
+        from app.ingestion.chunker import chunk_sections
+        from app.ingestion.parser import parse_document
+
+        path = _make_pdf(
+            [
+                ["Trang một nội dung thường, không có heading nào ở đây cả cho đủ dài."],
+                [
+                    "2 Background",
+                    "This is a long paragraph of body text that goes on for quite a while to satisfy the minimum length check.",
+                ],
+            ]
+        )
+        try:
+            outline = extract_outline(path)
+            self.assertEqual([e.section_index for e in outline], [1])
+
+            sections = parse_document(path)
+            chunks = chunk_sections(sections)
+            chunk_section_indices = {c.section_index for c in chunks if c.position_ref == "Trang 2"}
+            self.assertEqual(chunk_section_indices, {1})
+        finally:
+            os.remove(path)
+
     def test_title_case_heading_is_detected(self):
         path = _make_pdf(
             [

@@ -32,11 +32,7 @@ giản là không hiện phần dàn ý, chứ không bịa ra chủ đề.
 import os
 import re
 from dataclasses import dataclass
-from typing import List
-
-# Phải khớp `paragraphs_per_section` mặc định của app/ingestion/parser.py, nếu
-# lệch thì position_ref của dàn ý sẽ trỏ sai section.
-PARAGRAPHS_PER_SECTION = 10
+from typing import List, Tuple
 
 # Ngưỡng suy đoán heading trong PDF.
 _MAX_HEADING_CHARS = 80
@@ -220,6 +216,12 @@ class OutlineEntry:
     title: str
     position_ref: str
     order: int
+    # Chỉ số (0-based) của section trong CÙNG danh sách sections mà
+    # app/ingestion/parser.py::parse_document tạo ra cho chunking — cho phép
+    # lấy lại đúng dải chunk thuộc chủ đề này (structural retrieval, xem
+    # app/services/structural_retrieval.py). Mặc định 0 để không phá các nơi
+    # đang tự dựng OutlineEntry mà chưa quan tâm trường này (vd tests).
+    section_index: int = 0
 
 
 def extract_outline(file_path: str) -> List[OutlineEntry]:
@@ -229,7 +231,15 @@ def extract_outline(file_path: str) -> List[OutlineEntry]:
     if ext == ".docx":
         return _outline_docx(file_path)
     if ext == ".pdf":
-        return _outline_pdf(file_path)
+        # Dùng LẠI chính danh sách section mà chunking sẽ dùng (thay vì tự mở
+        # lại PDF một lần nữa) — đây là điểm mấu chốt để section_index của một
+        # heading và section_index của các chunk thuộc cùng trang LUÔN khớp
+        # nhau, vì cả hai cùng đọc từ một list, không phải hai phép tính độc
+        # lập hy vọng trùng nhau (khác nhánh DOCX bên dưới, xem _outline_docx).
+        from app.ingestion.parser import parse_document
+
+        sections = parse_document(file_path)
+        return _outline_pdf(sections)
     return []
 
 
@@ -241,18 +251,33 @@ def _dedupe_keep_order(entries: List[OutlineEntry]) -> List[OutlineEntry]:
         if key in seen:
             continue
         seen.add(key)
-        result.append(OutlineEntry(title=e.title, position_ref=e.position_ref, order=len(result)))
+        result.append(
+            OutlineEntry(
+                title=e.title,
+                position_ref=e.position_ref,
+                order=len(result),
+                section_index=e.section_index,
+            )
+        )
     return result
 
 
 def _outline_docx(file_path: str) -> List[OutlineEntry]:
     from docx import Document as DocxDocument
 
+    from app.ingestion.parser import DEFAULT_PARAGRAPHS_PER_SECTION
+
     doc = DocxDocument(file_path)
 
     entries: List[OutlineEntry] = []
     # Đếm theo đoạn văn KHÔNG rỗng, đúng cách parser.py gom section — nếu đếm
-    # cả đoạn rỗng thì position_ref sẽ lệch.
+    # cả đoạn rỗng thì position_ref sẽ lệch. Đây VẪN là một lượt đọc riêng với
+    # parse_document (khác nhánh PDF ở extract_outline) vì cần style_name của
+    # từng đoạn văn (python-docx), thứ đã mất khi parser.py gộp đoạn văn thành
+    # text thuần cho chunking — nhưng dùng CHUNG hằng số
+    # DEFAULT_PARAGRAPHS_PER_SECTION từ parser.py nên section_index tính ra ở
+    # đây LUÔN khớp với section_index parser.py sẽ gán cho chunk, không còn là
+    # hai con số hardcode ở hai file phải tự nhớ giữ đồng bộ với nhau.
     non_empty_index = 0
     for paragraph in doc.paragraphs:
         text = paragraph.text.strip()
@@ -261,9 +286,14 @@ def _outline_docx(file_path: str) -> List[OutlineEntry]:
 
         style_name = (paragraph.style.name or "") if paragraph.style is not None else ""
         if style_name.startswith("Heading") or style_name.startswith("Title"):
-            section_index = non_empty_index // PARAGRAPHS_PER_SECTION + 1
+            section_index = non_empty_index // DEFAULT_PARAGRAPHS_PER_SECTION
             entries.append(
-                OutlineEntry(title=text, position_ref=f"Mục {section_index}", order=len(entries))
+                OutlineEntry(
+                    title=text,
+                    position_ref=f"Mục {section_index + 1}",
+                    order=len(entries),
+                    section_index=section_index,
+                )
             )
 
         non_empty_index += 1
@@ -293,22 +323,25 @@ def _looks_like_heading(line: str, following: str) -> bool:
     return _is_title_case_or_caps(stripped)
 
 
-def _outline_pdf(file_path: str) -> List[OutlineEntry]:
-    from pypdf import PdfReader
-
-    reader = PdfReader(file_path)
+def _outline_pdf(sections: List[Tuple[str, str]]) -> List[OutlineEntry]:
+    """Nhận `sections` đã parse sẵn (app/ingestion/parser.py::parse_document),
+    KHÔNG tự mở lại file PDF — mỗi phần tử `sections[i]` là (position_ref,
+    toàn bộ text của trang i+1), đúng đơn vị 1-trang-1-section mà chunking
+    cũng dùng, nên `section_index = i` ở đây trỏ đúng section mà chunker sẽ
+    sinh chunk từ đó."""
     entries: List[OutlineEntry] = []
 
-    for page_number, page in enumerate(reader.pages, start=1):
-        lines = [ln for ln in (page.extract_text() or "").splitlines() if ln.strip()]
+    for section_index, (position_ref, text) in enumerate(sections):
+        lines = [ln for ln in text.splitlines() if ln.strip()]
         for i, line in enumerate(lines):
             following = " ".join(lines[i + 1 : i + 3])
             if _looks_like_heading(line, following):
                 entries.append(
                     OutlineEntry(
                         title=line.strip(),
-                        position_ref=f"Trang {page_number}",
+                        position_ref=position_ref,
                         order=len(entries),
+                        section_index=section_index,
                     )
                 )
 
