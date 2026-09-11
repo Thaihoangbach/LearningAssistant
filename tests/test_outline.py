@@ -224,7 +224,18 @@ class TestFilterTopicTitles(unittest.TestCase):
         entries = [e.title for e in extract_outline(path)]
         final = filter_topic_titles(entries)
         # Trước fix: 26/27 dòng lọt qua is_plausible_topic từng dòng riêng lẻ.
-        self.assertLess(len(final), len(entries) * 0.3, "khối lượng nhiễu phải giảm mạnh, không chỉ lọt vài dòng")
+        # Sau khi bỏ nhánh Title-Case/ALL-CAPS (outline.py::_looks_like_heading
+        # chỉ còn nhận mục đánh số), tài liệu scan này — không có mục đánh số
+        # — có thể không còn sinh ra entry thô nào cả, tức nhiễu bằng 0 ngay
+        # từ bước trích xuất, còn mạnh hơn yêu cầu gốc của test (giảm mạnh ở
+        # bước lọc). len(entries)==0 thì assertLess gốc so sánh 0 < 0 (sai) dù
+        # đúng ý test muốn kiểm — tách riêng case này.
+        if not entries:
+            self.assertEqual(final, [])
+        else:
+            self.assertLess(
+                len(final), len(entries) * 0.3, "khối lượng nhiễu phải giảm mạnh, không chỉ lọt vài dòng"
+            )
 
 
 class TestIsBibliographyLikeChunk(unittest.TestCase):

@@ -99,7 +99,10 @@ class TestOutlinePdf(unittest.TestCase):
         finally:
             os.remove(path)
 
-    def test_title_case_heading_is_detected(self):
+    def test_title_case_heading_without_numbering_is_not_detected(self):
+        # Đã BỎ nhánh Title-Case/ALL-CAPS cho PDF (nguồn nhiễu chính trên tài
+        # liệu thật, xem real_test_documents/README.md) — một dòng title-case
+        # KHÔNG đánh số không còn được coi là heading, dù trông giống tiêu đề.
         path = _make_pdf(
             [
                 [
@@ -110,7 +113,24 @@ class TestOutlinePdf(unittest.TestCase):
         )
         try:
             outline = extract_outline(path)
-            self.assertEqual([e.title for e in outline], ["Multi-Head Attention Mechanism"])
+            self.assertEqual(outline, [])
+        finally:
+            os.remove(path)
+
+    def test_numbered_title_case_heading_is_still_detected(self):
+        # Mục đánh số vẫn được nhận dù nó CŨNG là title-case — tín hiệu đánh
+        # số mới là điều kiện quyết định, không phải hình thức chữ hoa.
+        path = _make_pdf(
+            [
+                [
+                    "6.1 Machine Translation",
+                    "This is a long paragraph of body text that goes on for quite a while to satisfy the minimum length check.",
+                ]
+            ]
+        )
+        try:
+            outline = extract_outline(path)
+            self.assertEqual([e.title for e in outline], ["6.1 Machine Translation"])
         finally:
             os.remove(path)
 
@@ -129,13 +149,30 @@ class TestOutlinePdf(unittest.TestCase):
         finally:
             os.remove(path)
 
-    def test_dense_reference_list_is_capped_not_unbounded(self):
-        # Mo phong danh sach tham khao day dac, moi dong deu "trong" giong
-        # heading (ngan, khong dau cau, co noi dung dai theo sau) - truoc khi
-        # sua, day chinh la nguon sinh ra hang tram entry gia.
+    def test_all_caps_reference_list_is_no_longer_treated_as_headings(self):
+        # Sau khi bỏ nhánh Title-Case/ALL-CAPS, một danh sách ĐỀU HOA dày đặc
+        # (trước đây là nguồn sinh hàng trăm entry giả) giờ không còn khớp gì
+        # cả — mạnh hơn hẳn việc chỉ giới hạn trần số lượng.
         lines = []
         for i in range(1, 61):
             lines.append(f"REFERENCE ENTRY NUMBER {i}")
+            lines.append(
+                "This is a long paragraph of body text that goes on for quite a while to satisfy the minimum length check."
+            )
+        path = _make_pdf([lines])
+        try:
+            outline = extract_outline(path)
+            self.assertEqual(outline, [])
+        finally:
+            os.remove(path)
+
+    def test_dense_numbered_list_is_still_capped_not_unbounded(self):
+        # Mục đánh số vẫn là tín hiệu heading hợp lệ — một danh sách đánh số
+        # dày đặc (vd tài liệu tham khảo đánh số không lọt _CITATION_LIKE_RE)
+        # vẫn cần trần _MAX_OUTLINE_ENTRIES để không phình vô hạn.
+        lines = []
+        for i in range(1, 61):
+            lines.append(f"{i} Some heading like line without citation markers")
             lines.append(
                 "This is a long paragraph of body text that goes on for quite a while to satisfy the minimum length check."
             )

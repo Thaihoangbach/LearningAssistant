@@ -198,19 +198,6 @@ def filter_topic_titles(titles: List[str]) -> List[str]:
     return _drop_repeated_near_duplicates(plausible)
 
 
-def _is_title_case_or_caps(stripped: str) -> bool:
-    """Hầu hết các từ viết hoa chữ cái đầu, hoặc toàn bộ viết hoa — cách viết
-    tiêu đề phổ biến, khác với văn xuôi bình thường (chỉ viết hoa đầu câu và
-    danh từ riêng)."""
-    words = [w for w in re.findall(r"[^\W\d_]+", stripped) if len(w) > 1]
-    if len(words) < 2:
-        return False
-    if stripped.isupper():
-        return True
-    capitalized = sum(1 for w in words if w[0].isupper())
-    return capitalized / len(words) >= 0.7
-
-
 @dataclass
 class OutlineEntry:
     title: str
@@ -318,9 +305,16 @@ def _looks_like_heading(line: str, following: str) -> bool:
     # heading đánh số thật ("6.1 Machine Translation").
     if _SENTENCE_END_RE.search(stripped):
         return False
-    if _NUMBERED_SECTION_RE.match(stripped):
-        return True
-    return _is_title_case_or_caps(stripped)
+    # CHỈ nhận mục đánh số kiểu học thuật ("6.1 Machine Translation") làm
+    # heading — đã BỎ HẲN nhánh Title-Case/ALL-CAPS trước đây (từng đo được
+    # sinh 68-851 "heading" giả trên PDF thật, xem real_test_documents/
+    # README.md). Một đoạn văn bị pypdf ngắt dòng theo độ rộng trang gần như
+    # LUÔN thoả điều kiện "dòng ngắn, không dấu câu, có nội dung dài theo
+    # sau" — heuristic đó không phân biệt được với heading thật trên PDF (dù
+    # dùng được cho DOCX vì có style Heading thật, xem _outline_docx). Tài
+    # liệu không có mục đánh số sẽ có dàn ý rỗng thay vì nhiễu — đúng nguyên
+    # tắc "không bịa chủ đề" đã áp dụng cho nhánh DOCX không có style Heading.
+    return bool(_NUMBERED_SECTION_RE.match(stripped))
 
 
 def _outline_pdf(sections: List[Tuple[str, str]]) -> List[OutlineEntry]:
