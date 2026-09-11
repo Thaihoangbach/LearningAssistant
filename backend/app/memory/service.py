@@ -45,8 +45,9 @@ def record_event(
     `content` do phía gọi dựng bằng template cố định — KHÔNG gọi LLM để viết.
 
     Lỗi embedding (API Cohere lỗi/rớt mạng) KHÔNG được chặn đứng việc ghi lại
-    sự kiện học tập — `embedding` nullable đúng vì lý do này; sự kiện vẫn có
-    giá trị hiển thị ở trang Memory dù không truy hồi ngữ nghĩa được."""
+    sự kiện học tập — `embedding` nullable đúng vì lý do này; sự kiện vẫn ghi
+    lại được (phục vụ recall theo recency/importance) dù không truy hồi ngữ
+    nghĩa được."""
     embed_fn = embed_fn or _default_embed
 
     embedding = None

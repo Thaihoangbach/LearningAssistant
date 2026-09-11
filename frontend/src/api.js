@@ -297,14 +297,8 @@ export async function updateProfile({ preferredLevel, learningGoal }) {
   return res.json();
 }
 
-export async function listMemory(limit = 50) {
-  const res = await fetch(`${API_BASE}/memory?user_id=${CURRENT_USER_ID}&limit=${limit}`);
-  if (!res.ok) await raiseFriendlyError(res);
-  return res.json();
-}
-
-export async function deleteMemory(eventId) {
-  const res = await fetch(`${API_BASE}/memory/${eventId}?user_id=${CURRENT_USER_ID}`, {
+export async function resetProfile() {
+  const res = await fetch(`${API_BASE}/profile?user_id=${CURRENT_USER_ID}`, {
     method: "DELETE",
   });
   if (!res.ok) await raiseFriendlyError(res);
