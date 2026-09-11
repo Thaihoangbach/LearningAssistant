@@ -478,7 +478,14 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         "answer": result.answer,
         "is_grounded": result.is_grounded,
         "abstained": qa_result.abstained if qa_result else False,
-        "needs_clarification": qa_result.needs_clarification if qa_result else False,
+        # Hợp cả hai nguồn: qa_result (đường RAG chung, answer_with_fallback
+        # không copy needs_clarification sang `result` khi tái dựng
+        # AnswerResult ở trên) VÀ result.needs_clarification (đường Summarize,
+        # app/services/summarize.py không đi qua qa_result) — thiếu vế nào
+        # cũng làm sai tín hiệu clarification của MỘT trong hai đường, phát
+        # hiện được khi test /chat/ask thật với yêu cầu tóm tắt mơ hồ.
+        "needs_clarification": (qa_result.needs_clarification if qa_result else False)
+        or result.needs_clarification,
         # Hậu quét injection trên câu trả lời cuối (app/services/qa_pipeline.py)
         # — phát hiện, không tự chặn. `False` mặc định cho các nhánh không sinh
         # bằng LLM (capability rule-based, guardrail chặn từ đầu vào).
