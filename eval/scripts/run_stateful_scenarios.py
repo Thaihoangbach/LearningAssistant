@@ -22,7 +22,7 @@ Nguyên tắc (đã thống nhất qua thảo luận thiết kế trong phiên):
 - Topic dùng trong kịch bản liên-tính-năng phải là tên THẬT lấy từ tài liệu
   đã upload (đi qua đúng filter_topic_titles), không tự đặt tên tuỳ ý.
 
-Output: eval/stateful_results.jsonl (1 dòng/case).
+Output: eval/results/stateful_results.jsonl (1 dòng/case).
 """
 import json
 import os
@@ -33,14 +33,19 @@ from datetime import datetime, timedelta
 
 import requests
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+# Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
+# chua run_doc_mapping.json va thu muc results/.
+HERE = os.path.dirname(__file__)
+EVAL_ROOT = os.path.join(HERE, "..")
+RESULTS_DIR = os.path.join(EVAL_ROOT, "results")
+
+sys.path.insert(0, os.path.join(EVAL_ROOT, "..", "backend"))
 
 BASE_URL = "http://127.0.0.1:8000"
 USER_ID = "golden-eval-user"
 COURSE_NAME = "GoldenSetEval"
-HERE = os.path.dirname(__file__)
 
-with open(os.path.join(HERE, "run_doc_mapping.json"), encoding="utf-8") as f:
+with open(os.path.join(EVAL_ROOT, "run_doc_mapping.json"), encoding="utf-8") as f:
     DOC_MAPPING = json.load(f)
 # Tài liệu dùng làm "topic thật" cho kịch bản liên tính năng — Cây quyết định
 # có nội dung rõ ràng, tên file ngắn gọn dùng làm topic_name mặc định hợp lý.
@@ -442,7 +447,7 @@ def main():
     run_flashcard_scenarios()
     run_study_plan_scenarios()
 
-    out_path = os.path.join(HERE, "stateful_results.jsonl")
+    out_path = os.path.join(RESULTS_DIR, "stateful_results.jsonl")
     with open(out_path, "w", encoding="utf-8") as f:
         for r in _results:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

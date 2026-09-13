@@ -14,7 +14,13 @@ attempt, flashcard review nhiều ngày...) mà bản thân mỗi case chỉ mô
 ngôn ngữ tự nhiên trong `context`, chưa đủ cấu trúc để dựng fixture tự động
 đáng tin cậy trong lần chạy này.
 
-Output: eval/run_results.jsonl (1 dòng/case, có actual response + điểm).
+Output: eval/results/run_results.jsonl (1 dòng/case, có actual response + điểm).
+
+Cờ `--regression-only`: chỉ chạy tập con 77 case đánh dấu
+`in_regression_set: true` trong golden_set.jsonl (dùng để kiểm tra không
+hồi quy sau khi sửa code, nhanh hơn chạy lại toàn bộ 267 case) — ghi ra
+eval/results/regression_results.jsonl thay vì run_results.jsonl. Đổi tên
+file output bằng `--out <filename>` nếu cần (vẫn ghi trong eval/results/).
 """
 import json
 import os
@@ -23,7 +29,13 @@ import time
 
 import requests
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+# Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
+# chua golden_set.jsonl/run_doc_mapping.json va thu muc results/.
+HERE = os.path.dirname(__file__)
+EVAL_ROOT = os.path.join(HERE, "..")
+RESULTS_DIR = os.path.join(EVAL_ROOT, "results")
+
+sys.path.insert(0, os.path.join(EVAL_ROOT, "..", "backend"))
 
 BASE_URL = "http://127.0.0.1:8000"
 USER_ID = "golden-eval-user"
@@ -35,9 +47,7 @@ CHAT_ASK_CATEGORIES = {
     "summarize", "apply", "guardrail",
 }
 
-HERE = os.path.dirname(__file__)
-
-with open(os.path.join(HERE, "run_doc_mapping.json"), encoding="utf-8") as f:
+with open(os.path.join(EVAL_ROOT, "run_doc_mapping.json"), encoding="utf-8") as f:
     DOC_MAPPING = json.load(f)
 FILE_NAME_BY_DOC_ID = {v["file_name"]: k for k, v in DOC_MAPPING.items()}
 
@@ -66,6 +76,13 @@ def ask(question, conversation_id=None, retries=3):
 
 
 _NO_CONTEXT_SNIPPET = "chưa có trong tài liệu"
+# answer_with_fallback (app/services/qa_pipeline.py) bọc NO_CONTEXT/NOT_GROUNDED
+# bằng message giàu thông tin hơn (kèm đoạn gần đúng để đối chiếu) khi is_grounded
+# =False — phát hiện qua Golden Set rerun sau khi vá bug tự-từ-chối (rag.py):
+# message thật đổi từ NEEDS_CLARIFICATION_MESSAGE sang message này, nhưng
+# thiếu snippet nay khien classify_outcome roi vao "other_abstention" chung,
+# khong phan anh dung cai thien thuc te.
+_NO_CONTEXT_FALLBACK_SNIPPET = "Không tìm thấy nội dung này trong tài liệu của bạn"
 _NOT_GROUNDED_SNIPPET = "Chưa đủ căn cứ"
 _NEEDS_TOPIC_SNIPPET = "chương/chủ đề cụ thể"
 _NEEDS_ENTITIES_SNIPPET = "hai vế cần so sánh"
@@ -83,7 +100,7 @@ def classify_outcome(resp):
             return "needs_entities"
         return "needs_clarification"
     if not resp.get("is_grounded"):
-        if _NO_CONTEXT_SNIPPET in answer:
+        if _NO_CONTEXT_SNIPPET in answer or _NO_CONTEXT_FALLBACK_SNIPPET in answer:
             return "insufficient_evidence"
         if _NOT_GROUNDED_SNIPPET in answer:
             return "unsupported_claim"
@@ -133,7 +150,13 @@ def score_case(case, resp, judge_client=None):
         result["checks"]["abstention_type_match"] = ok
         passes.append(ok)
 
-    if case.get("expected_answer"):
+    # Bỏ qua khi case CÓ abstention_type: với các case đó, expected_answer
+    # đang được dùng để MÔ TẢ đúng câu từ chối/hỏi lại mong đợi (không phải
+    # một câu trả lời nội dung) — nếu không loại trừ, check này luôn mâu
+    # thuẫn với abstention_type_match ở trên bất kể hệ thống trả lời gì
+    # (phát hiện qua eval/rescore.py, gây sai lệch ~15 case guardrail/
+    # summarize trong lần chạy 267 case đầu).
+    if case.get("expected_answer") and not expected_abstention:
         ok = outcome == "grounded_answer"
         result["checks"]["grounded_as_expected"] = ok
         passes.append(ok)
@@ -164,12 +187,17 @@ def score_case(case, resp, judge_client=None):
             if content_ok is not None:
                 passes.append(content_ok)
 
+    # So khong phan biet hoa/thuong — cau tra loi that co the viet hoa dau
+    # cau ("Câu hỏi gợi mở...") con substring case dinh nghia lai thuong
+    # ("câu hỏi gợi mở"), phat hien qua EDU-APL-005 sau khi va bug tu-tu-choi:
+    # content_correct_per_judge=True nhung van fail vi khac hoa/thuong don thuan.
+    actual_lower = (result["actual_answer"] or "").lower()
     for s in case.get("must_contain") or []:
-        ok = s in (result["actual_answer"] or "")
+        ok = s.lower() in actual_lower
         result.setdefault("must_contain_results", []).append({"substring": s, "found": ok})
         passes.append(ok)
     for s in case.get("must_not_contain") or []:
-        ok = s not in (result["actual_answer"] or "")
+        ok = s.lower() not in actual_lower
         result.setdefault("must_not_contain_results", []).append({"substring": s, "absent": ok})
         passes.append(ok)
 
@@ -190,18 +218,46 @@ def run_conversational(case, judge_client):
 
 
 def main():
-    with open(os.path.join(HERE, "golden_set.jsonl"), encoding="utf-8") as f:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--regression-only", action="store_true",
+        help="Chi chay tap con danh dau in_regression_set=true trong golden_set.jsonl "
+             "(dung de kiem khong hoi quy sau khi sua code, thay cho eval/run_regression.py cu).",
+    )
+    parser.add_argument(
+        "--out", default=None,
+        help="Duong dan file ket qua (mac dinh: run_results.jsonl, hoac "
+             "regression_results.jsonl khi dung --regression-only).",
+    )
+    args = parser.parse_args()
+
+    with open(os.path.join(EVAL_ROOT, "golden_set.jsonl"), encoding="utf-8") as f:
         all_cases = [json.loads(line) for line in f if line.strip()]
 
     cases = [c for c in all_cases if c["category"] in CHAT_ASK_CATEGORIES]
+    if args.regression_only:
+        cases = [c for c in cases if c.get("in_regression_set")]
 
-    out_path = os.path.join(HERE, "run_results.jsonl")
+    default_out = "regression_results.jsonl" if args.regression_only else "run_results.jsonl"
+    out_path = os.path.join(RESULTS_DIR, args.out or default_out)
+    # Chi coi la "da xong" khi request_ok=True — bug thuc te: case fail vi
+    # loi ha tang (Cohere het han muc, timeout...) khong duoc tinh la "da
+    # xong", tranh bo qua nham khi resume (xem eval/report.md muc 6.7).
     already_done = set()
+    kept_lines = []
     if os.path.exists(out_path):
         with open(out_path, encoding="utf-8") as f:
             for line in f:
-                if line.strip():
-                    already_done.add(json.loads(line)["id"])
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if row.get("checks", {}).get("request_ok") is True:
+                    already_done.add(row["id"])
+                    kept_lines.append(line)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.writelines(kept_lines)
     cases = [c for c in cases if c["id"] not in already_done]
     print(f"Resuming: {len(already_done)} cases already done, running {len(cases)} remaining.")
 
