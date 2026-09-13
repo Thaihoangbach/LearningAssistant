@@ -1,0 +1,3422 @@
+[
+  {
+    "fact_id": "01_hoc_sau_vi-001",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Deep Learning",
+    "subtopic": "định nghĩa học sâu",
+    "fact_text": "Học sâu (tiếng Anh: deep learning, còn gọi là học cấu trúc sâu) là một phần trong một nhánh rộng hơn của các phương pháp học máy dựa trên mạng thần kinh nhân tạo kết hợp với việc học biểu diễn đặc trưng (representation learning); việc học này có thể có giám sát, nửa giám sát hoặc không giám sát.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-002",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Deep Learning",
+    "subtopic": "so sánh ANN với não sinh học",
+    "fact_text": "Mạng thần kinh nhân tạo được lấy cảm hứng từ việc xử lý thông tin trong hệ sinh học nhưng có nhiều khác biệt so với não sinh học: mạng thần kinh nhân tạo thường có tính tĩnh và mang tính biểu tượng, trong khi não bộ của hầu hết các sinh vật sống có tính động (linh hoạt) và analog.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-003",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Deep Learning",
+    "subtopic": "đại diện dữ liệu phân cấp",
+    "fact_text": "Học sâu dựa trên việc học (không giám sát) của nhiều cấp các đặc điểm hoặc đại diện của dữ liệu, trong đó các tính năng cao cấp bắt nguồn từ các tính năng thấp cấp hơn để tạo thành một đại diện thứ bậc.",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-004",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Deep Learning",
+    "subtopic": "credit assignment path (CAP)",
+    "fact_text": "Một chuỗi các biến đổi được tham số hóa từ đầu vào đến đầu ra của mạng được gọi là đường gán kế thừa (CAP - credit assignment path), mô tả các kết nối quan hệ nhân quả tiềm năng giữa đầu vào và đầu ra và có thể thay đổi chiều dài.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-005",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Deep Learning",
+    "subtopic": "độ sâu của mạng và ngưỡng học sâu",
+    "fact_text": "Đối với một mạng neuron nuôi tiến, độ sâu của mạng là số lượng các lớp ẩn cộng 1; hầu hết các nhà nghiên cứu đồng ý rằng học sâu có nhiều lớp phi tuyến với CAP lớn hơn 2, còn Schmidhuber coi CAP lớn hơn 10 là học rất sâu.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-006",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Deep Learning",
+    "subtopic": "CAP trong mạng neuron tái phát",
+    "fact_text": "Đối với mạng neuron tái phát, trong đó một tín hiệu có thể truyền thông qua một lớp nhiều hơn một lần, CAP có khả năng không bị giới hạn chiều dài.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-007",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Deep Learning",
+    "subtopic": "học sâu và kỹ thuật đặc điểm thủ công",
+    "fact_text": "Đối với các nhiệm vụ học có giám sát, các phương pháp học sâu sẽ tránh kỹ thuật đặc điểm (feature engineering) bằng cách dịch dữ liệu vào các đại diện trung gian nhỏ gọn và lấy được các cấu trúc lớp loại bỏ sự thừa thải trong đại diện.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-008",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "định lý xấp xỉ phổ quát",
+    "fact_text": "Định lý xấp xỉ phổ quát đề cập đến khả năng của mạng neuron nuôi tiến (feedforward) với một lớp ẩn có kích thước hữu hạn đơn để xấp xỉ các hàm liên tục.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-009",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "lịch sử định lý xấp xỉ phổ quát",
+    "fact_text": "Bằng chứng đầu tiên của định lý xấp xỉ phổ quát được George Cybenko xuất bản năm 1989 cho các hàm kích hoạt hình sigma, và được Kurt Hornik mở rộng vào năm 1991 đối với các kiến trúc nuôi tiến nhiều lớp.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-010",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "diễn giải xác suất và dropout",
+    "fact_text": "Diễn giải xác suất xem việc kích hoạt phi tuyến như là một hàm phân phối tích lũy, và diễn giải này đã dẫn đến sự ra đời của dropout như một regularizer trong mạng neuron.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-011",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "truyền ngược cho mạng sâu năm 1989",
+    "fact_text": "Năm 1989, Yann Le Cun và các cộng sự áp dụng thuật toán truyền ngược tiêu chuẩn (có từ khoảng năm 1974) đối với một mạng neuron sâu để nhận dạng chữ viết tay mã ZIP trong các bức thư, nhưng thời gian để đào tạo mạng dựa trên số liệu này mất khoảng 3 ngày.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-012",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "thuật toán đánh thức giấc ngủ năm 1995",
+    "fact_text": "Năm 1995, Brendan Frey đã chứng minh rằng có thể đào tạo một mạng nơ ron bao gồm đầy đủ sáu lớp kết nối và vài trăm đơn vị ẩn bằng cách sử dụng thuật toán đánh thức giấc ngủ, hợp tác phát triển với Peter Dayan và Geoffrey Hinton, nhưng việc huấn luyện phải mất hai ngày.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-013",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Deep Learning",
+    "subtopic": "Cresceptron so với Neocognitron",
+    "fact_text": "Khác với Neocognitron yêu cầu một lập trình viên con người can thiệp, Cresceptron (Juyang Weng và các cộng sự, 1992) sẽ tự động học được một số đặc điểm không có giám sát trong mỗi lớp, nơi mỗi đặc điểm được đại diện bởi một nhân tích chập.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-014",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Deep Learning",
+    "subtopic": "nguồn gốc của thăm dò max (max-pooling)",
+    "fact_text": "Thăm dò max (max-pooling), bây giờ thường được các mạng neuron sâu thông qua, lần đầu tiên được sử dụng trong Cresceptron để giảm độ phân giải vị trí bởi một hệ số (2x2) đến 1 thông qua việc ghép tầng, giúp tổng quát hóa tốt hơn.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-015",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Deep Learning",
+    "subtopic": "nguồn gốc sinh học của mạng neuron nhân tạo",
+    "fact_text": "Mạng neuron nhân tạo được lấy cảm hứng từ các mô hình sinh học năm 1959 được đề xuất bởi David H. Hubel và Torsten Wiesel, hai người đã tìm thấy hai loại tế bào trong vỏ não thị giác chính: các tế bào đơn giản và các tế bào phức tạp.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-016",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Deep Learning",
+    "subtopic": "vấn đề biến mất gradient",
+    "fact_text": "Luận văn tốt nghiệp cao đẳng của Sepp Hochreiter năm 1991 chính thức xác định vấn đề biến mất gradient là lý do gây ra sự thất bại trong việc đào tạo các mạng neuron nhân tạo sâu có giám sát từ đầu, ảnh hưởng đến các mạng nuôi tiến nhiều lớp và các mạng neuron hồi quy.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-017",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Deep Learning",
+    "subtopic": "phương pháp thứ bậc đa cấp của Schmidhuber",
+    "fact_text": "Để khắc phục vấn đề biến mất gradient, Jürgen Schmidhuber (1992) đề xuất thứ bậc đa cấp của mạng, trong đó mỗi cấp được đào tạo trước tại một thời điểm bằng học không có giám sát rồi được điều chỉnh bằng truyền ngược, và mỗi cấp học một đại diện bị nén của các quan sát để đưa đến cấp tiếp theo.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-018",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Deep Learning",
+    "subtopic": "LSTM và thành tích ICDAR",
+    "fact_text": "Mạng bộ nhớ dài ngắn hạn (LSTM) của Hochreiter & Schmidhuber (1997) là một phương pháp khác khắc phục vấn đề biến mất gradient; trong năm 2009, các mạng LSTM đa chiều sâu đã chiến thắng ba cuộc thi ICDAR năm 2009 trong nhận dạng chữ viết tay mà không có bất kỳ kiến thức sẵn có về ba ngôn ngữ để được học.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-019",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Deep Learning",
+    "subtopic": "mô hình sâu của Hinton năm 2006",
+    "fact_text": "Mô hình sâu của Hinton và các cộng sự (2006) học phân phối của một đại diện cao cấp bằng cách sử dụng các lớp kế tiếp của các biến tiềm ẩn, sử dụng một máy Boltzmann hạn chế (Smolensky, 1986) để mô hình hóa mỗi lớp mới của các đặc điểm cao cấp hơn, sau đó mạng được đào tạo tiếp tục bằng truyền ngược có giám sát để phân loại dữ liệu có dán nhãn.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-020",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Deep Learning",
+    "subtopic": "GPU và truyền ngược cho mạng sâu năm 2010",
+    "fact_text": "Trong năm 2010, Dan Ciresan và các đồng nghiệp trong nhóm của Jürgen Schmidhuber tại Phòng thí nghiệm AI Thụy Sĩ IDSIA cho thấy rằng với sức mạnh xử lý vượt trội của các GPU, đồng truyền ngược đơn giản trở nên khả thi đối với các mạng neuron nuôi tiến sâu với nhiều lớp, và phương pháp này tốt hơn tất cả các kỹ thuật máy học khác trong việc giải bài toán MNIST chữ số viết tay.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-021",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Deep Learning",
+    "subtopic": "định nghĩa mạng neuron sâu (DNN)",
+    "fact_text": "Mạng neuron sâu (DNN - Deep neural Network) là một mạng neuron nhân tạo (ANN) với nhiều đơn vị lớp ẩn giữa lớp đầu vào và đầu ra.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-022",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Deep Learning",
+    "subtopic": "kiến trúc DNN theo ứng dụng",
+    "fact_text": "Các DNN thường được thiết kế như các mạng nuôi tiến, nhưng cũng được áp dụng thành công cho các mạng nơ ron tái phát (ví dụ mô hình hóa ngôn ngữ), và các mạng neuron sâu tích chập (CNN) được sử dụng trong thị giác máy tính và gần đây được áp dụng để mô hình hóa âm thanh cho nhận dạng giọng nói tự động (ASR).",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-023",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Deep Learning",
+    "subtopic": "huấn luyện DNN bằng truyền ngược",
+    "fact_text": "Một DNN có thể được đào tạo với thuật toán truyền ngược tiêu chuẩn, các bản cập nhật trọng số được thực hiện thông qua độ dốc gradient ngẫu nhiên; khi thực hiện học có giám sát về một vấn đề phân loại nhiều lớp, các lựa chọn phổ biến cho hàm kích hoạt và hàm chi phí là hàm softmax và hàm entropy chéo.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-024",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Deep Learning",
+    "subtopic": "vấn đề khi huấn luyện DNN thô sơ",
+    "fact_text": "Như với các ANN, nhiều vấn đề có thể nảy sinh với các DNN nếu chúng được huấn luyện thô sơ; hai vấn đề phổ biến là overfitting (nhiễu hoặc sai số ngẫu nhiên) và thời gian tính toán.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-025",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Deep Learning",
+    "subtopic": "regularization chống overfitting cho DNN",
+    "fact_text": "Các phương pháp regularization như phân rã trọng số (L2-regularization) hoặc sparsity (L1-regularization) có thể được áp dụng trong quá trình huấn luyện để chống lại overfitting; một phương pháp gần đây là dropout, trong đó một số lượng đơn vị được bỏ qua ngẫu nhiên từ các lớp ẩn trong quá trình đào tạo.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-026",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Deep Learning",
+    "subtopic": "định nghĩa mạng niềm tin sâu (DBN)",
+    "fact_text": "Một mạng niềm tin sâu (DBN) là một mô hình xác suất thể sinh, tạo thành bởi nhiều đơn vị ẩn nhiều lớp, có thể được coi là một hàm hợp của các mô-đun học đơn giản tạo thành mỗi lớp.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-027",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Deep Learning",
+    "subtopic": "huấn luyện RBM bằng contrastive divergence",
+    "fact_text": "Một DBN có thể được huấn luyện hiệu quả theo cách không giám sát, lớp kề lớp, với các lớp thường được tạo từ các máy Boltzmann hạn chế (RBM); phương pháp huấn luyện phổ biến cho RBM do Geoffrey Hinton đề xuất là tương phản phân kỳ (CD - contrastive divergence), gồm chu trình: khởi tạo các đơn vị hiện tới một vector huấn luyện, cập nhật các đơn vị ẩn song song với đơn vị hiện, cập nhật lại các đơn vị hiện (bước 'cải tạo'), rồi tái cập nhật các đơn vị ẩn.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-028",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Deep Learning",
+    "subtopic": "định nghĩa mạng nơ ron tích chập (CNN) trong học sâu",
+    "fact_text": "Một CNN gồm có một hoặc nhiều hơn các lớp tích chập với các lớp đầy đủ kết nối trên đỉnh, cũng sử dụng trọng số gắn liền và các lớp thăm dò, kiến trúc này cho phép CNN tận dụng lợi thế của cấu trúc 2D của dữ liệu đầu vào.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-029",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 11 | Trang 12",
+    "topic": "Deep Learning",
+    "subtopic": "bộ dữ liệu MNIST",
+    "fact_text": "MNIST là một tập đánh giá phổ biến cho phân loại hình ảnh, bao gồm các chữ số viết tay và bao gồm 60000 ví dụ huấn luyện và 10000 ví dụ kiểm tra.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-030",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 12 | Trang 13",
+    "topic": "Deep Learning",
+    "subtopic": "kết quả tốt nhất trên MNIST",
+    "fact_text": "Kết quả tốt nhất hiện nay trên MNIST là tỷ lệ lỗi 0,23%, đạt được bởi Ciresan và các cộng sự vào năm 2012.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "01_hoc_sau_vi-031",
+    "document_id": "01_hoc_sau_vi",
+    "document_title": "Học sâu (Deep Learning)",
+    "section": "SECTION 14 | Trang 15",
+    "topic": "Deep Learning",
+    "subtopic": "DeepFace của Facebook",
+    "fact_text": "Nhóm nghiên cứu trí tuệ nhân tạo của Facebook đã tạo ra phần mềm DeepFace (công bố năm 2014) có khả năng nhận dạng khuôn mặt với độ chính xác khoảng 97,35%, sử dụng 4 triệu ảnh khuôn mặt của hơn 4000 người để huấn luyện mạng nơ ron nhiều lớp.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-001",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "số lượng tế bào thần kinh trong não người",
+    "fact_text": "Não người hoạt động nhờ mạng lưới khoảng 86 tỷ tế bào thần kinh kết nối với nhau, truyền tín hiệu điện hóa để xử lý thông tin hay đưa ra quyết định.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-002",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định nghĩa mạng thần kinh nhân tạo",
+    "fact_text": "Mạng thần kinh nhân tạo (Artificial neural network, ANN) là một mô hình học máy lấy cảm hứng từ cấu trúc mạng lưới tế bào thần kinh của não, được cấu tạo từ các đơn vị xử lý đơn giản kết nối với nhau theo lớp, cùng nhau học cách biểu diễn thông tin phức tạp từ dữ liệu.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-003",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "cấu trúc lớp và tính toán neuron",
+    "fact_text": "Về mặt kỹ thuật, một ANN gồm các neuron nhân tạo tổ chức thành nhiều lớp: lớp đầu vào nhận dữ liệu thô, một hoặc nhiều lớp ẩn thực hiện các phép biến đổi phi tuyến, và lớp đầu ra trả về kết quả; đầu ra của mỗi neuron được tính bằng tổng có trọng số của các đầu vào, sau đó đưa qua một hàm kích hoạt phi tuyến để tạo tín hiệu truyền sang lớp tiếp theo.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-004",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định nghĩa mạng thần kinh sâu",
+    "fact_text": "Khi một mạng thần kinh nhân tạo có từ hai lớp ẩn trở lên, nó thường được gọi là mạng thần kinh sâu (deep neural network), là nền tảng của học sâu hiện đại.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-005",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "mô hình neuron nhị phân đầu tiên (McCulloch & Pitts, 1943)",
+    "fact_text": "Ý tưởng mô hình hóa tế bào thần kinh bằng toán học xuất hiện từ năm 1943, khi Warren McCulloch và Walter Pitts đề xuất mô hình neuron nhị phân đầu tiên: một đơn vị tính toán nhận đầu vào nhị phân và cho ra đầu ra nhị phân dựa trên ngưỡng kích hoạt.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-006",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "mô hình perceptron (Rosenblatt, 1958)",
+    "fact_text": "Năm 1958, Frank Rosenblatt hiện thực hóa ý tưởng của McCulloch và Pitts thành mô hình perceptron, một mạng thần kinh nhân tạo có thể huấn luyện được với quy tắc cập nhật trọng số tự động từ dữ liệu, gây ra làn sóng lạc quan lớn và thu hút đầu tư mạnh từ chính phủ Mỹ.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-007",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Artificial Neural Network",
+    "subtopic": "hạn chế của perceptron đơn lớp (Minsky & Papert, 1969)",
+    "fact_text": "Năm 1969, Marvin Minsky và Seymour Papert chứng minh rằng perceptron đơn lớp không thể giải quyết các bài toán phi tuyến cơ bản như hàm XOR, khiến nghiên cứu về mạng thần kinh nhân tạo rơi vào giai đoạn trì trệ kéo dài.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-008",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "sự hồi sinh của ANN với backpropagation (1986)",
+    "fact_text": "Mạng thần kinh nhân tạo được hồi sinh vào thập niên 1980 với sự phổ biến hóa của thuật toán lan truyền ngược (backpropagation) bởi David Rumelhart, Geoffrey Hinton và Ronald Williams vào năm 1986; thuật toán này cho phép huấn luyện hiệu quả các mạng nhiều lớp và giải quyết được bài toán XOR.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-009",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "LeNet-5 và ứng dụng CNN đầu tiên",
+    "fact_text": "Năm 1989, Yann LeCun và cộng sự áp dụng lan truyền ngược để huấn luyện mạng tích chập (CNN) nhận diện chữ số viết tay trên bưu kiện; kiến trúc LeNet-5 hoàn thiện năm 1998 là mạng tích chập đầu tiên được triển khai thực tế ở quy mô lớn, được các ngân hàng Mỹ dùng để tự động đọc số tài khoản trên séc.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-010",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "khai thác cấu trúc không gian bằng CNN",
+    "fact_text": "CNN khai thác cấu trúc không gian của hình ảnh bằng cách dùng các bộ lọc (filter) trượt qua ảnh thay vì kết nối đầy đủ từng điểm ảnh, giảm đáng kể số tham số và giúp mô hình không bị ảnh hưởng bởi thay đổi vị trí.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-011",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "Elman network (1990)",
+    "fact_text": "Năm 1990, Jeffrey Elman giới thiệu kiến trúc RNN nền tảng, còn gọi là Elman network, trong đó lớp ẩn có kết nối vòng lặp trở lại chính nó: đầu ra của lớp ẩn ở bước thời gian trước được đưa trở lại làm một phần đầu vào cho bước tiếp theo, tạo ra một dạng 'bộ nhớ' về ngữ cảnh trước đó.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-012",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "vấn đề triệt tiêu gradient của RNN chuẩn",
+    "fact_text": "RNN chuẩn gặp vấn đề triệt tiêu gradient (vanishing gradient) khi chuỗi đầu vào dài, khiến gradient nhỏ dần qua mỗi bước thời gian khi lan truyền ngược, làm mô hình gần như không ghi nhớ được các ngữ cảnh quá xa về trước.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-013",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "LSTM (Hochreiter & Schmidhuber, 1997)",
+    "fact_text": "Năm 1997, Sepp Hochreiter và Jürgen Schmidhuber giới thiệu kiến trúc Long Short-Term Memory (LSTM), giải quyết vấn đề triệt tiêu gradient bằng cơ chế cổng (gate) kiểm soát luồng thông tin được giữ lại hay loại bỏ qua từng bước thời gian; LSTM trở thành kiến trúc nền tảng cho nhận diện giọng nói và dịch máy trong suốt hai thập kỷ sau.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-014",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "GRU so với LSTM",
+    "fact_text": "Năm 2014, Kyunghyun Cho và cộng sự đề xuất Gated Recurrent Unit (GRU), đơn giản hóa cơ chế cổng của LSTM từ ba xuống còn hai cổng, nhẹ hơn để huấn luyện và trong nhiều tác vụ cho kết quả tương đương với LSTM.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-015",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Artificial Neural Network",
+    "subtopic": "AlexNet thắng ILSVRC 2012",
+    "fact_text": "Năm 2012, mô hình AlexNet của Alex Krizhevsky, Ilya Sutskever và Geoffrey Hinton giành chiến thắng ImageNet Large Scale Visual Recognition Challenge (ILSVRC) với tỉ lệ lỗi top-5 là 15,3%, thấp hơn đối thủ hạng hai gần 11 điểm phần trăm; AlexNet huấn luyện trên GPU và sử dụng hàm kích hoạt ReLU thay vì sigmoid.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-016",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "VGGNet (2014)",
+    "fact_text": "Năm 2014, nhóm của Karen Simonyan và Andrew Zisserman tại Oxford giới thiệu VGGNet, đạt tỉ lệ lỗi 7,3% và về nhì tại ILSVRC, sử dụng 16-19 lớp chỉ với các bộ lọc 3×3 nhỏ xếp chồng lên nhau.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-017",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "GoogLeNet và module Inception",
+    "fact_text": "Người chiến thắng ILSVRC 2014 với tỉ lệ lỗi 6,7% là GoogLeNet (Inception v1) của Google, đi theo hướng khác VGGNet: thay vì tăng chiều sâu, nó giới thiệu module Inception cho phép mỗi lớp học song song ở nhiều kích thước bộ lọc khác nhau, giữ số tham số ở mức thấp hơn VGG nhiều lần.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-018",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "ResNet vượt qua ngưỡng lỗi con người (2015)",
+    "fact_text": "Năm 2015, ResNet của Kaiming He và cộng sự tại Microsoft Research giành chiến thắng ILSVRC với tỉ lệ lỗi 3,57%, lần đầu tiên vượt qua ngưỡng lỗi của con người (khoảng 5%) trên tập dữ liệu ImageNet.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-019",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "kết nối tắt (residual connection) của ResNet",
+    "fact_text": "ResNet giải quyết bài toán khi số lớp tăng quá nhiều, độ chính xác huấn luyện bắt đầu giảm không phải do quá khớp mà do gradient dần biến mất qua quá nhiều lớp; giải pháp là kết nối tắt (residual connection), trong đó tín hiệu đầu vào của một khối được cộng trực tiếp vào đầu ra của khối đó, tạo ra 'đường tắt' cho gradient đi qua; ResNet-152 có tới 152 lớp nhưng vẫn huấn luyện ổn định.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-020",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "kiến trúc Transformer (2017)",
+    "fact_text": "Năm 2017, nhóm nghiên cứu tại Google công bố kiến trúc Transformer trong bài báo 'Attention Is All You Need', thay thế hoàn toàn cơ chế hồi quy tuần tự bằng cơ chế chú ý (attention), tính toán mối quan hệ giữa mọi cặp vị trí trong chuỗi cùng lúc, cho phép song song hóa hoàn toàn; Transformer nhanh chóng thay thế LSTM trong xử lý ngôn ngữ tự nhiên và là nền tảng cho các mô hình ngôn ngữ lớn từ GPT đến Gemini.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-021",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Artificial Neural Network",
+    "subtopic": "Vision Transformer (2020)",
+    "fact_text": "Năm 2020, kiến trúc Vision Transformer (ViT) mở rộng cơ chế attention sang thị giác máy tính bằng cách chia ảnh thành các mảnh nhỏ và xử lý như một chuỗi, cho thấy Transformer có thể cạnh tranh và vượt qua CNN trên nhiều tác vụ nhận diện hình ảnh.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-022",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Artificial Neural Network",
+    "subtopic": "hàm mất mát cho hồi quy và phân loại",
+    "fact_text": "Để huấn luyện một mạng thần kinh nhân tạo, cần một hàm mất mát định lượng mức độ sai lệch giữa đầu ra của mô hình và kết quả mong muốn; với bài toán hồi quy, hàm mất mát phổ biến nhất là sai số toàn phương trung bình (MSE), còn với bài toán phân loại, hàm mất mát thường dùng là cross-entropy.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-023",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Artificial Neural Network",
+    "subtopic": "lan truyền ngược tính gradient",
+    "fact_text": "Lan truyền ngược là thuật toán tính gradient của hàm mất mát theo từng tham số một cách hiệu quả bằng cách áp dụng quy tắc dây chuyền (chain rule) của giải tích, lần lượt từ lớp đầu ra ngược về lớp đầu vào, nhờ đó mạng xác định được mỗi trọng số đóng góp bao nhiêu vào sai số đầu ra.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-024",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Artificial Neural Network",
+    "subtopic": "gradient descent, SGD và Adam",
+    "fact_text": "Sau khi có gradient, thuật toán suy giảm độ dốc (gradient descent) cập nhật trọng số theo hướng ngược chiều gradient để giảm hàm mất mát; trong thực tế thường dùng stochastic gradient descent (SGD) tính gradient trên từng nhóm dữ liệu nhỏ, và Adam kết hợp tích lũy động lượng (momentum) với điều chỉnh tốc độ học riêng cho từng tham số, hiện là optimizer mặc định trong hầu hết framework học sâu.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-025",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định nghĩa tính phổ quát (generalization)",
+    "fact_text": "Tính phổ quát (generalization) là khả năng của mô hình hoạt động tốt trên dữ liệu chưa từng thấy trong quá trình huấn luyện, và là mục tiêu trung tâm của mọi hệ thống học máy.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-026",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "quá khớp (overfitting) và thiếu khớp (underfitting)",
+    "fact_text": "Hiện tượng khi mô hình 'học vẹt' dữ liệu huấn luyện thay vì học quy luật tổng quát được gọi là quá khớp (overfitting), có thể kiểm soát bằng chính quy hóa, dropout, tăng cường dữ liệu, hoặc tập validation; ở chiều ngược lại, thiếu khớp (underfitting) xảy ra khi mô hình quá đơn giản để nắm bắt được quy luật trong dữ liệu.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-027",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định lý xấp xỉ toàn năng, phiên bản gốc",
+    "fact_text": "Định lý xấp xỉ toàn năng (universal approximation theorem), phiên bản gốc được chứng minh độc lập bởi George Cybenko (1989) và Kurt Hornik (1991), phát biểu rằng một mạng thần kinh chỉ với một lớp ẩn duy nhất nhưng đủ rộng (nhiều neuron) có thể xấp xỉ bất kỳ hàm liên tục nào trên một miền compact với độ chính xác tùy ý.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-028",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "hạn chế của định lý xấp xỉ toàn năng gốc",
+    "fact_text": "Định lý xấp xỉ toàn năng phiên bản gốc không nói gì về số lượng neuron cần thiết cụ thể, và trong thực tế số đó có thể lớn đến mức không thể huấn luyện được.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-029",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định lý xấp xỉ toàn năng, phiên bản thứ hai (mạng sâu)",
+    "fact_text": "Phiên bản thứ hai của định lý xấp xỉ toàn năng, phát triển trong thập niên 2010, cho thấy thay vì mạng rộng, mạng đủ sâu (nhiều lớp) cũng có khả năng xấp xỉ toàn năng, và thường làm được với số tham số ít hơn đáng kể so với mạng nông tương đương.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-030",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Artificial Neural Network",
+    "subtopic": "định lý không có bữa trưa miễn phí",
+    "fact_text": "Định lý không có bữa trưa miễn phí (no free lunch theorem), được chứng minh bởi David Wolpert và William Macready năm 1997, phát biểu rằng không tồn tại một thuật toán học máy nào là 'tốt nhất' trên mọi bài toán, khi lấy trung bình trên toàn bộ các phân phối dữ liệu có thể có, mọi thuật toán đều có hiệu suất như nhau.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-031",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Artificial Neural Network",
+    "subtopic": "gradient descent chỉ đảm bảo cực tiểu địa phương",
+    "fact_text": "Gradient descent chỉ đảm bảo hội tụ về một điểm cực tiểu địa phương, không nhất thiết là cực tiểu toàn cục, vì không gian tham số của mạng sâu là một hàm nhiều chiều cực kỳ phức tạp chứa vô số điểm cực tiểu địa phương và điểm yên ngựa (saddle point).",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "02_mang_than_kinh_nhan_tao_vi-032",
+    "document_id": "02_mang_than_kinh_nhan_tao_vi",
+    "document_title": "Mạng thần kinh nhân tạo (Artificial Neural Network)",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Artificial Neural Network",
+    "subtopic": "hội tụ với mạng đủ lớn và Neural Tangent Kernel",
+    "fact_text": "Nghiên cứu thực nghiệm và lý thuyết gần đây cho thấy với mạng đủ lớn, hầu hết các cực tiểu địa phương đều có giá trị hàm mất mát gần với cực tiểu toàn cục, và khi chiều rộng của mạng tiến đến vô cực, hành vi huấn luyện có thể được mô tả xấp xỉ bằng một mô hình tuyến tính thông qua Neural Tangent Kernel.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-001",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "định nghĩa CNN",
+    "fact_text": "Mạng nơ-ron tích chập (Convolutional Neural Network, CNN hay ConvNet) là một lớp các mạng nơ-ron sâu trong học sâu, được thiết kế đặc biệt để xử lý và phân tích các dữ liệu có cấu trúc lưới nhiều chiều, phổ biến nhất là hình ảnh hai chiều.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-002",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "hai nguyên lý không gian cốt lõi của CNN",
+    "fact_text": "Khác với các mạng nơ-ron kết nối đầy đủ (MLP/FC), CNN tận dụng hai nguyên lý không gian cốt lõi: sự kết nối cục bộ (local connectivity) và chia sẻ trọng số (weight sharing).",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-003",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "lợi ích của kết nối cục bộ và chia sẻ trọng số",
+    "fact_text": "Nhờ kết nối cục bộ và chia sẻ trọng số, CNN giảm thiểu đáng kể số lượng tham số cần huấn luyện, hạn chế hiện tượng quá khớp (overfitting) và có khả năng trích xuất các đặc trưng học được mang tính bất biến tịnh tiến (translation invariance).",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-004",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "nền móng sinh học của CNN (Hubel & Wiesel)",
+    "fact_text": "Trong giai đoạn 1959-1962, David Hubel và Torsten Wiesel nghiên cứu vỏ não thị giác của mèo và phát hiện ra các tế bào thần kinh có trường tiếp nhận (receptive field) cục bộ, chia làm tế bào đơn giản (simple cells) và tế bào phức tạp (complex cells); khám phá này mang về cho họ giải Nobel Y học năm 1981 và đặt nền móng sinh học cho CNN.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-005",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "Neocognitron (Fukushima, 1980)",
+    "fact_text": "Năm 1980, Kunihiko Fukushima đề xuất mô hình Neocognitron, kiến trúc nhân tạo đầu tiên kết hợp các lớp tích chập và lớp gom cụm (pooling), có khả năng nhận dạng mẫu không phụ thuộc vào vị trí.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-006",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "LeNet-5 (1998)",
+    "fact_text": "Năm 1998, Yann LeCun và các đồng sự tại AT&T Labs đã kết hợp phép tích chập với thuật toán lan truyền ngược để tạo ra LeNet-5, mô hình nhận dạng chữ số viết tay trên séc ngân hàng thành công thương mại đầu tiên.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-007",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "CNN",
+    "subtopic": "bước ngoặt AlexNet (2012)",
+    "fact_text": "Năm 2012, Alex Krizhevsky, Ilya Sutskever và Geoffrey Hinton phát triển AlexNet, sử dụng GPU để huấn luyện mạng CNN sâu trên tập dữ liệu ImageNet và giành chiến thắng áp đảo tại cuộc thi ILSVRC 2012, mở ra kỷ nguyên bùng nổ của học sâu.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-008",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "lớp tích chập (Convolutional Layer)",
+    "fact_text": "Lớp tích chập là thành phần cốt lõi thực hiện tính toán nặng nhất của CNN, sử dụng một tập hợp các bộ lọc (filters/kernels) có kích thước nhỏ trượt qua toàn bộ chiều rộng và chiều cao của ảnh đầu vào.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-009",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "phép tích chập tạo bản đồ đặc trưng",
+    "fact_text": "Tại mỗi vị trí trượt, phép tích chập tính tích vô hướng (dot product) giữa các trọng số của bộ lọc (kernel) và vùng giá trị điểm ảnh tương ứng của ma trận ảnh đầu vào, tạo ra một bản đồ đặc trưng (feature map).",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-010",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "các tham số điều khiển phép tích chập",
+    "fact_text": "Các tham số điều khiển phép tích chập gồm kích thước bộ lọc (kernel size - độ rộng và cao của cửa sổ trượt), bước trượt (stride - số điểm ảnh mà bộ lọc di chuyển mỗi bước), và đệm (padding, thường là zero-padding, thêm giá trị 0 xung quanh viền ảnh để kiểm soát kích thước không gian đầu ra).",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-011",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "lớp kích hoạt và ReLU",
+    "fact_text": "Ngay sau phép tích chập tuyến tính, một hàm kích hoạt phi tuyến được áp dụng cho từng phần tử để giúp mạng học được các mối quan hệ phức tạp; hàm kích hoạt chuẩn mực trong CNN hiện đại là ReLU (Rectified Linear Unit).",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-012",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "lớp gộp / lấy mẫu (Pooling Layer)",
+    "fact_text": "Lớp gộp (pooling) giảm kích thước không gian của bản đồ đặc trưng, giúp giảm số lượng tham số tính toán và tạo ra tính bất biến đối với những biến đổi nhẹ/dịch chuyển của vật thể.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-013",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "Max Pooling so với Average Pooling",
+    "fact_text": "Max Pooling lấy giá trị lớn nhất trong cửa sổ trượt và là phương pháp pooling phổ biến nhất, trong khi Average Pooling lấy giá trị trung bình cộng các giá trị trong cửa sổ.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-014",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "CNN",
+    "subtopic": "lớp kết nối đầy đủ (Fully Connected Layer)",
+    "fact_text": "Ở các tầng cuối cùng của mạng, sau khi các lớp tích chập và pooling trích xuất các đặc trưng cấp cao, dữ liệu được trải phẳng (flatten) thành một vectơ một chiều và đưa qua các lớp kết nối đầy đủ để thực hiện nhiệm vụ phân loại hoặc dự đoán, thường dùng Softmax ở lớp đầu ra.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-015",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "LeNet-5 trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, LeNet-5 (1998) có 5 lớp và đóng góp chính của nó là kiến trúc Tích chập + Pooling + FC chuẩn mực đầu tiên.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-016",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "AlexNet trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, AlexNet (2012) có 8 lớp, đạt độ chính xác Top-5 trên ImageNet là 84,7%, với đóng góp chính là áp dụng ReLU, Dropout và huấn luyện song song trên GPU.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-017",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "VGG-16 trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, VGG-16 (2014) có 16 lớp, đạt độ chính xác Top-5 92,7%, với đóng góp chính là đồng nhất hóa kiến trúc bằng các bộ lọc nhỏ xếp chồng.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-018",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "GoogLeNet trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, GoogLeNet (2014) có 22 lớp, đạt độ chính xác Top-5 93,3%, với đóng góp chính là giới thiệu khối Inception giúp tính toán đặc trưng ở nhiều tỉ lệ khác nhau.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-019",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "ResNet trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, ResNet (2015) có 152 lớp, đạt độ chính xác Top-5 96,4%, với đóng góp chính là giới thiệu kết nối tắt (Skip Connections/Residual Blocks), giải quyết triệt để bài toán biến mất đạo hàm (vanishing gradient).",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-020",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "EfficientNet trong bảng các cột mốc kiến trúc CNN",
+    "fact_text": "Theo bảng các cột mốc kiến trúc CNN quan trọng, EfficientNet (2019) có số lớp biến đổi, đạt độ chính xác Top-5 97,1%, với đóng góp chính là tối ưu hóa đồng thời cả chiều sâu, chiều rộng và độ phân giải ảnh (Compound Scaling).",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-021",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "so sánh CNN với MLP: ưu điểm của CNN",
+    "fact_text": "So với Mạng Perceptron đa lớp (MLP) có kết nối đầy đủ (mọi nơ-ron nối với mọi nơ-ron lớp trước) và tham số rất lớn tăng theo cấp số nhân với kích thước ảnh, CNN có kết nối cục bộ (chỉ nối trong trường tiếp nhận), tham số nhỏ hơn rất nhiều nhờ chia sẻ trọng số, giữ nguyên cấu trúc không gian 2D, và bất biến với sự dịch chuyển nhẹ của vật thể trong ảnh.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-022",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "nhược điểm của MLP so với CNN",
+    "fact_text": "Theo bảng so sánh, MLP làm phẳng ảnh làm mất hoàn toàn cấu trúc không gian 2D và nhạy cảm với vị trí vật thể, trong khi CNN giữ được mối tương quan giữa các điểm ảnh lân cận.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "03_mang_than_kinh_tich_chap_vi-023",
+    "document_id": "03_mang_than_kinh_tich_chap_vi",
+    "document_title": "Mạng thần kinh tích chập (CNN)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "CNN",
+    "subtopic": "ứng dụng của CNN",
+    "fact_text": "CNN là công nghệ nền tảng thống trị trong nhiều lĩnh vực: thị giác máy tính (phân loại ảnh, phát hiện vật thể như YOLO/R-CNN, phân đoạn hình ảnh U-Net), y tế (phân tích ảnh X-quang/MRI/CT để chẩn đoán khối u), xe tự lái (nhận diện làn đường, biển báo, người đi bộ), xử lý ngôn ngữ tự nhiên (tích chập 1D trên chuỗi từ), và sinh học tính toán (dự đoán cuộn gập cấu trúc ADN và Protein).",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-001",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Định nghĩa cây quyết định",
+    "fact_text": "Một cây quyết định (decision tree) là một đồ thị của các quyết định và các hậu quả có thể của nó, bao gồm rủi ro và hao phí tài nguyên.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-002",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Mục đích sử dụng",
+    "fact_text": "Cây quyết định được sử dụng để xây dựng một kế hoạch nhằm đạt được mục tiêu mong muốn và được dùng để hỗ trợ quá trình ra quyết định.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-003",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Cấu trúc dữ liệu",
+    "fact_text": "Cây quyết định là một dạng đặc biệt của cấu trúc cây.",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-004",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Mô hình dự báo",
+    "fact_text": "Trong lĩnh vực máy học, cây quyết định là một kiểu mô hình dự báo (predictive model), nghĩa là một ánh xạ từ các quan sát về một sự vật/hiện tượng tới các kết luận về giá trị mục tiêu của sự vật/hiện tượng đó.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-005",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Cấu trúc cây quyết định",
+    "fact_text": "Mỗi nút trong (internal node) của cây quyết định tương ứng với một biến; đường nối giữa nó với nút con của nó thể hiện một giá trị cụ thể cho biến đó.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-006",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Cấu trúc cây quyết định",
+    "fact_text": "Mỗi nút lá của cây quyết định đại diện cho giá trị dự đoán của biến mục tiêu, cho trước các giá trị của các biến được biểu diễn bởi đường đi từ nút gốc tới nút lá đó.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-007",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Học bằng cây quyết định",
+    "fact_text": "Kỹ thuật học máy dùng trong cây quyết định được gọi là học bằng cây quyết định, và cũng là một phương pháp thông dụng trong khai phá dữ liệu.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-008",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Khai phá dữ liệu",
+    "fact_text": "Trong khai phá dữ liệu bằng cây quyết định, các lá đại diện cho các phân loại còn cành đại diện cho các kết hợp của các thuộc tính dẫn tới phân loại đó.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-009",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Quy trình xây dựng cây",
+    "fact_text": "Một cây quyết định có thể được học bằng cách chia tập hợp nguồn thành các tập con dựa theo một kiểm tra giá trị thuộc tính, và quá trình này được lặp lại một cách đệ quy cho mỗi tập con dẫn xuất.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-010",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Quy trình xây dựng cây",
+    "fact_text": "Quá trình đệ quy xây dựng cây quyết định hoàn thành khi không thể tiếp tục thực hiện việc chia tách được nữa, hay khi một phân loại đơn có thể áp dụng cho từng phần tử của tập con dẫn xuất.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-011",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Rừng ngẫu nhiên",
+    "fact_text": "Một bộ phân loại rừng ngẫu nhiên (random forest) sử dụng một số cây quyết định để có thể cải thiện tỉ lệ phân loại.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-012",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Decision Tree",
+    "subtopic": "Biểu diễn dữ liệu",
+    "fact_text": "Trong dữ liệu dùng để xây dựng cây quyết định, biến phụ thuộc (dependent variable) y là biến mà ta cần tìm hiểu, phân loại hay tổng quát hóa, còn x1, x2, x3... là các biến giúp thực hiện công việc đó.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-013",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Decision Tree",
+    "subtopic": "Các kiểu cây quyết định",
+    "fact_text": "Cây quyết định còn có hai tên khác là cây hồi quy (regression tree) và cây phân loại (classification tree).",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-014",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Decision Tree",
+    "subtopic": "Cây hồi quy",
+    "fact_text": "Cây hồi quy (regression tree) ước lượng các hàm giá có giá trị là số thực thay vì được sử dụng cho các nhiệm vụ phân loại, ví dụ ước tính giá một ngôi nhà hoặc khoảng thời gian một bệnh nhân nằm viện.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-015",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Decision Tree",
+    "subtopic": "Cây phân loại",
+    "fact_text": "Cây phân loại (classification tree) được dùng khi y là một biến phân loại, như giới tính (nam hay nữ) hoặc kết quả của một trận đấu (thắng hay thua).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-016",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Trong ví dụ minh họa, David - quản lý một câu lạc bộ đánh golf - thu thập trong hai tuần thông tin về thời tiết (trời nắng/âm u/mưa, nhiệt độ, độ ẩm, gió) và việc mọi người có đến chơi golf hay không, nhằm tối ưu hóa số nhân viên phục vụ mỗi ngày.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-017",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Trong ví dụ về câu lạc bộ golf, David thu được một bộ dữ liệu gồm 14 dòng và 5 cột.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-018",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Decision Tree",
+    "subtopic": "Bộ dữ liệu golf",
+    "fact_text": "Trong bộ dữ liệu chơi golf, các biến độc lập là Trời, Nhiệt độ, Độ ẩm, Gió, và biến phụ thuộc là Có chơi hay không, với 14 bản ghi quan sát.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-019",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Mô hình cây quyết định cho bài toán của David chia người chơi golf thành nhóm khi trời nắng, nhóm chơi khi trời nhiều mây, và nhóm chơi khi trời mưa.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-020",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Kết luận thứ nhất từ mô hình cây quyết định golf là nếu trời nhiều mây, người ta luôn luôn chơi golf, và một số người vẫn chơi golf cả khi trời mưa.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-021",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Trong nhóm trời nắng, khách hàng không muốn chơi golf nếu độ ẩm lên quá 70%.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-022",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Ví dụ minh họa golf",
+    "fact_text": "Trong nhóm trời mưa, khách hàng sẽ không chơi golf nếu trời nhiều gió.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-023",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Vai trò của cây quyết định",
+    "fact_text": "Cây quyết định giúp biến một biểu diễn dữ liệu phức tạp thành một cấu trúc đơn giản hơn rất nhiều.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-024",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Công thức Gini impurity",
+    "fact_text": "Gini impurity được dùng trong thuật toán CART (Classification and Regression Trees), dựa vào việc bình phương các xác suất thành viên cho mỗi thể loại đích trong nút.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-025",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Công thức Gini impurity",
+    "fact_text": "Giá trị Gini impurity tiến đến cực tiểu (bằng 0) khi mọi trường hợp trong nút rơi vào một thể loại đích duy nhất.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-026",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Decision Tree",
+    "subtopic": "Công thức Entropy",
+    "fact_text": "Entropy được dùng trong các thuật toán sinh cây ID3, C4.5 và C5.0, và số đo này dựa trên khái niệm entropy trong lý thuyết thông tin (information theory).",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-027",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Decision Tree",
+    "subtopic": "Ưu điểm của cây quyết định",
+    "fact_text": "Việc chuẩn bị dữ liệu cho một cây quyết định là cơ bản hoặc không cần thiết, trong khi các kỹ thuật khác thường đòi hỏi chuẩn hóa dữ liệu, tạo các biến phụ (dummy variable) và loại bỏ các giá trị rỗng.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-028",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Decision Tree",
+    "subtopic": "Ưu điểm của cây quyết định",
+    "fact_text": "Cây quyết định có thể xử lý cả dữ liệu có giá trị bằng số và dữ liệu có giá trị là tên thể loại, trong khi các luật quan hệ chỉ dùng được cho các biến tên và mạng nơ-ron chỉ dùng được cho các biến có giá trị bằng số.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-029",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Decision Tree",
+    "subtopic": "Mô hình hộp trắng",
+    "fact_text": "Cây quyết định là một mô hình hộp trắng có thể giải thích bằng logic Boolean, trong khi mạng nơ-ron là một ví dụ về mô hình hộp đen do lời giải thích cho kết quả quá phức tạp để hiểu được.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "04_cay_quyet_dinh_vi-030",
+    "document_id": "04_cay_quyet_dinh_vi",
+    "document_title": "Cây quyết định (Decision Tree)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Decision Tree",
+    "subtopic": "Đồ thị quyết định",
+    "fact_text": "Trong cây quyết định, mọi đường đi từ nút gốc đến nút lá được tiến hành bằng các phép hội (AND); trong đồ thị quyết định, có thể dùng các phép tuyển (OR) để kết nối ghép hai hay nhiều đường lại với nhau.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-001",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Linear Regression",
+    "subtopic": "Định nghĩa",
+    "fact_text": "Phân tích hồi quy tuyến tính là một phương pháp phân tích quan hệ giữa biến phụ thuộc Y với một hay nhiều biến độc lập X, mô hình hóa sử dụng hàm tuyến tính (bậc 1).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-002",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Linear Regression",
+    "subtopic": "Ước lượng tham số",
+    "fact_text": "Trong hồi quy tuyến tính, các tham số của mô hình (hay hàm số) được ước lượng từ dữ liệu.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-003",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Linear Regression",
+    "subtopic": "Ứng dụng",
+    "fact_text": "Hồi quy tuyến tính được sử dụng rộng rãi trong thực tế do tính chất đơn giản hóa của hồi quy, và cũng dễ ước lượng.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-004",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Linear Regression",
+    "subtopic": "Phương pháp ước lượng",
+    "fact_text": "Hàm ước lượng thống kê được sử dụng phổ biến nhất trong hồi quy tuyến tính là phương pháp bình phương nhỏ nhất.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-005",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Linear Regression",
+    "subtopic": "Giả thuyết Gauss-Markov",
+    "fact_text": "Khi mô hình hồi quy tuyến tính có các phần sai số thỏa mãn bốn Giả thuyết Gauss-Markov, thì phương pháp ước lượng bình phương nhỏ nhất đó được coi là không chệch.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-006",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Linear Regression",
+    "subtopic": "Phương pháp ước lượng",
+    "fact_text": "Phương pháp bình phương tối thiểu tổng quát hóa được sử dụng khi sai số hoặc bị tương quan với nhau hoặc có hiệp phương sai không đồng nhất hoặc cả hai.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-007",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Linear Regression",
+    "subtopic": "Phương pháp ước lượng",
+    "fact_text": "Phương pháp bình phương tối thiểu tổng quát hóa sẽ hiệu quả để ước lượng (tính) các tham số beta khi sai số bị tương quan hoặc có hiệp phương sai không đồng nhất.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "05_hoi_quy_tuyen_tinh_vi-008",
+    "document_id": "05_hoi_quy_tuyen_tinh_vi",
+    "document_title": "Hồi quy tuyến tính (Linear Regression)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Linear Regression",
+    "subtopic": "Kiểm định t",
+    "fact_text": "Kiểm định t được sử dụng để kiểm tra xem các tham số beta đã được ước lượng có khác không hoặc lớn (nhỏ hơn) một giá trị nhất định.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-001",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Định nghĩa overfitting",
+    "fact_text": "Trong thống kê, sự quá khớp (overfitting) là kết quả của một phân tích mà tương ứng với việc đạt độ chính xác quá cao với một tập dữ liệu nào đó, vì vậy điều này có thể thất bại khi so khớp với các dữ liệu bổ sung hoặc dự đoán các quan sát đáng tin cậy trong tương lai.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-002",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Định nghĩa overfitting",
+    "fact_text": "Một mô hình quá khớp là một mô hình thống kê chứa nhiều tham số hơn có thể chứng minh bằng dữ liệu.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-003",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Bản chất overfitting",
+    "fact_text": "Bản chất của sự quá khớp là việc vô tình trích xuất những biến thể dư thừa, ví dụ như phân số phương sai chưa giải thích được, như khi các biến thể thể hiện cấu trúc mô hình cơ bản.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-004",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Minh họa overfitting",
+    "fact_text": "Trong hình minh họa, đường màu xanh lục thể hiện một mô hình quá khớp và đường màu đen thể hiện một mô hình chính quy (đã chính quy hóa).",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-005",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Minh họa overfitting",
+    "fact_text": "Đường xanh lục (mô hình quá khớp) bám sát dữ liệu huấn luyện tốt nhất nhưng lại quá phụ thuộc vào dữ liệu, nên dường như sẽ có tỉ lệ lỗi cao trên các dữ liệu chưa biết đến (dữ liệu thử nghiệm) so với đường màu đen (mô hình chính quy).",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "06_su_qua_khop_vi-006",
+    "document_id": "06_su_qua_khop_vi",
+    "document_title": "Sự quá khớp (Overfitting)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Overfitting",
+    "subtopic": "Hậu quả overfitting",
+    "fact_text": "Vì mô hình quá khớp bám sát dữ liệu huấn luyện quá mức, nó dễ có tỉ lệ lỗi cao khi áp dụng lên dữ liệu thử nghiệm chưa biết đến.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-001",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Định nghĩa xác suất",
+    "fact_text": "Xác suất (probability) là một nhánh của toán học liên quan đến các mô tả bằng số về khả năng xảy ra một sự kiện, hoặc khả năng một mệnh đề là đúng.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-002",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Thang đo xác suất",
+    "fact_text": "Xác suất của một sự kiện là một số trong khoảng từ 0 đến 1, trong đó 0 biểu thị sự bất khả thi của sự kiện và 1 biểu thị sự chắc chắn.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-003",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Ví dụ tung đồng xu",
+    "fact_text": "Khi tung một đồng xu cân bằng, cả hai kết quả 'sấp' và 'ngửa' đều có thể xảy ra như nhau, nên xác suất xảy ra 'sấp' hoặc 'ngửa' là 0,5 hoặc 50%.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-004",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Tính xác suất cổ điển",
+    "fact_text": "Khi xử lý các thử nghiệm ngẫu nhiên được xác định rõ ràng trong bối cảnh lý thuyết thuần túy, xác suất có thể được mô tả bằng số bằng số lượng kết quả mong muốn chia cho tổng số tất cả các kết quả.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-005",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Ví dụ tung đồng xu",
+    "fact_text": "Khi tung một đồng xu cân bằng hai lần, xác suất nhận được kết quả 'sấp-sấp' là 1 trong 4 kết quả, tức 1/4, 0,25 hoặc 25%.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-006",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Diễn giải xác suất",
+    "fact_text": "Có hai loại diễn giải xác suất cạnh tranh chính khi ứng dụng thực tế: chủ nghĩa khách quan và chủ nghĩa chủ quan, mỗi trường phái có quan điểm khác nhau về bản chất cơ bản của xác suất.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-007",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Diễn giải khách quan",
+    "fact_text": "Xác suất thường xuyên, phiên bản phổ biến nhất của xác suất khách quan, cho rằng xác suất của một sự kiện ngẫu nhiên biểu thị tần suất xuất hiện tương đối của kết quả của một thử nghiệm khi thử nghiệm được lặp lại vô thời hạn.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-008",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Diễn giải khách quan",
+    "fact_text": "Xác suất xu hướng diễn giải xác suất là xu hướng của một số thử nghiệm để mang lại một kết quả nhất định, ngay cả khi nó chỉ được thực hiện một lần.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-009",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Probability",
+    "subtopic": "Diễn giải chủ quan",
+    "fact_text": "Xác suất Bayes, phiên bản phổ biến nhất của xác suất chủ quan, bao gồm kiến thức chuyên môn cũng như dữ liệu thực nghiệm để tạo ra xác suất.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-010",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Probability",
+    "subtopic": "Định lý Aumann",
+    "fact_text": "Theo định lý thỏa thuận của Aumann, các tác nhân Bayes có niềm tin trước đó giống nhau sẽ kết thúc với niềm tin hậu nghiệm tương tự.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-011",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Probability",
+    "subtopic": "Từ nguyên",
+    "fact_text": "Từ 'xác suất' (probability) bắt nguồn từ chữ probabilitas trong tiếng Latin và có nghĩa là 'để chứng minh, để kiểm chứng'.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-012",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Probability",
+    "subtopic": "Lịch sử xác suất",
+    "fact_text": "Al-Khalil (717-786) đã viết cuốn sách Thông điệp mật mã, trong đó lần đầu tiên sử dụng các hoán vị và tổ hợp để liệt kê tất cả các từ tiếng Ả Rập có thể có và không có nguyên âm.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-013",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Probability",
+    "subtopic": "Lịch sử xác suất",
+    "fact_text": "Al-Kindi (801-873) đã sử dụng suy luận thống kê sớm nhất được biết đến trong công việc của mình về phân tích mật mã và phân tích tần số.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-014",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Probability",
+    "subtopic": "Lịch sử xác suất",
+    "fact_text": "Nhà nghiên cứu người Ý ở thế kỷ XVI Gerolamo Cardano đã chứng minh hiệu quả của việc xác định tỷ lệ cược là tỷ lệ giữa các kết quả thuận lợi và không thuận lợi.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-015",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Probability",
+    "subtopic": "Lịch sử xác suất",
+    "fact_text": "Abraham de Moivre (1718) coi chủ đề xác suất như một nhánh của toán học.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-016",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Probability",
+    "subtopic": "Lịch sử lý thuyết sai số",
+    "fact_text": "Pierre-Simon Laplace đề xuất luật sai số đầu tiên năm 1774, phát biểu rằng tần suất của một lỗi có thể được biểu thị dưới dạng một hàm số mũ của mức độ lỗi.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-017",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Probability",
+    "subtopic": "Lịch sử lý thuyết sai số",
+    "fact_text": "Định luật sai số thứ hai được Laplace đề xuất vào năm 1778, tuyên bố rằng tần số của sai số là một hàm số mũ của bình phương sai số; luật sai số thứ hai này được gọi là phân phối chuẩn hay luật Gauss.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-018",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Probability",
+    "subtopic": "Lịch sử phương pháp bình phương nhỏ nhất",
+    "fact_text": "Adrien-Marie Legendre (1805) đã phát triển phương pháp bình phương nhỏ nhất và giới thiệu nó trong tác phẩm Nouvelles méthodes pour la détermination des orbites des comètes.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-019",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Phân loại khái niệm xác suất",
+    "fact_text": "Ý tưởng chung của xác suất thường được chia thành 2 khái niệm liên quan: xác suất may rủi (aleatory probability) và xác suất trong tri thức (epistemic probability).",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-020",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Xác suất may rủi",
+    "fact_text": "Xác suất may rủi (aleatory probability) đề cập đến khả năng xảy ra của các sự kiện trong tương lai mà khả năng đó phụ thuộc vào một hiện tượng vật lý mang tính ngẫu nhiên.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-021",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Xác suất trong tri thức",
+    "fact_text": "Xác suất trong tri thức (epistemic probability) đề cập đến sự không chắc chắn của chúng ta về một mệnh đề nào đó vì thiếu thông tin để suy luận.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-022",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Công thức hóa xác suất",
+    "fact_text": "Có hai hướng công thức hóa xác suất đã thành công là sự hình thành công thức Kolmogorov và sự hình thành công thức Cox.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-023",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Công thức Kolmogorov",
+    "fact_text": "Trong công thức của Kolmogorov, các tập được hiểu là các biến cố và xác suất chính là một phép đo trên một lớp các tập đó.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-024",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Các định luật xác suất",
+    "fact_text": "Ba định luật cơ bản của xác suất là: (1) xác suất là một giá trị số trong khoảng 0 và 1; (2) xác suất của một sự kiện hay mệnh đề và phần bù của nó cộng lại phải bằng 1; (3) xác suất kết hợp của hai sự kiện hay hai mệnh đề là tích của xác suất của một trong chúng và xác suất của cái thứ hai với điều kiện biết cái trước xảy ra.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-025",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Probability",
+    "subtopic": "Đặc điểm của xác suất",
+    "fact_text": "Một sự kiện không thể xảy ra thì có xác suất là 0, còn một sự kiện chắc chắn thì có xác suất là 1, nhưng điều ngược lại không đúng - sự khác biệt giữa 'chắc chắn' và 'xác suất xảy ra 1' là rất quan trọng.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-026",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Probability",
+    "subtopic": "Phân bố xác suất",
+    "fact_text": "Một phân bố xác suất là một hàm số nhằm gán các giá trị (gọi là xác suất) cho các sự kiện.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-027",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Probability",
+    "subtopic": "Phân bố rời rạc và liên tục",
+    "fact_text": "Một phân bố được gọi là phân bố rời rạc nếu nó được định ra trên một tập rời rạc, đếm được; một phân bố được gọi là phân bố liên tục nếu nó được định ra trên một tập vô hạn, không đếm được.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-028",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Probability",
+    "subtopic": "Ví dụ các phân bố",
+    "fact_text": "Các phân bố rời rạc quan trọng bao gồm phân bố đồng nhất, phân bố Poisson, phân bố nhị thức, phân bố nhị thức âm và phân bố Maxwell-Boltzmann; các phân bố liên tục quan trọng bao gồm phân bố chuẩn (phân bố Gauss), phân bố gamma, phân bố-t của Student, và phân bố hàm mũ.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-029",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Probability",
+    "subtopic": "Định luật số lớn",
+    "fact_text": "Theo định luật số lớn, khi số lần gieo N của một đồng xu cân đối trở nên lớn, tỉ lệ NH/N (số lần mặt head xuất hiện trên tổng số lần gieo) sẽ tiến gần hơn đến giá trị 1/2.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "07_xac_suat_vi-030",
+    "document_id": "07_xac_suat_vi",
+    "document_title": "Xác suất (Probability)",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Probability",
+    "subtopic": "Xác suất trong không gian mẫu vô hạn",
+    "fact_text": "Xác suất bằng 0 chỉ ra rằng một biến cố hầu như không bao giờ (almost never) xảy ra, trong khi xác suất bằng 1 chỉ ra rằng biến cố đó hầu như chắc chắn (almost surely) xảy ra; đây là một sự phân biệt quan trọng khi không gian mẫu là vô hạn.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-001",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Định nghĩa NMT",
+    "fact_text": "Dịch máy bằng nơ-ron (Neural machine translation: NMT) là một cách tiếp cận dịch máy sử dụng mạng nơ-ron nhân tạo lớn để dự đoán chuỗi từ được dịch, bằng cách mô hình hóa toàn bộ các câu văn trong một mạng nơ-ron nhân tạo duy nhất.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-002",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Dịch máy nơ-ron sâu",
+    "fact_text": "Dịch máy nơ-ron sâu là một phần mở rộng của dịch máy bằng nơ-ron; cả hai đều sử dụng một mạng nơ-ron lớn, nhưng dịch máy nơ-ron sâu sử dụng nhiều lớp nơ-ron thay vì chỉ một lớp nơ-ron như dịch máy bằng nơ-ron.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-003",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "So sánh với SMT",
+    "fact_text": "Dịch máy bằng nơ-ron yêu cầu bộ nhớ ít hơn so với các mô hình dịch máy thống kê truyền thống (SMT).",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-004",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Cách huấn luyện NMT",
+    "fact_text": "Trong dịch máy bằng nơ-ron, tất cả các phần của mô hình dịch thuật nơ-ron được đào tạo cùng lúc với nhau (từ câu ngôn ngữ này sang câu ngôn ngữ khác) để tối đa hóa hiệu suất dịch thuật.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-005",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Lịch sử NMT",
+    "fact_text": "Các ứng dụng học tập sâu xuất hiện đầu tiên trong nhận dạng giọng nói vào những năm 1990.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-006",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Lịch sử NMT",
+    "fact_text": "Bài báo khoa học đầu tiên về việc sử dụng mạng thần kinh trong dịch máy đã xuất hiện vào năm 2014.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-007",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Lịch sử NMT",
+    "fact_text": "Năm 2015 là lần đầu tiên hệ thống NMT xuất hiện trong cuộc thi dịch máy nguồn mở OpenMT'15.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-008",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Sự phổ biến của NMT",
+    "fact_text": "WMT'15 lần đầu tiên có một ứng cử viên NMT; năm tiếp theo, đã có 90% hệ thống NMT trong số những người chiến thắng.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-009",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "So sánh với SMT",
+    "fact_text": "NMT không sử dụng các cách tiếp cận thống kê dựa trên cụm từ với các thành phần con được thiết kế riêng biệt; NMT không phải là một bước lớn của dịch máy thống kê truyền thống (SMT).",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-010",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Nguyên lý NMT",
+    "fact_text": "Nguyên lý chính của NMT là việc sử dụng các biểu diễn vectơ ('nhúng', 'biểu diễn không gian liên tục') cho các từ và trạng thái bên trong.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-011",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Kiến trúc NMT",
+    "fact_text": "Trong NMT không có mô hình ngôn ngữ, mô hình dịch thuật và mô hình sắp xếp lại riêng biệt, mà chỉ có một mô hình chuỗi nơ-ron duy nhất dự đoán từng từ một, dựa trên toàn bộ câu nguồn và tạo ra toàn bộ câu kết quả.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-012",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Nền tảng kỹ thuật NMT",
+    "fact_text": "Mô hình NMT sử dụng học tập sâu và học đại diện.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-013",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Kiến trúc encoder-decoder",
+    "fact_text": "Mô hình chuỗi từ đầu tiên của NMT thường được tạo ra bằng cách sử dụng mạng nơ-ron hồi quy (RNN): một RNN hai chiều gọi là bộ mã hóa (encoder) mã hóa câu nguồn, cho một RNN thứ hai gọi là bộ giải mã (decoder) được sử dụng để dự đoán các từ trong ngôn ngữ đích.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-014",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Mạng nơ-ron tích chập trong NMT",
+    "fact_text": "Mạng nơ-ron tích chập (Convolutional Neural Networks) về nguyên tắc có phần tốt hơn cho các chuỗi nơ-ron dài liên tục, nhưng ban đầu không được sử dụng do một số điểm yếu; các điểm yếu này đã được bù đắp thành công vào năm 2017 bằng cách sử dụng phương pháp tiếp cận dựa trên 'sự chú ý'.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-015",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Sự phổ biến của NMT",
+    "fact_text": "Vào năm 2016, hầu hết các hệ thống dịch máy (MT) tốt nhất đã sử dụng mạng nơ-ron.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-016",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Ứng dụng thực tế của NMT",
+    "fact_text": "Các dịch vụ dịch thuật của Google, Microsoft, Yandex và PROMT hiện sử dụng NMT.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-017",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Ứng dụng thực tế của NMT",
+    "fact_text": "Google sử dụng Google Neural Machine Translation (GNMT) để ưu tiên hơn các phương pháp thống kê trước đó; Microsoft sử dụng một công nghệ tương tự cho các bản dịch lời nói của mình, bao gồm Microsoft Translator live và Skype Translator.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "08_dich_may_bang_no_ron_vi-018",
+    "document_id": "08_dich_may_bang_no_ron_vi",
+    "document_title": "Dịch máy bằng nơ-ron (Neural Machine Translation)",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Neural Machine Translation",
+    "subtopic": "Hệ thống mã nguồn mở",
+    "fact_text": "OpenNMT là một hệ thống dịch máy thần kinh nguồn mở được phát hành bởi nhóm Harvard NLP.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-001",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "off-topic-negative",
+    "subtopic": "Định nghĩa phở",
+    "fact_text": "Phở là một món ăn truyền thống của Việt Nam, được xem là một trong những món ăn tiêu biểu cho nền ẩm thực Việt Nam.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-002",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "off-topic-negative",
+    "subtopic": "Thành phần phở",
+    "fact_text": "Thành phần chính của phở là bánh phở và nước dùng cùng với thịt bò hoặc thịt gà cắt lát mỏng, hành.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-003",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "off-topic-negative",
+    "subtopic": "Cách nấu nước dùng",
+    "fact_text": "Nước dùng của phở bò thường được ninh từ xương ống bò kèm với các loại gia vị như quế, hồi, thảo quả nướng.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-004",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "off-topic-negative",
+    "subtopic": "Nguồn gốc phở",
+    "fact_text": "Một trong những tài liệu đầu tiên nhắc đến phở là cuốn từ điển Hán-Việt Nhật Dụng Thường Đàm của Phạm Đình Hổ biên soạn vào năm 1827.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-005",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "off-topic-negative",
+    "subtopic": "Nguồn gốc phở",
+    "fact_text": "Phở như ngày nay được cho là đã ra đời và định hình vào những năm đầu thế kỷ 20, với Hà Nội và Nam Định thường được cho là hai địa phương xuất xứ của phở.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-006",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "off-topic-negative",
+    "subtopic": "Lịch sử tên gọi",
+    "fact_text": "Danh từ 'phở' được chính thức ấn hành lần đầu trong cuốn Việt Nam tự điển (1930) do Hội Khai Trí Tiến Đức khởi thảo, với định nghĩa 'Món đồ ăn bằng bánh thái nhỏ nấu với thịt bò'.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-007",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "off-topic-negative",
+    "subtopic": "Lịch sử phở gà",
+    "fact_text": "Năm 1939, phở gà xuất hiện vì mỗi tuần có hai ngày (thứ hai và thứ sáu) không có thịt bò bán do việc giết mổ trâu bò bị hạn chế, khiến nhiều chủ quán phở bò phải đóng cửa vào những ngày đó.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-008",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "off-topic-negative",
+    "subtopic": "Thành phần dinh dưỡng",
+    "fact_text": "Phở là món ăn tổ hợp của các chất vị; trong bát phở có chứa 18-20 loại thực phẩm gốc động vật và thực vật tự nhiên.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-009",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "off-topic-negative",
+    "subtopic": "Lan tỏa của phở",
+    "fact_text": "Phở bắt nguồn từ Bắc Bộ, xâm nhập vào Trung Bộ giữa thập niên 1950, sau sự thất bại của Pháp ở Đông Dương và Việt Nam bị chia thành 2 miền.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-010",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "off-topic-negative",
+    "subtopic": "Biến thể vùng miền",
+    "fact_text": "Phở Sài Gòn (phở Nam) thường đi kèm với các gia vị tương đen, tương ớt, chanh, rau sống (ngò gai, húng quế) và giá, trong khi tại Hà Nội thông thường sẽ không có đĩa rau sống này.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-011",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "off-topic-negative",
+    "subtopic": "Ngày phở tại Nhật Bản",
+    "fact_text": "Năm 2016, người Nhật đã chọn ngày 4 tháng 4 hàng năm là Ngày phở Việt Nam tại Nhật Bản, vì số 4 (four) trong tiếng Anh và từ 'phở' đều phiên âm bằng tiếng Nhật là フォー (fō), giúp mọi người dễ nhớ.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "13_offtopic_am_thuc_vi-012",
+    "document_id": "13_offtopic_am_thuc_vi",
+    "document_title": "Phở",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "off-topic-negative",
+    "subtopic": "Công nhận di sản",
+    "fact_text": "Vào tháng 8/2024, phở Hà Nội, phở Nam Định và mì Quảng được Bộ Văn hóa Thể thao và Du lịch công nhận là Di sản văn hóa phi vật thể quốc gia.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "09_random_forest_en-001",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "definition",
+    "fact_text": "Random forests or random decision forests is an ensemble learning method for classification, regression, and other tasks that works by creating a multitude of decision trees during training.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "09_random_forest_en-002",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "prediction aggregation - classification",
+    "fact_text": "For classification tasks, the output of the random forest is the class selected by most trees.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "09_random_forest_en-003",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "prediction aggregation - regression",
+    "fact_text": "For regression tasks, the output of the random forest is the average of the predictions of the trees.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "09_random_forest_en-004",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "overfitting correction",
+    "fact_text": "Random forests correct for decision trees' habit of overfitting to their training set.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "09_random_forest_en-005",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "history - origin",
+    "fact_text": "The first algorithm for random decision forests was created in 1995 by Tin Kam Ho using the random subspace method.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "09_random_forest_en-006",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "history - Breiman and Cutler extension",
+    "fact_text": "Leo Breiman and Adele Cutler developed an extension of the algorithm that combines Breiman's 'bagging' idea with random selection of features, and registered 'Random Forests' as a trademark in 2006.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "09_random_forest_en-007",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "history - Salzberg and Heath",
+    "fact_text": "The general method of random decision forests was first proposed by Salzberg and Heath in 1993, using a randomized decision tree algorithm to create multiple trees that are then combined using majority voting.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "09_random_forest_en-008",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Random Forest",
+    "subtopic": "overtraining resistance",
+    "fact_text": "Ho established that forests of trees splitting with oblique hyperplanes can gain accuracy as they grow without suffering from overtraining, as long as the forests are randomly restricted to be sensitive to only selected feature dimensions.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "09_random_forest_en-009",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "foundational paper contributions",
+    "fact_text": "Breiman's paper describing random forests combines a CART-like procedure for building a forest of uncorrelated trees with randomized node optimization and bagging, and introduces using out-of-bag error as an estimate of generalization error and measuring variable importance through permutation.",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "09_random_forest_en-010",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "decision tree properties vs accuracy",
+    "fact_text": "According to Hastie et al., decision tree learning is close to an 'off-the-shelf procedure for data mining' because it is invariant under scaling and other transformations of feature values, is robust to inclusion of irrelevant features, and produces inspectable models -- but decision trees are seldom accurate.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "09_random_forest_en-011",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "bias-variance of deep trees",
+    "fact_text": "Trees that are grown very deep tend to learn highly irregular patterns and overfit their training sets, meaning they have low bias but very high variance.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "09_random_forest_en-012",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "bagging rationale and tradeoff",
+    "fact_text": "Random forests average multiple deep decision trees trained on different parts of the same training set to reduce variance, at the expense of a small increase in bias and some loss of interpretability.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "09_random_forest_en-013",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "bagging algorithm",
+    "fact_text": "The bagging training algorithm for random forests repeatedly, B times, samples with replacement n training examples from the training set to form a sample Xb, Yb, and trains a classification or regression tree on each sample.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "09_random_forest_en-014",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Random Forest",
+    "subtopic": "prediction aggregation procedure",
+    "fact_text": "After training, predictions for unseen samples are made by averaging the predictions of all the individual regression trees, or by taking the plurality vote in the case of classification trees.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "09_random_forest_en-015",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Random Forest",
+    "subtopic": "bootstrap variance reduction",
+    "fact_text": "The bootstrapping procedure leads to better model performance because it decreases the variance of the model without increasing the bias, so the average of many trees is not highly sensitive to noise in the training set as long as the trees are not correlated.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "09_random_forest_en-016",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Random Forest",
+    "subtopic": "de-correlation via bootstrap sampling",
+    "fact_text": "Simply training many trees on a single training set would give strongly correlated trees, or even the same tree many times if the training algorithm is deterministic; bootstrap sampling de-correlates the trees by showing them different training sets.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "09_random_forest_en-017",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Random Forest",
+    "subtopic": "number of trees hyperparameter",
+    "fact_text": "The number B of samples (equivalently, of trees) is a free parameter; typically a few hundred to several thousand trees are used, depending on the size and nature of the training set, and B can be optimized using cross-validation or by observing the out-of-bag error.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "09_random_forest_en-018",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Random Forest",
+    "subtopic": "feature bagging",
+    "fact_text": "Random forests also use 'feature bagging' -- a modified tree learning algorithm that selects a random subset of the features at each candidate split -- because if one or a few features are very strong predictors, ordinary bootstrap samples would select those features in many of the B trees, causing the trees to become correlated.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "09_random_forest_en-019",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Random Forest",
+    "subtopic": "default hyperparameters for regression",
+    "fact_text": "For regression problems, the inventors recommend a default minimum node size of 5, though in practice the best values for such parameters should be tuned on a case-by-case basis for every problem.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "09_random_forest_en-020",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Random Forest",
+    "subtopic": "ExtraTrees vs ordinary random forests",
+    "fact_text": "Extremely randomized trees (ExtraTrees) are an ensemble of individual trees like ordinary random forests but differ in two main ways: each tree is trained using the whole learning sample rather than a bootstrap sample, and the top-down splitting is randomized by choosing a number of random cut-points per feature instead of computing the locally optimal cut-point.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "09_random_forest_en-021",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Random Forest",
+    "subtopic": "ExtraTrees split selection procedure",
+    "fact_text": "In ExtraTrees, cut-point values for a feature are chosen from a uniform distribution within the feature's empirical range in the tree's training set, rather than computing the locally optimal cut-point (based on, e.g., information gain or Gini impurity); among all the randomly chosen splits, the split yielding the highest score is chosen to split the node.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "09_random_forest_en-022",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Random Forest",
+    "subtopic": "high-dimensional data limitation",
+    "fact_text": "The basic random forest procedure may not work well in situations where there are a large number of features but only a small proportion of these features are informative with respect to sample classification.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "09_random_forest_en-023",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Random Forest",
+    "subtopic": "methods for high-dimensional data",
+    "fact_text": "Methods for addressing random forests' difficulty with high-dimensional, mostly uninformative feature sets include prefiltering (eliminating features that are mostly just noise), Enriched Random Forest (using weighted random sampling that gives greater weight to more informative features), and Tree-weighted random forest (giving more weight to more accurate trees).",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "09_random_forest_en-024",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Random Forest",
+    "subtopic": "permutation importance procedure",
+    "fact_text": "Permutation importance is computed by training a random forest and recording the out-of-bag error for each data point averaged over the forest, then permuting a feature's values in the out-of-bag samples, recomputing the out-of-bag error, and averaging the difference in error before and after the permutation over all trees, normalized by the standard deviation of the differences.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "09_random_forest_en-025",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Random Forest",
+    "subtopic": "permutation importance biases",
+    "fact_text": "Permutation importance has drawbacks: when features have different numbers of values, random forests favor features with more values; if the data contain groups of correlated features of similar relevance, smaller groups are favored over large groups; and if there are collinear features, the procedure may fail to identify important features unless groups of correlated features are permuted together.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "09_random_forest_en-026",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Random Forest",
+    "subtopic": "mean decrease in impurity",
+    "fact_text": "Mean decrease in impurity feature importance considers as important the variables which decrease a lot the impurity during splitting; it is described in Breiman's book Classification and Regression Trees and is the default implementation in scikit-learn and R, with normalized importance obtained so the sum of normalized feature importances across all features is 1.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "09_random_forest_en-027",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Random Forest",
+    "subtopic": "impurity measures",
+    "fact_text": "Statistics commonly used as an impurity measure for samples falling in a node include entropy, the Gini coefficient, and mean squared error.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "09_random_forest_en-028",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Random Forest",
+    "subtopic": "scikit-learn MDI limitations",
+    "fact_text": "The scikit-learn default mean-decrease-in-impurity feature importance implementation can report misleading feature importance because it favors high cardinality features and uses training statistics, so it does not reflect a feature's usefulness for predictions on a test set.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "09_random_forest_en-029",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Random Forest",
+    "subtopic": "relationship to k-nearest neighbors",
+    "fact_text": "A relationship between random forests and the k-nearest neighbor algorithm (k-NN) was pointed out by Lin and Jeon in 2002; both can be viewed as weighted neighborhoods schemes that make predictions for new points by looking at a weight function over the training set, and since a forest averages the predictions of a set of trees with individual weight functions, the whole forest is again a weighted neighborhood scheme.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "09_random_forest_en-030",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Random Forest",
+    "subtopic": "random forest dissimilarity / unsupervised learning",
+    "fact_text": "Random forest predictors naturally lead to a dissimilarity measure among observations; this can be extended to define dissimilarity between unlabeled data by training a forest to distinguish original observed data from synthetic data drawn from a reference distribution, and this random forest dissimilarity has been used, for example, to find clusters of patients based on tissue marker data.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "09_random_forest_en-031",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Random Forest",
+    "subtopic": "linear models as base estimators",
+    "fact_text": "Instead of decision trees, linear models such as multinomial logistic regression and naive Bayes classifiers have been proposed and evaluated as base estimators in random forests; in cases where the relationship between the predictors and the target variable is linear, these base learners may have accuracy equal to that of the ensemble learner.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "09_random_forest_en-032",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Random Forest",
+    "subtopic": "kernel random forest connection",
+    "fact_text": "Kernel random forests (KeRF) establish a connection between random forests and kernel methods: by slightly modifying their definition, random forests can be rewritten as kernel methods, which are more interpretable and easier to analyze.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "09_random_forest_en-033",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Random Forest",
+    "subtopic": "centered forest and uniform forest",
+    "fact_text": "Centered forest and uniform forest are two simplified models of Breiman's original random forest: centered forest uniformly selects an attribute among all attributes and splits at the center of the cell along that attribute until a fully binary tree of a given level is built, while uniform forest uniformly selects a feature and splits at a point uniformly drawn on the side of the cell along that feature.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "09_random_forest_en-034",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Random Forest",
+    "subtopic": "interpretability tradeoff",
+    "fact_text": "While random forests often achieve higher accuracy than a single decision tree, they sacrifice the intrinsic interpretability of decision trees, because following the path a single decision tree takes to make its decision is trivial, but following the paths of tens or hundreds of trees is much harder.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "09_random_forest_en-035",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Random Forest",
+    "subtopic": "born-again decision tree compression",
+    "fact_text": "To achieve both performance and interpretability, some model compression techniques allow transforming a random forest into a minimal 'born-again' decision tree that faithfully reproduces the same decision function.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "09_random_forest_en-036",
+    "document_id": "09_random_forest_en",
+    "document_title": "Random forest",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Random Forest",
+    "subtopic": "limitation with correlated features",
+    "fact_text": "Another limitation of random forests is that if features are linearly correlated with the target, the random forest may not enhance the accuracy of the base learner, and likewise in problems with multiple categorical variables.",
+    "fact_type": "exception"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-001",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "definition",
+    "fact_text": "Gradient descent is a method for unconstrained mathematical optimization; it is a first-order iterative algorithm for minimizing a differentiable multivariate function.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-002",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "steepest descent direction",
+    "fact_text": "The idea of gradient descent is to take repeated steps in the direction opposite to the gradient (or approximate gradient) of the function at the current point, because this is the direction of steepest descent.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-003",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "gradient ascent",
+    "fact_text": "Stepping in the direction of the gradient, rather than opposite to it, leads to a trajectory that maximizes the function; this procedure is known as gradient ascent.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-004",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "distinction from local search",
+    "fact_text": "Gradient descent should not be confused with local search algorithms, although both are iterative methods for optimization.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-005",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "use in machine learning",
+    "fact_text": "Gradient descent is particularly useful in machine learning and artificial intelligence for minimizing the cost or loss function.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-006",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "history - Cauchy",
+    "fact_text": "Gradient descent is generally attributed to Augustin-Louis Cauchy, who first suggested it in 1847.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-007",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "history - Hadamard",
+    "fact_text": "Jacques Hadamard independently proposed a similar method to gradient descent in 1907.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-008",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "history - Curry",
+    "fact_text": "The convergence properties of gradient descent for non-linear optimization problems were first studied by Haskell Curry in 1944.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-009",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "stochastic gradient descent",
+    "fact_text": "Stochastic gradient descent, a simple extension of gradient descent, serves as the most basic algorithm used for training most deep networks today.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-010",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Gradient Descent",
+    "subtopic": "negative gradient observation",
+    "fact_text": "Gradient descent is based on the observation that if a multi-variable function is defined and differentiable in a neighborhood of a point, then the function decreases fastest if one moves from that point in the direction of the negative gradient of the function at that point.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-011",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Gradient Descent",
+    "subtopic": "convergence guarantee conditions",
+    "fact_text": "It is possible to guarantee convergence to a local minimum under certain assumptions on the function, such as convexity and Lipschitz continuity, combined with particular choices of step size, including a sequence as in the Barzilai-Borwein method or a sequence satisfying the Wolfe conditions found via line search.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-012",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Gradient Descent",
+    "subtopic": "convexity and global minima",
+    "fact_text": "When the function being minimized is convex, all local minima are also global minima, so in this case gradient descent can converge to the global solution.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-013",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Gradient Descent",
+    "subtopic": "mountain-fog analogy",
+    "fact_text": "The basic intuition behind gradient descent can be illustrated by a hypothetical scenario of people stuck on a foggy mountain who use the steepness of the hill at their current position, measured with a sophisticated instrument analogous to differentiation, to proceed in the direction of steepest descent, taking measurements at intervals analogous to the step size.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-014",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Gradient Descent",
+    "subtopic": "step size tradeoff",
+    "fact_text": "Using a step size that is too small would slow convergence, while a step size that is too large would lead to overshoot and divergence, making the choice of a good step size an important practical problem.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-015",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Gradient Descent",
+    "subtopic": "descent direction requirement",
+    "fact_text": "In choosing a step size and descent direction, the update direction should point downhill; the amount by which the function can be guaranteed to decrease depends on a trade-off between the angle of the descent direction relative to the negative gradient and how quickly the gradient changes along the descent direction.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-016",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Gradient Descent",
+    "subtopic": "line search and backtracking",
+    "fact_text": "One way to choose a step size is to set the descent direction to the negative gradient and use line search to find a suitable step size, such as one satisfying the Wolfe conditions; a more economical alternative with good theoretical guarantees and experimental results is backtracking line search.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-017",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Gradient Descent",
+    "subtopic": "approaches to choosing step and direction",
+    "fact_text": "Approaches for choosing the step size and descent direction include using the Hessian to estimate curvature (if the function is twice-differentiable), using the function's Lipschitz constant to bound curvature, or building a custom model of the function; under stronger assumptions such as convexity, more advanced techniques may be possible.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-018",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Gradient Descent",
+    "subtopic": "solving linear systems",
+    "fact_text": "Gradient descent can be used to solve a system of linear equations by reformulating it as a quadratic minimization problem; if the system matrix is real symmetric and positive-definite, an objective function is defined as a quadratic function whose minimization is equivalent to solving the linear system.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-019",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Gradient Descent",
+    "subtopic": "closed-form line search for quadratics",
+    "fact_text": "For quadratic functions, the line search minimization that finds the locally optimal step size on every iteration can be performed analytically, and explicit formulas for the locally optimal step size are known.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-020",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Gradient Descent",
+    "subtopic": "comparison with conjugate gradient",
+    "fact_text": "Gradient descent (steepest descent) is rarely used for solving linear equations, with the conjugate gradient method being one of the most popular alternatives.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-021",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Gradient Descent",
+    "subtopic": "condition number and convergence speed",
+    "fact_text": "The number of gradient descent iterations needed is commonly proportional to the spectral condition number of the system matrix (the ratio of the maximum to minimum eigenvalues of the matrix), while the convergence of the conjugate gradient method is typically determined by a square root of the condition number, making it much faster; both methods can benefit from preconditioning, though gradient descent may require fewer assumptions on the preconditioner.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-022",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Gradient Descent",
+    "subtopic": "zig-zag path cause",
+    "fact_text": "Because each steepest-descent step is taken in the steepest direction, the steps alternate between directions aligned with the extreme axes of elongated level sets; when the condition number of the system matrix is large, this produces a characteristic zig-zag path, and the poor conditioning of the matrix is the primary cause of the slow convergence.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-023",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Gradient Descent",
+    "subtopic": "nonlinear system worked example",
+    "fact_text": "Gradient descent can be used to solve a system of nonlinear equations; in a worked example with three unknown variables, x1, x2, and x3, a Jacobian matrix is computed at an initial guess and used to take one iteration step of gradient descent.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-024",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Gradient Descent",
+    "subtopic": "arbitrary and infinite dimensions",
+    "fact_text": "Gradient descent works in spaces of any number of dimensions, even infinite-dimensional ones; in the infinite-dimensional case, the search space is typically a function space, and the Frechet derivative of the functional to be minimized is calculated to determine the descent direction.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-025",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Gradient Descent",
+    "subtopic": "curvature and preconditioning",
+    "fact_text": "Gradient descent can take many iterations to compute a local minimum with a required accuracy if the curvature in different directions is very different for the given function; preconditioning, which changes the geometry of the space to shape the function's level sets like concentric circles, cures this slow convergence but can be computationally expensive to construct and apply.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-026",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Gradient Descent",
+    "subtopic": "Newton's method alternatives",
+    "fact_text": "Methods based on Newton's method and inversion of the Hessian using conjugate gradient techniques can be better alternatives to gradient descent, generally converging in fewer iterations though the cost of each iteration is higher; for extremely large problems where computer-memory issues dominate, a limited-memory method such as L-BFGS should be used instead of BFGS or steepest descent.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-027",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Gradient Descent",
+    "subtopic": "not a local search algorithm",
+    "fact_text": "Although it is sometimes possible to substitute gradient descent for a local search algorithm, gradient descent is not in the same family: it is an iterative method for local optimization that relies on an objective function's gradient rather than an explicit exploration of a solution space.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-028",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Gradient Descent",
+    "subtopic": "relation to Euler's method",
+    "fact_text": "Gradient descent can be viewed as applying Euler's method for solving ordinary differential equations to a gradient flow.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-029",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "saddle points and zig-zagging",
+    "fact_text": "Gradient descent can converge to a local minimum and slow down in the neighborhood of a saddle point; even for unconstrained quadratic minimization, gradient descent develops a zig-zag pattern of subsequent iterates as iterations progress, resulting in slow convergence.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-030",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "Nesterov's fast gradient method",
+    "fact_text": "Yurii Nesterov proposed a modification that enables faster convergence for convex problems; for unconstrained smooth problems this is called the fast gradient method (FGM) or accelerated gradient method (AGM), and using the Nesterov acceleration technique reduces the error in the objective value compared to standard gradient descent, with the resulting decrease rate known to be optimal for first-order optimization methods.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-031",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "optimized gradient method",
+    "fact_text": "The optimized gradient method (OGM) reduces the constant factor of the optimal first-order convergence rate by a factor of two and is an optimal first-order method for large-scale problems.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-032",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "momentum / heavy ball method",
+    "fact_text": "The momentum or heavy ball method, used to break the zig-zag pattern of gradient descent, uses a momentum term in analogy to a heavy ball sliding on the surface of the function's values; gradient descent with momentum remembers the solution update at each iteration and determines the next update as a linear combination of the gradient and the previous update.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-033",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "heavy ball convergence rate",
+    "fact_text": "For unconstrained quadratic minimization, the theoretical convergence rate bound of the heavy ball method is asymptotically the same as that for the optimal conjugate gradient method.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-034",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Gradient Descent",
+    "subtopic": "constrained extension via projection",
+    "fact_text": "Gradient descent can be extended to handle constraints by including a projection onto the set of constraints, a method that is only feasible when the projection is efficiently computable on a computer and is a specific case of the forward-backward algorithm for monotone inclusions.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-035",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Gradient Descent",
+    "subtopic": "relation to mirror descent",
+    "fact_text": "Gradient descent is a special case of mirror descent using the squared Euclidean distance as the given Bregman divergence.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "10_gradient_descent_en-036",
+    "document_id": "10_gradient_descent_en",
+    "document_title": "Gradient descent",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Gradient Descent",
+    "subtopic": "convergence rate assumptions",
+    "fact_text": "If the objective function is assumed to be strongly convex and Lipschitz smooth, gradient descent converges linearly with a fixed step size; looser assumptions lead to either weaker convergence guarantees or require a more sophisticated step size selection.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-001",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision definition",
+    "fact_text": "Precision (also called positive predictive value) is the fraction of relevant instances among the retrieved instances.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-002",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Precision and Recall",
+    "subtopic": "Recall definition",
+    "fact_text": "Recall (also known as sensitivity) is the fraction of relevant instances that were retrieved.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-003",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Precision and Recall",
+    "subtopic": "Worked example",
+    "fact_text": "In a picture containing ten cats and twelve dogs, a program that identifies eight dogs (of which five are actually dogs) has precision 5/8 (true positives / selected elements) and recall 5/12 (true positives / relevant elements); the three misidentified cats are false positives and the seven missed dogs are false negatives.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-004",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Precision and Recall",
+    "subtopic": "Relation to Type I/II errors",
+    "fact_text": "In hypothesis-testing terms, absence of Type I and Type II errors (perfect specificity and sensitivity) corresponds respectively to perfect precision (no false positives) and perfect recall (no false negatives); recall is simply the complement of the Type II error rate (one minus the Type II error rate).",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-005",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Precision and Recall",
+    "subtopic": "Quality vs quantity interpretation",
+    "fact_text": "Precision can be seen as a measure of quality, and recall as a measure of quantity: higher precision means an algorithm returns more relevant results than irrelevant ones, while high recall means it returns most of the relevant results (whether or not irrelevant ones are also returned).",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-006",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Precision and Recall",
+    "subtopic": "Classification precision/recall formulas",
+    "fact_text": "In a classification task, precision for a class is the number of true positives divided by the total number of elements labelled as belonging to the positive class (true positives plus false positives); recall is the number of true positives divided by the total number of elements that actually belong to the positive class (true positives plus false negatives).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-007",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Precision and Recall",
+    "subtopic": "Limitations of isolated metrics",
+    "fact_text": "Precision and recall are not particularly useful when used in isolation: it is possible to have perfect recall by simply retrieving every item, and it is possible to achieve perfect precision by selecting only a very small number of extremely likely items.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-008",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Precision and Recall",
+    "subtopic": "Recall-favoring design example",
+    "fact_text": "A smoke detector is generally designed to commit many Type I errors (alerting when there is no danger) because the cost of a Type II error (failing to sound an alarm during a major fire) is prohibitively high, so smoke detectors are designed favoring recall over precision.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-009",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision-favoring design example",
+    "fact_text": "Blackstone's ratio, \"It is better that ten guilty persons escape than that one innocent suffer,\" emphasizes the cost of a Type I error (convicting an innocent person); accordingly the criminal justice system is geared toward precision, even at the cost of losses in recall (letting more guilty people go free).",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-010",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision-recall tradeoff example",
+    "fact_text": "A brain surgeon removing a tumor illustrates the tradeoff: being more liberal in the brain tissue removed increases recall (more cancer cells extracted) but reduces precision (more healthy cells removed), while being more conservative increases precision but reduces recall.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-011",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision-recall curve",
+    "fact_text": "A precision-recall curve plots precision as a function of recall; usually precision will decrease as recall increases.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-012",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Precision and Recall",
+    "subtopic": "F-measure and MCC",
+    "fact_text": "Examples of measures that combine precision and recall are the F-measure (the weighted harmonic mean of precision and recall) and the Matthews correlation coefficient, which is a geometric mean of the chance-corrected variants Informedness (DeltaP') and Markedness (DeltaP).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-013",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Confusion matrix: TPR/FNR",
+    "fact_text": "True positive rate (TPR), also called recall or sensitivity, equals TP/P (true positives divided by real positives), which equals 1 minus the false negative rate (FNR); FNR equals FN/P, which equals 1 minus TPR.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-014",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Confusion matrix: FPR/TNR",
+    "fact_text": "False positive rate (FPR), the Type I error rate, equals FP/N (false positives divided by real negatives), which equals 1 minus the true negative rate (TNR, specificity); TNR equals TN/N, which equals 1 minus FPR.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-015",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Confusion matrix: PPV formula",
+    "fact_text": "Positive predictive value (PPV), i.e. precision, equals TP/(TP+FP), which equals 1 minus the false discovery rate (FDR); FDR equals FP/(TP+FP), which equals 1 minus PPV.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-016",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Confusion matrix: Accuracy formula",
+    "fact_text": "Accuracy (ACC) equals (TP+TN)/(P+N), i.e. the sum of true positives and true negatives divided by the total population.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-017",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "F1 score formula",
+    "fact_text": "The F1 score equals 2 x PPV x TPR / (PPV + TPR), which is equivalent to 2TP / (2TP + FP + FN).",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-018",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Balanced accuracy formula",
+    "fact_text": "Balanced accuracy (BA) equals (TPR + TNR) / 2, the average of the true positive rate and true negative rate.",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-019",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Precision and Recall",
+    "subtopic": "Matthews correlation coefficient formula",
+    "fact_text": "The phi or Matthews correlation coefficient (MCC) equals the square root of (TPR x TNR x PPV x NPV) minus the square root of (FNR x FPR x FOR x FDR).",
+    "fact_type": "table_value"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-020",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Precision and Recall",
+    "subtopic": "Probabilistic interpretation",
+    "fact_text": "Precision and recall can be interpreted as (estimated) conditional probabilities, where precision and recall are connected by Bayes' theorem.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-021",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Precision and Recall",
+    "subtopic": "Choosing precision vs recall by cost",
+    "fact_text": "It is useful to value precision over recall when the cost of a false positive is high (e.g., in medical diagnosis, a false positive can lead to unnecessary treatment and expense), and to value recall over precision when the cost of a false negative is high (e.g., in fraud detection, a missed fraudulent transaction causes significant financial loss).",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-022",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Precision and Recall",
+    "subtopic": "Accuracy as weighted average of sensitivity/specificity",
+    "fact_text": "In machine learning terminology, sensitivity is equivalent to the recall of the positive class and specificity is equivalent to the recall of the negative class; accuracy can be expressed as the weighted average of sensitivity and specificity, weighted by the condition's prevalence.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-023",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision's dependence on class ratio",
+    "fact_text": "The true positive rate (recall) depends only on positive cases and is not affected by the class ratio r, but precision has an explicit dependence on r: starting from balanced classes and gradually decreasing r, the corresponding precision decreases because the denominator increases.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-024",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Precision and Recall",
+    "subtopic": "Accuracy depends on prevalence",
+    "fact_text": "A method with 90% precision and 50% recall would yield an accuracy of either 83% or 50%, depending on whether the prevalence in the dataset is 30% or 90%.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-025",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Precision and Recall",
+    "subtopic": "Accuracy pitfall on imbalanced data",
+    "fact_text": "If a sample has 95 negative and 5 positive values, classifying all values as negative (100% recall and 0% precision) would give a 0.95 accuracy score.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-026",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Precision and Recall",
+    "subtopic": "Balanced accuracy example",
+    "fact_text": "For the example with 95 negative and 5 positive samples, classifying all as negative gives a 0.5 balanced accuracy score (the maximum bACC score is one), equivalent to the expected value of a random guess in a balanced dataset.",
+    "fact_type": "numerical_fact"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-027",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Precision and Recall",
+    "subtopic": "Predicted positive condition rate",
+    "fact_text": "The predicted positive condition rate (PPCR) identifies the percentage of the total population that is flagged; for example, a search engine that returns 30 results out of 1,000,000 documents has a PPCR of 0.003%.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-028",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Precision and Recall",
+    "subtopic": "Precision-recall vs ROC plots",
+    "fact_text": "According to Saito and Rehmsmeier, precision-recall plots are more informative than ROC plots when evaluating binary classifiers on imbalanced data, since ROC plots may be visually deceptive about classification reliability in such scenarios.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-029",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Precision and Recall",
+    "subtopic": "F-beta measure variants",
+    "fact_text": "The F-measure is a special case of the general F-beta measure for non-negative real values of beta; the F2 measure weights recall higher than precision, while the F0.5 measure puts more emphasis on precision than recall.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "11_precision_and_recall_en-030",
+    "document_id": "11_precision_and_recall_en",
+    "document_title": "Precision and recall",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Precision and Recall",
+    "subtopic": "Multi-class precision and recall",
+    "fact_text": "For classification problems with more than two classes, precision for a given class is obtained by dividing the number of true positives by the classifier's bias toward that class (how many times it predicted the class), and recall is obtained by dividing true positives by the class's prevalence (how many times the class occurs in the data); class-wise scores can be combined into an overall multi-class evaluation score such as macro F1.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-001",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Reinforcement Learning",
+    "subtopic": "RL definition",
+    "fact_text": "In machine learning and optimal control, reinforcement learning (RL), also known as approximate dynamic programming, is concerned with how an intelligent agent should take actions in a dynamic environment in order to maximize a reward signal.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-002",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Three ML paradigms",
+    "fact_text": "Reinforcement learning is one of the three basic machine learning paradigms, alongside supervised learning and unsupervised learning.",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-003",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 0 | Trang 1",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Exploration-exploitation dilemma",
+    "fact_text": "To learn to maximize rewards, the agent makes decisions between trying new actions to learn more about the environment (exploration) or using current knowledge to take the best action (exploitation); the search for the optimal balance between these two strategies is known as the exploration-exploitation dilemma.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-004",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Transition probability and reward",
+    "fact_text": "In the Markov decision process framework of RL, the environment defines a transition probability (at a given time) from one state to another under a chosen action, and an immediate reward associated with that transition.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-005",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Goal of RL",
+    "fact_text": "The purpose of reinforcement learning is for the agent to learn an optimal (or near-optimal) policy that maximizes the reward function or other user-provided reinforcement signal that accumulates from immediate rewards.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-006",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Full vs partial observability",
+    "fact_text": "If the agent directly observes the current environmental state, the problem has full observability; if the agent only has access to a subset of states, or the observed states are corrupted by noise, the agent has partial observability and the problem must be formulated as a partially observable Markov decision process (POMDP).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-007",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 1 | Trang 2",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Applications",
+    "fact_text": "Reinforcement learning has been applied successfully to various problems, including energy storage, robot control, photovoltaic generators, backgammon, checkers, Go (AlphaGo), and autonomous driving systems.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-008",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Exploration research",
+    "fact_text": "The trade-off between exploration and exploitation has been most thoroughly studied through the multi-armed bandit problem and, for finite state space Markov decision processes, in Burnetas and Katehakis (1997).",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-009",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Epsilon-greedy exploration",
+    "fact_text": "In epsilon-greedy exploration, epsilon is a parameter controlling exploration vs. exploitation: with probability 1-epsilon, exploitation is chosen and the agent picks the action believed to have the best long-term effect; with probability epsilon, exploration is chosen and the action is picked uniformly at random. Epsilon is usually fixed but can be adjusted on a schedule or adaptively.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-010",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 2 | Trang 3",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Policy definition",
+    "fact_text": "The agent's action selection is modeled as a policy: a map giving the probability of taking an action when in a given state; there are also deterministic policies, which denote the specific action that should be played at a given state.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-011",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Reinforcement Learning",
+    "subtopic": "State-value function",
+    "fact_text": "The state-value function is defined as the expected discounted return starting from a given state and successively following a policy; roughly speaking, it estimates how good it is to be in a given state.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-012",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Discounted return",
+    "fact_text": "The discounted return is defined as the sum of future discounted rewards, where the discount rate is less than 1, so that rewards in the distant future are weighted less than rewards in the immediate future.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-013",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 3 | Trang 4",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Brute-force policy search",
+    "fact_text": "The brute force approach to finding an optimal policy samples returns for each possible policy and chooses the one with the largest expected discounted return; this is limited because the number of policies can be large or infinite, and the variance of the returns may be large, requiring many samples to accurately estimate each policy's discounted return.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-014",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Action-value function",
+    "fact_text": "Given a state, an action, and a policy, the action-value of that pair is defined as the expected discounted return of first taking that action in that state and following the policy thereafter; the action-value function of an optimal policy is called the optimal action-value function, commonly denoted Q*.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-015",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Acting optimally via Q*",
+    "fact_text": "If a policy is optimal, one acts optimally by choosing the action with the highest action-value at each state; the knowledge of the optimal action-value function alone suffices to know how to act optimally.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-016",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 4 | Trang 5",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Value iteration and policy iteration",
+    "fact_text": "Assuming full knowledge of the Markov decision process, the two basic approaches to compute the optimal action-value function are value iteration and policy iteration; both algorithms compute a sequence of functions that converge to the optimal action-value function.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-017",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Monte Carlo methods",
+    "fact_text": "Monte Carlo methods are used to solve reinforcement learning problems by averaging sample returns, relying solely on actual or simulated experience rather than requiring full knowledge of the environment's dynamics.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-018",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Episodic tasks",
+    "fact_text": "Monte Carlo methods apply to episodic tasks, where experience is divided into episodes that eventually terminate; policy and value function updates occur only after the completion of an episode, making these methods incremental on an episode-by-episode basis rather than step-by-step.",
+    "fact_type": "condition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-019",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 5 | Trang 6",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Temporal difference methods",
+    "fact_text": "A better solution when returns have high variance is Sutton's temporal difference (TD) methods, based on the recursive Bellman equation; TD computation can be incremental (memory changed and the transition thrown away after each transition) or batch (transitions batched and estimates computed once), with batch methods such as the least-squares temporal difference method potentially using sample information better.",
+    "fact_type": "relationship"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-020",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Q-learning and Deep Q-learning",
+    "fact_text": "Value iteration can be used as a starting point, giving rise to the Q-learning algorithm and its many variants, including Deep Q-learning methods where a neural network is used to represent Q.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-021",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Policy gradient methods",
+    "fact_text": "Gradient-based (policy gradient) methods start with a mapping from a parameter space to the space of policies and use gradient ascent on a performance function via a noisy gradient estimate; Williams's REINFORCE method, also known as the likelihood ratio method in simulation-based optimization, is one such algorithm.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-022",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 6 | Trang 7",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Gradient-free policy search",
+    "fact_text": "A large class of direct policy search methods avoids relying on gradient information, including simulated annealing, cross-entropy search, and evolutionary computation; many gradient-free methods can, in theory and in the limit, achieve a global optimum.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-023",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Model-based methods (Dyna)",
+    "fact_text": "Model-based methods combine value/policy-search algorithms with a learned model of the Markov decision process's transition probabilities; for instance, the Dyna algorithm learns a model from experience and uses it to provide more modelled transitions for a value function, in addition to the real transitions.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-024",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Model-based vs model-free",
+    "fact_text": "Model-based methods can be more computationally intensive than model-free approaches, and their utility can be limited by the extent to which the Markov decision process can be learnt.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-025",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 7 | Trang 8",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Partially supervised RL",
+    "fact_text": "The costly exploration needed to learn an optimal policy can be reduced if some supervised data is available, for instance by learning a crude control policy and using it to initialize the Q table intelligently instead of with zeros.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-026",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Dopamine and TD learning",
+    "fact_text": "TD learning has been used for modeling dopamine-based learning in the brain, where dopaminergic projections from the substantia nigra to the basal ganglia function as the prediction error.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-027",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Reinforcement Learning",
+    "subtopic": "RL research topics",
+    "fact_text": "RL research topics include actor-critic architecture, partially supervised RL, human feedback, modular and hierarchical reinforcement learning, multiagent/distributed reinforcement learning, transfer learning, intrinsic motivation, and sample-based planning such as Monte Carlo tree search.",
+    "fact_type": "hierarchy"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-028",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 8 | Trang 9",
+    "topic": "Reinforcement Learning",
+    "subtopic": "On-policy/off-policy, discrete/continuous spaces",
+    "fact_text": "An algorithm can be on-policy (performing policy updates using trajectories sampled via the current policy) or off-policy; the action space may be discrete (e.g. going up, left, right, down, stay) or continuous, and the state space may likewise be discrete or continuous.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-029",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Q-learning vs SARSA",
+    "fact_text": "Q-learning and SARSA are both discrete-action, discrete-state algorithms operating on an action-value; Q-learning is off-policy while SARSA (state-action-reward-state-action) is on-policy.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-030",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "DQN algorithm",
+    "fact_text": "DQN (Deep Q Network) is an off-policy algorithm with a discrete action space and continuous state space, using an action-value operator.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-031",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "DDPG algorithm",
+    "fact_text": "DDPG (Deep Deterministic Policy Gradient) is an off-policy algorithm with continuous action and state spaces, using an action-value operator.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-032",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "A3C, TRPO, PPO vs TD3, SAC",
+    "fact_text": "A3C (Asynchronous Advantage Actor-Critic), TRPO (Trust Region Policy Optimization), and PPO (Proximal Policy Optimization) are on-policy algorithms with continuous state spaces using an advantage operator (action-value minus state-value), while TD3 (Twin Delayed DDPG) and SAC (Soft Actor-Critic) are off-policy algorithms with continuous action and state spaces.",
+    "fact_type": "comparison"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-033",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Deep reinforcement learning",
+    "fact_text": "Deep reinforcement learning extends reinforcement learning by using a deep neural network and without explicitly designing the state space; work on learning Atari games by Google DeepMind increased attention to deep or end-to-end reinforcement learning.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-034",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 9 | Trang 10",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Adversarial deep RL",
+    "fact_text": "Adversarial deep reinforcement learning is an active research area focusing on vulnerabilities of learned policies; studies initially showed RL policies are susceptible to imperceptible adversarial manipulations, and proposed defenses have since been shown to not fully address current vulnerabilities.",
+    "fact_type": "concept"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-035",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Inverse reinforcement learning",
+    "fact_text": "In inverse reinforcement learning (IRL), no reward function is given; instead the reward function is inferred from an observed behavior from an expert, with the idea of mimicking behavior that is often optimal or close to optimal.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-036",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "Reinforcement Learning",
+    "subtopic": "MaxEnt IRL and RU-IRL",
+    "fact_text": "Maximum entropy inverse reinforcement learning (MaxEnt IRL) estimates the parameters of a linear model of the reward function by maximizing the entropy of the probability distribution of observed trajectories, subject to constraints related to matching expected feature counts; MaxEnt IRL has been shown to be a particular case of a more general framework named random utility inverse reinforcement learning (RU-IRL).",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-037",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Multi-objective reinforcement learning",
+    "fact_text": "Multi-objective reinforcement learning (MORL) is a form of reinforcement learning concerned with conflicting alternatives; it is distinct from multi-objective optimization in that it is concerned with agents acting in environments.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-038",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 10 | Trang 11",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Safe and risk-averse RL",
+    "fact_text": "Safe reinforcement learning (SRL) is the process of learning policies that maximize the expectation of the return while ensuring reasonable system performance and/or respecting safety constraints during learning and/or deployment; an alternative, risk-averse reinforcement learning, optimizes a risk measure of the return such as the conditional value at risk (CVaR) instead of the expected return, which also increases robustness to model uncertainties.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-039",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 11 | Trang 12",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Self-reinforcement learning",
+    "fact_text": "Self-reinforcement learning (self-learning) does not use the concept of an immediate external reward after a transition; it only uses internal self-reinforcement provided by a mechanism of feelings and emotions, and the learning equation includes only the state evaluation, not the immediate reward.",
+    "fact_type": "definition"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-040",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 11 | Trang 12",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Crossbar Adaptive Array (CAA)",
+    "fact_text": "Self-reinforcement (self-learning) was introduced in 1982 along with a neural network capable of self-reinforcement learning named Crossbar Adaptive Array (CAA), which computes, in a crossbar fashion, both decisions about actions and emotions (feelings) about consequence states.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-041",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 11 | Trang 12",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Statistical comparison of RL algorithms",
+    "fact_text": "To statistically compare RL algorithms, an agent is trained for each algorithm as closely as possible to the others; after training, the agents are run on a sample of test episodes and their episodic returns are compared using standard statistical tools for hypothesis testing, such as the T-test and permutation test.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-042",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 12 | Trang 13",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Sample inefficiency",
+    "fact_text": "OpenAI's Dota-playing bot utilized thousands of years of simulated gameplay to achieve human-level performance, illustrating RL's high sample inefficiency; techniques like experience replay and curriculum learning have been proposed to reduce this but add complexity and are not always sufficient for real-world applications.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-043",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 12 | Trang 13",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Generalization and transferability",
+    "fact_text": "RL agents trained in specific environments often struggle to generalize their learned policies to new, unseen scenarios, which is a major setback preventing application of RL to dynamic real-world environments where adaptability is crucial.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-044",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 12 | Trang 13",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Bias and reward function issues",
+    "fact_text": "Designing appropriate reward functions is critical because poorly designed reward functions can lead to unintended behaviors, and RL systems trained on biased data may perpetuate existing biases and lead to discriminatory or unfair outcomes.",
+    "fact_type": "cause_effect"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-045",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 12 | Trang 13",
+    "topic": "Reinforcement Learning",
+    "subtopic": "RL in NLP",
+    "fact_text": "In natural language processing, RL treats text generation as a sequential decision problem, where the model's policy selects words or utterances as actions and the reward measures properties of the completed output that are difficult to express as a per-token supervised loss; early applications used policy-gradient methods such as REINFORCE to optimize sequence-level metrics including BLEU (machine translation) and ROUGE (text summarization), and to train dialogue systems.",
+    "fact_type": "example"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-046",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 13 | Trang 14",
+    "topic": "Reinforcement Learning",
+    "subtopic": "RLHF procedure",
+    "fact_text": "Reinforcement learning from human feedback (RLHF) trains a reward model on human preference judgments (annotators comparing or ranking model outputs), and the language model is then fine-tuned with a policy-gradient algorithm, commonly proximal policy optimization (PPO), to produce outputs that the reward model scores highly.",
+    "fact_type": "procedure"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-047",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 13 | Trang 14",
+    "topic": "Reinforcement Learning",
+    "subtopic": "InstructGPT and ChatGPT",
+    "fact_text": "OpenAI used RLHF to train InstructGPT, released in January 2022, and ChatGPT, released in November 2022.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-048",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 13 | Trang 14",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Direct Preference Optimization",
+    "fact_text": "Direct Preference Optimization (DPO), published in 2023, fine-tunes the language model on the preference data directly, without a separate reward model or reinforcement learning loop.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-049",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 13 | Trang 14",
+    "topic": "Reinforcement Learning",
+    "subtopic": "OpenAI o1 and DeepSeek-R1",
+    "fact_text": "OpenAI o1, released in 2024, and DeepSeek-R1, released in 2025, were trained with large-scale reinforcement learning using rewards computed automatically from the task (such as checking a mathematical answer against a reference solution or running unit tests on generated code) to produce a chain of thought before answering.",
+    "fact_type": "chronological"
+  },
+  {
+    "fact_id": "12_reinforcement_learning_en-050",
+    "document_id": "12_reinforcement_learning_en",
+    "document_title": "Reinforcement learning",
+    "section": "SECTION 13 | Trang 14",
+    "topic": "Reinforcement Learning",
+    "subtopic": "Emergent reasoning in DeepSeek-R1",
+    "fact_text": "DeepSeek-R1's developers reported that reasoning behaviors such as self-verification and reflection emerged when reinforcement learning was applied directly to a pretrained base model, without a preliminary supervised fine-tuning stage.",
+    "fact_type": "example"
+  }
+]

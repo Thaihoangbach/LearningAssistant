@@ -1,0 +1,88 @@
+=== SECTION 0 | Trang 1 ===
+Dịch máy bằng nơ-ron
+Dịch máy bằng nơ-ron (Neural machine translation: NMT) là một cách tiếp cận dịch máy sử dụng
+mạng nơ-ron nhân tạo lớn để dự đoán chuỗi từ được dịch,bằng cách mô hình hóa toàn bộ các câu văn
+trong một mạng nơ-ron nhân tạo duy nhất.
+Dịch máy nơ-ron sâu là một phần mở rộng của dịch máy bằng nơ-ron. Cả hai đều sử dụng một mạng nơ-
+ron lớn, sự khác biệt là dịch máy nơ-ron sâu sử dụng nhiều lớp nơ-ron thay vì chỉ một lớp nơ-ron như
+dịch máy bằng nơ-ron.[1]
+Dịch máy bằng nơ-ron yêu cầu bộ nhớ ít hơn so với các mô hình dịch máy thống kê truyền thống (SMT).
+Hơn nữa, không giống như các hệ thống dịch thuật thông thường, tất cả các phần của mô hình dịch thuật
+nơ-ron được đào tạo cùng lúc với nhau (từ câu ngôn ngữ này sang câu ngôn ngữ khác) để tối đa hóa hiệu
+suất dịch thuật.[2][3][4]
+Các ứng dụng học tập sâu xuất hiện đầu tiên trong nhận dạng giọng nói vào những năm 1990. Bài báo
+khoa học đầu tiên về việc sử dụng mạng thần kinh trong dịch máy đã xuất hiện vào năm 2014, và đạt
+được rất nhiều tiến bộ trong vài năm sau đó. (Large-vocabulary NMT, ứng dụng để chú thích ảnh,
+Subword-NMT, Multilingual NMT, Multi-Source NMT, Character-dec NMT, Zero-Resource NMT,
+Google, Fully Character-NMT, Zero-Shot NMT in 2017).Năm 2015, sự xuất hiện đầu tiên của hệ thống
+NMT trong cuộc thi dịch máy nguồn mở (OpenMT'15). WMT'15 cũng lần đầu tiên có một ứng cử viên
+NMT; năm tiếp theo, đã có 90% hệ thống NMT trong số những người chiến thắng.[5]
+NMT không sử dụng các cách tiếp cận thống kê dựa trên cụm từ, với các thành phần con được thiết kế
+riêng biệt.[6] Dịch máy bằng nơ-ron (NMT) không phải là một bước lớn của dịch máy thống kê truyền
+thống (SMT). Nguyên lý chính của nó là việc sử dụng các biểu diễn vectơ ("nhúng", "biểu diễn không
+gian liên tục") cho các từ và trạng thái bên trong. Cấu trúc của các mô hình nơ-ron nhìn chung đơn giản
+hơn các mô hình dựa trên cụm từ. Không có mô hình ngôn ngữ, mô hình dịch thuật và mô hình sắp xếp
+lại riêng biệt, mà chỉ có một mô hình chuỗi nơ-ron duy nhất dự đoán từng từ một. Tuy nhiên, chuỗi nơ-
+ron này dựa trên toàn bộ câu nguồn và tạo ra toàn bộ câu kết quả.[7]
+Mô hình NMT sử dụng học tập sâu và học đại diện.
+Tính chất
+Lịch sử
+Hoạt động
+
+=== SECTION 1 | Trang 2 ===
+Mô hình chuỗi từ đầu tiên thường được tạo ra bằng cách sử dụng mạng nơ-ron hồi quy (RNN). Mạng nơ-
+ron hồi quy hai chiều, được gọi là bộ mã hóa (encoder), được sử dụng để mã hóa câu nguồn cho RNN
+thứ hai, được gọi là bộ giải mã (decoder), được sử dụng để dự đoán các từ trong ngôn ngữ đích.[8]
+Mạng nơ-ron tích chập (Convolutional Neural Networks: Convnets) về nguyên tắc có phần tốt hơn cho
+các chuỗi nơ-ron dài liên tục, nhưng ban đầu không được sử dụng do một số điểm yếu, các điểm yếu này
+đã được bù đắp thành công vào năm 2017 bằng cách sử dụng phương pháp tiếp cận dựa trên "sự chú
+ý".[9][10]
+Vào năm 2016, hầu hết các hệ thống MT tốt nhất đã sử dụng mạng nơ-ron.[5] Các dịch vụ dịch thuật của
+Google, Microsoft, Yandex [11] và PROMT [12] hiện sử dụng NMT. Google sử dụng Google Neural
+Machine dịch (GNMT) để ưu tiên cho các phương pháp thống kê trước đó.[13] Microsoft sử dụng một
+công nghệ tương tự cho các bản dịch lời nói của mình (bao gồm Microsoft Translator live và Skype
+Translator).[14] Một hệ thống dịch máy thần kinh nguồn mở, OpenNMT, đã được phát hành bởi nhóm
+Harvard NLP.[15]
+1. "Deep Neural Machine Translation". Omniscien Technologies. Truy cập 2017-11-08.
+2. Kalchbrenner, Nal; Blunsom, Philip (2013). "Recurrent Continuous Translation Models".
+Proceedings of the Association for Computational Linguistics.
+3. Sutskever, Ilya; Vinyals, Oriol; Le, Quoc Viet (2014). "Sequence to sequence learning with
+neural networks". arXiv:1409.3215 [cs.CL].
+4. Kyunghyun Cho; Bart van Merrienboer; Dzmitry Bahdanau; Yoshua Bengio (ngày 3 tháng 9
+năm 2014). "On the Properties of Neural Machine Translation: Encoder–Decoder
+Approaches". arXiv:1409.1259 [cs.CL].
+5. Bojar, Ondrej; Chatterjee, Rajen; Federmann, Christian; Graham, Yvette; Haddow, Barry;
+Huck, Matthias; Yepes, Antonio Jimeno; Koehn, Philipp; Logacheva, Varvara; Monz,
+Christof; Negri, Matteo; Névéol, Aurélie; Neves, Mariana; Popel, Martin; Post, Matt; Rubino,
+Raphael; Scarton, Carolina; Specia, Lucia; Turchi, Marco; Verspoor, Karin; Zampieri,
+Marcos (2016). "Findings of the 2016 Conference on Machine Translation" (PDF). ACL 2016
+First Conference on Machine Translation (WMT16). The Association for Computational
+Linguistics: 131–198.
+6. Wołk, Krzysztof; Marasek, Krzysztof (2015). "Neural-based Machine Translation for Medical
+Text Domain. Based on European Medicines Agency Leaflet Texts". Procedia Computer
+Science. 64 (64): 2–9. doi:10.1016/j.procs.2015.08.456.
+7. Philipp Koehn (2016-11-30). "The State of Neural Machine Translation (NMT)". Omniscien
+Technologies. Truy cập 2017-11-08.
+8. Dzmitry Bahdanau; Cho Kyunghyun; Yoshua Bengio (2014). "Neural Machine Translation by
+Jointly Learning to Align and Translate". arXiv:1409.0473 [cs.CL].
+9. Bahdanau, Dzmitry; Cho, Kyunghyun; Bengio, Yoshua (2014-09-01). "Neural Machine
+Translation by Jointly Learning to Align and Translate". arXiv:1409.0473 [cs.CL].
+10. Coldewey, Devin (2017-08-29). "DeepL schools other online translators with clever machine
+learning". TechCrunch. Truy cập 2018-01-27.
+Sử dụng
+Tham khảo
+
+=== SECTION 2 | Trang 3 ===
+11. "Yandex — Company blog — One model is better than two. Yandex.Translate launches a
+hybrid machine translation system". Yandex. Truy cập 2018-01-27.
+12. "Нейронные сети, офлайн-переводчики и конкуренция. Никита Шаблыков о
+технологиях машинного перевода". PROMT.One. Truy cập ngày 1 tháng 11 năm 2025.
+13. Lewis-Kraus, Gideon (ngày 14 tháng 12 năm 2016). "The Great A.I. Awakening". The New
+York Times. Truy cập 2016-12-21.
+14. "Microsoft Translator launching Neural Network based translations for all its speech
+languages". Translator. Truy cập 2018-01-27.
+15. "OpenNMT – Open-Source Neural Machine Translation". opennmt.net. Truy cập
+2017-03-22.
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Dịch_máy_bằng_nơ-ron&oldid=75270347”
+
+

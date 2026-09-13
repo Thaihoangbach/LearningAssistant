@@ -1,0 +1,425 @@
+=== SECTION 0 | Trang 1 ===
+Precision and recall
+Precision and recall
+In classification, precision and recall are
+performance metrics that apply to data retrieved from
+a collection, corpus or sample space.
+Precision (also called positive predictive value) is the
+fraction of relevant instances among the retrieved
+instances. Written as a formula:
+Recall (also known as sensitivity) is the fraction of
+relevant instances that were retrieved. Written as a
+formula:
+Both precision and recall are therefore based on
+relevance.
+Consider a computer program for recognizing dogs
+(the relevant element) in a digital photograph. Upon
+processing a picture which contains ten cats and
+twelve dogs, the program identifies eight dogs. Of the
+eight elements identified as dogs, only five actually
+are dogs (true positives), while the other three are
+cats (false positives). Seven dogs were missed (false
+negatives), and seven cats were correctly excluded
+(true negatives). The program's precision is then 5/8
+(true positives / selected elements) while its recall is
+5/12 (true positives / relevant elements).
+Adopting a hypothesis-testing approach, where in this case, the null hypothesis is that a given item is irrelevant
+(not a dog), absence of type I and type II errors (perfect specificity and sensitivity) corresponds respectively to
+perfect precision (no false positives) and perfect recall (no false negatives).
+More generally, recall is simply the complement of the type II error rate (i.e., one minus the type II error rate).
+Precision is related to the type I error rate, but in a slightly more complicated way, as it also depends upon the
+prior distribution of seeing a relevant vs. an irrelevant item.
+The above cat and dog example contained 8 − 5 = 3 type I errors (false positives) out of 10 total cats (true
+negatives), for a type I error rate of 3/10, and 12 − 5 = 7 type II errors (false negatives), for a type II error rate of
+7/12. Precision can be seen as a measure of quality, and recall as a measure of quantity. Higher precision means
+
+
+=== SECTION 1 | Trang 2 ===
+A dog classifier example. This classifier successfully identified 5
+images as containing a dog, but misidentified 3 cats as being dogs.
+that an algorithm returns more relevant results than irrelevant ones, and high recall means that an algorithm
+returns most of the relevant results (whether or not irrelevant ones are also returned).
+In a classification task, the precision for a
+class is the number of true positives (i.e. the
+number of items correctly labelled as
+belonging to the positive class) divided by the
+total number of elements labelled as
+belonging to the positive class (i.e. the sum of
+true positives and false positives, which are
+items incorrectly labelled as belonging to the
+class). Recall in this context is defined as the
+number of true positives divided by the total
+number of elements that actually belong to
+the positive class (i.e. the sum of true
+positives and false negatives, which are items
+which were not labelled as belonging to the
+positive class but should have been).
+Precision and recall are not particularly useful
+metrics when used in isolation. For instance,
+it is possible to have perfect recall by simply
+retrieving every single item. Likewise, it is
+possible to achieve perfect precision by
+selecting only a very small number of
+extremely likely items.
+In a classification task, a precision score of
+1.0 for a class C means that every item
+labelled as belonging to class C does indeed
+belong to class C (but says nothing about the
+number of items from class C that were not
+labelled correctly) whereas a recall of 1.0
+means that every item from class C was
+labelled as belonging to class C (but says
+nothing about how many items from other
+classes were incorrectly also labelled as
+belonging to class C).
+Often, there is an inverse relationship
+between precision and recall, where it is
+possible to increase one at the cost of
+reducing the other, but context may dictate if one is more valued in a given situation:
+A smoke detector is generally designed to commit many Type I errors (to alert in many situations when there is
+no danger), because the cost of a Type II error (failing to sound an alarm during a major fire) is prohibitively
+high. As such, smoke detectors are designed with recall in mind (to catch all real danger), even while giving little
+weight to the losses in precision (and making many false alarms). In the other direction, Blackstone's ratio, "It is
+Introduction
+
+
+=== SECTION 2 | Trang 3 ===
+better that ten guilty persons escape than that one innocent suffer," emphasizes the costs of a Type I error
+(convicting an innocent person). As such, the criminal justice system is geared toward precision (not convicting
+innocents), even at the cost of losses in recall (letting more guilty people go free).
+A brain surgeon removing a cancerous tumor from a patient's brain illustrates the tradeoffs as well: The surgeon
+needs to remove all of the tumor cells since any remaining cancer cells will regenerate the tumor. Conversely, the
+surgeon must not remove healthy brain cells since that would leave the patient with impaired brain function. The
+surgeon may be more liberal in the area of the brain they remove to ensure they have extracted all the cancer
+cells. This decision increases recall but reduces precision. On the other hand, the surgeon may be more
+conservative in the brain cells they remove to ensure they extract only cancer cells. This decision increases
+precision but reduces recall. That is to say, greater recall increases the chances of removing healthy cells
+(negative outcome) and increases the chances of removing all cancer cells (positive outcome). Greater precision
+decreases the chances of removing healthy cells (positive outcome) but also decreases the chances of removing
+all cancer cells (negative outcome).
+Usually, precision and recall scores are not discussed in isolation. A precision-recall curve plots precision as a
+function of recall; usually precision will decrease as the recall increases. Alternatively, values for one measure
+can be compared for a fixed level at the other measure (e.g. precision at a recall level of 0.75) or both are
+combined into a single measure. Examples of measures that are a combination of precision and recall are the F-
+measure (the weighted harmonic mean of precision and recall), or the Matthews correlation coefficient, which is
+a geometric mean of the chance-corrected variants: the regression coefficients Informedness (DeltaP') and
+Markedness (DeltaP).[1][2] Accuracy is a weighted arithmetic mean of Precision and Inverse Precision (weighted
+by Bias) as well as a weighted arithmetic mean of Recall and Inverse Recall (weighted by Prevalence).[1] Inverse
+Precision and Inverse Recall are simply the Precision and Recall of the inverse problem where positive and
+negative labels are exchanged (for both real classes and prediction labels). True Positive Rate and False Positive
+Rate, or equivalently Recall and 1 - Inverse Recall, are frequently plotted against each other as ROC curves and
+provide a principled mechanism to explore operating point tradeoffs. Outside of Information Retrieval, the
+application of Recall, Precision and F-measure are argued to be flawed as they ignore the true negative cell of the
+contingency table, and they are easily manipulated by biasing the predictions.[1] The first problem is 'solved' by
+using Accuracy and the second problem is 'solved' by discounting the chance component and renormalizing to
+Cohen's kappa, but this no longer affords the opportunity to explore tradeoffs graphically. However,
+Informedness and Markedness are Kappa-like renormalizations of Recall and Precision,[3] and their geometric
+mean Matthews correlation coefficient thus acts like a debiased F-measure.
+For classification tasks, the terms true positives, true negatives, false positives, and false negatives compare the
+results of the classifier under test with trusted external judgments. The terms positive and negative refer to the
+classifier's prediction (sometimes known as the expectation), and the terms true and false refer to whether that
+prediction corresponds to the external judgment (sometimes known as the observation).
+Let us define an experiment from P positive instances and N negative instances for some condition. The four
+outcomes can be formulated in a 2×2 contingency table or confusion matrix, as follows:
+Definition
+
+=== SECTION 3 | Trang 4 ===
+Predicted condition Sources: [4][5][6][7][8][9][10][11]
+Totalpopulation
+= P + N Predicted positive Predictednegative
+Informedness,
+bookmaker informedness
+(BM)
+= TPR + TNR − 1
+Prevalence threshold(PT)
+=  √TPR × FPR − FPR
+TPR − FPR  
+Actual condition
+RealPositive (P)[a]
+True positive (TP),
+hit[b]
+False negative(FN),
+miss,
+underestimation
+True positive rate(TPR), recall,sensitivity (SEN),
+probability of detection,
+hit rate, power
+=  TP
+P  = 1 − FNR
+False negative rate(FNR),
+miss rate
+type II error [c]
+=  FN
+P   = 1 − TPR
+RealNegative
+(N)[d]
+False positive (FP),
+false alarm, overestimation
+True negative(TN),
+correct rejection[e]
+False positive rate(FPR),
+probability of false alarm,
+fall-out
+type I error [f]
+=  FP
+N  = 1 − TNR
+True negative rate(TNR),
+specificity (SPC),
+selectivity
+=  TN
+N  = 1 − FPR
+Prevalence
+=  P
+P + N 
+Positive predictive value (PPV),
+precision
+=  TP
+TP + FP  = 1 − FDR
+False omissionrate (FOR)
+=  FN
+TN + FN 
+= 1 − NPV
+Positive likelihoodratio (LR+)
+=  TPR
+FPR 
+Negative likelihoodratio (LR−)
+=  FNR
+TNR 
+Accuracy(ACC)
+=  TP + TN
+P + N  
+False discovery rate (FDR)
+=  FP
+TP + FP  = 1 − PPV
+Negativepredictive value(NPV)
+=  TN
+TN + FN 
+= 1 − FOR
+Markedness (MK),
+deltaP (Δp)
+= PPV + NPV − 1
+Diagnostic odds ratio(DOR)
+=  LR+
+LR−  =  TP × TN
+FP × FN 
+Balancedaccuracy(BA)
+=  TPR + TNR
+2  
+F1 score
+=  2 PPV × TPR
+PPV + TPR  
+=  2 TP
+2 TP + FP + FN 
+Fowlkes–Mallows index(FM)
+= √PPV × TPR
+phi or Matthewscorrelation coefficient(MCC)
+= √TPR × TNR × PPV × NPV
+- √FNR × FPR × FOR × FDR
+Threat score (TS),critical success index(CSI), Jaccard index
+=  TP
+TP + FN + FP 
+a. the number of real positive cases in the data
+b. A test result that correctly indicates the presence of a condition or characteristic
+c. Type II error: A test result which wrongly indicates that a particular condition or attribute is absent
+d. the number of real negative cases in the data
+e. A test result that correctly indicates the absence of a condition or characteristic
+f. Type I error: A test result which wrongly indicates that a particular condition or attribute is present
+Precision and recall are then defined as:[12]
+Recall in this context is also referred to as the true positive rate or sensitivity, and precision is also referred to as
+positive predictive value (PPV); other related measures used in classification include true negative rate and
+accuracy.[12] True negative rate is also called specificity.
+
+=== SECTION 4 | Trang 5 ===
+Both precision and recall may be useful in cases where there is imbalanced data. However, it may be valuable to
+prioritize one metric over the other in cases where the outcome of a false positive or false negative is costly. For
+example, in medical diagnosis, a false positive test can lead to unnecessary treatment and expenses. In this
+situation, it is useful to value precision over recall. In other cases, the cost of a false negative is high, and recall
+may be a more valuable metric. For instance, the cost of a false negative in fraud detection is high, as failing to
+detect a fraudulent transaction can result in significant financial loss.[13]
+Precision and recall can be interpreted as (estimated) conditional probabilities:[14] Precision is given by
+ while recall is given by ,[15] where  is the predicted class and  is the
+actual class (i.e.  means the actual class is positive). Both quantities are, therefore, connected by Bayes'
+theorem.
+The probabilistic interpretation allows to easily derive how a no-skill classifier would perform. A no-skill
+classifier is defined by the property that the joint probability  is
+just the product of the unconditional probabilities since the classification and the presence of the class are
+independent.
+For example, the precision of a no-skill classifier is simply a constant
+ i.e. determined by the probability/frequency with
+which the class P occurs.
+A similar argument can be made for the recall:  which
+is the probability for a positive classification.
+Accuracy can be expressed as the weighted average of how well a classifier identifies positive cases and negative
+cases, weighted by the condition's base prevalence ( ). This formulation relies on sensitivity (the true positive
+rate) and specificity (the true negative rate):
+Precision vs. recall
+Probabilistic definition
+No-skill classifiers
+Accuracy, imbalanced data, and balanced accuracy
+
+=== SECTION 5 | Trang 6 ===
+In machine learning terminology, sensitivity is equivalent to the recall of the positive class (often termed 
+), while specificity is equivalent to the recall of the negative class (often termed ). Because this equation
+scales the true positive and true negative rates directly by the actual number of positive and negative cases
+available in the dataset, it remains mathematically strictly bounded across all prevalence levels.[16]
+Alternatively, Accuracy can be expressed to depend on both precision ( ), recall ( , i.e., ),
+and prevalence ( ). By expressing accuracy as 1 minus the total error rate, the accuracy of a classifier is given
+by:
+[Proof]
+To derive this formula, we begin with the standard definitions from the confusion matrix. Let
+ represent the total population of the dataset.
+The foundational metrics are defined as:
+Prevalence ( ): 
+Recall ( ): 
+Precision ( ): 
+Step 1: Express Accuracy via the error rate
+Accuracy is the overall proportion of correct predictions. Equivalently, it is 1 minus the total error rate:
+Step 2: Express False Negatives (FN) using Recall
+From the definition of Recall, we can express the true positives ( ) and false negatives ( ) as fractions of
+the total actual positive cases ():
+Step 3: Express False Positives (FP) using Precision and Recall
+From the definition of Precision, we solve algebraically for :
+Substitute the expression for  from Step 2 into this equation:
+Step 4: Combine the errors
+Add the expressions for  and  together to get the total number of errors:
+
+=== SECTION 6 | Trang 7 ===
+Factor out the actual positive cases ():
+Step 5: Divide by the total population (N)
+To find the overall error rate, divide both sides of the equation by :
+Because Prevalence is defined as , we can substitute  into the equation:
+Step 6: Finalize the Accuracy equation
+Substitute this total error rate back into the Accuracy formula from Step 1:
+In this form, the equation isolates how accuracy is penalized by two distinct errors scaled by prevalence: the rate
+at which positive cases are missed ( ), and the rate of collateral false positives generated
+by catching them ( ). This explicit relationship highlights how changes in
+precision and recall impact overall accuracy disproportionately depending on the underlying prevalence in an
+imbalanced dataset.
+However, because prevalence, precision, and recall are not independent variables, this formula is strictly bound
+by a mathematical limit. The mathematically implied number of false positives cannot exceed the total number
+of actual negative cases in the dataset. Therefore, the accuracy formula above is only valid subject to the
+following constraint on minimum precision:[17]
+Because of the above, Accuracy can be a limited/misleading metric when comparing data sets with different base
+prevalence (i.e. differently imbalanced data sets). For example, a method with 90% precision and 50% recall
+would yield an accuracy of either 83% or 50%, depending if the prevalence in the dataset is 30% or 90%. Also, if
+a sample has 95 negative and 5 positive values, then classifying all values as negative (100% recall and 0%
+precision) would give 0.95 accuracy score.
+There are many metrics that don't suffer from this problem. For example, balanced accuracy[18] (bACC)
+normalizes true positive and true negative predictions by the number of positive and negative samples,
+respectively, and divides their sum by two:
+
+=== SECTION 7 | Trang 8 ===
+For the previous example (95 negative and 5 positive samples), classifying all as negative gives 0.5 balanced
+accuracy score (the maximum bACC score is one), which is equivalent to the expected value of a random guess
+in a balanced data set. Balanced accuracy can serve as an overall performance metric for a model, whether or not
+the true labels are imbalanced in the data, assuming the cost of FN is the same as FP.
+Balanced accuracy is a linear combination of Youden's J statistic. ( )
+The TPR and FPR are a property of a given classifier operating at a specific threshold. However, the overall
+number of TPs, FPs etc. depend on the class imbalance in the data via the class ratio . As the recall (or
+TPR) depends only on positive cases, it is not affected by , but the precision is. We have that
+Thus the precision has an explicit dependence on .[19] Starting with balanced classes at  and gradually
+decreasing , the corresponding precision will decrease, because the denominator increases.
+Another metric is the predicted positive condition rate (PPCR), which identifies the percentage of the total
+population that is flagged. For example, for a search engine that returns 30 results (retrieved documents) out of
+1,000,000 documents, the PPCR is 0.003%.
+According to Saito and Rehmsmeier, precision-recall plots are more informative than ROC plots when
+evaluating binary classifiers on imbalanced data. In such scenarios, ROC plots may be visually deceptive with
+respect to conclusions about the reliability of classification performance.[20][21]
+Different from the above approaches, if an imbalance scaling is applied directly by weighting the confusion
+matrix elements, the standard metrics definitions still apply even in the case of imbalanced datasets.[22] The
+weighting procedure relates the confusion matrix elements to the support set of each considered class.
+A measure that combines precision and recall is the harmonic mean of precision and recall, the traditional F-
+measure or balanced F-score:
+This measure is approximately the average of the two when they are close, and is more generally the harmonic
+mean, which, for the case of two numbers, coincides with the square of the geometric mean divided by the
+arithmetic mean. There are several reasons that the F-score can be criticized, in particular circumstances, due to
+its bias as an evaluation metric.[1] This is also known as the  measure, because recall and precision are evenly
+weighted.
+F-measure
+
+=== SECTION 8 | Trang 9 ===
+It is a special case of the general  measure (for non-negative real values of  ):
+Two other commonly used  measures are the  measure, which weights recall higher than precision, and the
+ measure, which puts more emphasis on precision than recall.
+The F-measure was derived by van Rijsbergen (1979) so that  "measures the effectiveness of retrieval with
+respect to a user who attaches  times as much importance to recall as precision". It is based on van Rijsbergen's
+effectiveness measure , the second term being the weighted harmonic mean of precision
+and recall with weights . Their relationship is  where .
+There are other parameters and strategies for performance metric of information retrieval system, such as the
+area under the ROC curve (AUC)[23] or pseudo-R-squared.
+Precision and recall values can also be calculated for classification problems with more than two classes.[24] To
+obtain the precision for a given class, we divide the number of true positives by the classifier bias towards this
+class (number of times that the classifier has predicted the class). To calculate the recall for a given class, we
+divide the number of true positives by the prevalence of this class (number of times that the class occurs in the
+data sample).
+The class-wise precision and recall values can then be combined into an overall multi-class evaluation score,
+e.g., using the macro F1 metric.[24]
+The classical definitions of precision, recall, and F-score are formulated for binary classification, where each
+instance is either true or false. Many practical domains, however, produce inherently continuous signals rather
+than discrete labels. Generalising these metrics to continuous distributions enables their direct application to such
+data without the information loss introduced by thresholding.[25]
+Two motivating examples illustrate the limitation of binary frameworks:
+Quantitative finance. A model may output a continuous buy/sell signal proportional to itsconviction for each asset at a given moment. Applying a fixed threshold (e.g. signal > 0.1 = buy)discards conviction magnitude and conflates strong and mild signals, limiting the model's ability tocorrectly distinguish a strong buy from a mild one.
+DNA methylation analysis. Sequencing tools detect differentially methylated regions whoseunderlying signal is continuous, typically ranging from −1 to +1. Forcing this into a binaryframework introduces similar distortions by treating all positive deviations as equivalent regardlessof magnitude.
+Limitations as goals
+Multi-class evaluation
+Generalisation to continuous distributions
+
+=== SECTION 9 | Trang 10 ===
+Let  denote the expected (ground-truth) signal and  the observed (predicted) signal at each data point .
+Then, precision, recall, and F-score can be calculated as:
+Note, sums may be replaced with integrals for continuous distributions depending on other continuous variables
+(i.e. , , ).
+These definitions reduce to the classical binary versions when . However, continuous metrics
+reveal a deeper mathematical elegance. Consider a completely wrong ML model with random signal. Traditional
+binary metrics, blind to magnitude and sign, can still award such a model positive precision, recall and/or F-
+score (even 25% or higher for dense signal). The continuous formulas, by contrast, return exactly 0 for precision,
+recall, and F-score in this situation – because when expected and observed signals do not correlate, the
+numerator terms cancel to zero.
+Uncertainty coefficient, also called proficiency
+Sensitivity and specificity
+Confusion matrix
+Scoring rule
+Base rate fallacy
+1. Powers, David M W (2011). "Evaluation: From Precision, Recall and F-Measure to ROC,Informedness, Markedness & Correlation" (https://web.archive.org/web/20191114213255/https://www.flinders.edu.au/science_engineering/fms/School-CSEM/publications/tech_reps-research_artfcts/TRRA_2007.pdf) (PDF). Journal of Machine Learning Technologies. 2 (1): 37–63. Archived fromthe original (http://www.flinders.edu.au/science_engineering/fms/School-CSEM/publications/tech_reps-research_artfcts/TRRA_2007.pdf) (PDF) on 2019-11-14.
+2. Perruchet, P.; Peereman, R. (2004). "The exploitation of distributional information in syllableprocessing" (https://lead.ube.fr/wp-content/uploads/2023/09/000365-the-exploitation-of-distributional-information-in-syllable-processing.pdf) (PDF). J. Neurolinguistics. 17 (2–3): 97–119.doi:10.1016/s0911-6044(03)00059-9 (https://doi.org/10.1016%2Fs0911-6044%2803%2900059-9).S2CID 17104364 (https://api.semanticscholar.org/CorpusID:17104364).
+3. Powers, David M. W. (2012). "The Problem with Kappa" (https://www.aclweb.org/anthology/E12-1035). Conference of the European Chapter of the Association for Computational Linguistics(EACL2012) Joint ROBUS-UNSUP Workshop.
+Definitions
+See also
+References
+
+=== SECTION 10 | Trang 11 ===
+4. Fawcett, Tom (2006). "An Introduction to ROC Analysis" (http://people.inf.elte.hu/kiss/11dwhdm/roc.pdf) (PDF). Pattern Recognition Letters. 27 (8): 861–874. doi:10.1016/j.patrec.2005.10.010 (https://doi.org/10.1016%2Fj.patrec.2005.10.010). S2CID 2027090 (https://api.semanticscholar.org/CorpusID:2027090).
+5. Provost, Foster; Tom Fawcett (2013-08-01). "Data Science for Business: What You Need to Knowabout Data Mining and Data-Analytic Thinking" (https://www.researchgate.net/publication/256438799). O'Reilly Media, Inc.
+6. Powers, David M. W. (2011). "Evaluation: From Precision, Recall and F-Measure to ROC,Informedness, Markedness & Correlation" (https://www.researchgate.net/publication/228529307).Journal of Machine Learning Technologies. 2 (1): 37–63.
+7. Ting, Kai Ming (2011). Sammut, Claude; Webb, Geoffrey I. (eds.). Encyclopedia of machinelearning. Springer. doi:10.1007/978-0-387-30164-8 (https://doi.org/10.1007%2F978-0-387-30164-8). ISBN 978-0-387-30164-8.
+8. Brooks, Harold; Brown, Barb; Ebert, Beth; Ferro, Chris; Jolliffe, Ian; Koh, Tieh-Yong; Roebber,Paul; Stephenson, David (2015-01-26). "WWRP/WGNE Joint Working Group on ForecastVerification Research" (https://www.cawcr.gov.au/projects/verification/). Collaboration for AustralianWeather and Climate Research. World Meteorological Organisation. Retrieved 2019-07-17.
+9. Chicco D, Jurman G (January 2020). "The advantages of the Matthews correlation coefficient(MCC) over F1 score and accuracy in binary classification evaluation" (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312). BMC Genomics. 21 (1): 6-1–6-13. doi:10.1186/s12864-019-6413-7(https://doi.org/10.1186%2Fs12864-019-6413-7). PMC 6941312 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6941312). PMID 31898477 (https://pubmed.ncbi.nlm.nih.gov/31898477).
+10. Chicco D, Toetsch N, Jurman G (February 2021). "The Matthews correlation coefficient (MCC) ismore reliable than balanced accuracy, bookmaker informedness, and markedness in two-classconfusion matrix evaluation" (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7863449). BioDataMining. 14 (13): 13. doi:10.1186/s13040-021-00244-z (https://doi.org/10.1186%2Fs13040-021-00244-z). PMC 7863449 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7863449). PMID 33541410 (https://pubmed.ncbi.nlm.nih.gov/33541410).
+11. Tharwat A. (August 2018). "Classification assessment methods" (https://doi.org/10.1016%2Fj.aci.2018.08.003). Applied Computing and Informatics. 17: 168–192. doi:10.1016/j.aci.2018.08.003 (https://doi.org/10.1016%2Fj.aci.2018.08.003).
+12. Olson, David L.; and Delen, Dursun (2008); Advanced Data Mining Techniques, Springer, 1stedition (February 1, 2008), page 138, ISBN 3-540-76916-1
+13. "Precision vs. Recall: Differences, Use Cases & Evaluation" (https://www.v7labs.com/blog/precision-vs-recall-guide#accuracy-precision-or-recallwhen-to-use-what).
+14. Fatih Cakir, Kun He, Xide Xia, Brian Kulis, Stan Sclaroff, Deep Metric Learning to Rank (http://cs-people.bu.edu/fcakir/papers/fastap_cvpr2019.pdf), In Proc. IEEE Conference on Computer Visionand Pattern Recognition (CVPR), 2019.
+15. Roelleke, Thomas (2022-05-31). Information Retrieval Models: Foundations & Relationships (https://books.google.com/books?id=YX9yEAAAQBAJ&pg=PA76). Springer Nature. ISBN 978-3-031-02328-6.
+16. Newman, Thomas B.; Kohn, Michael A. (2009). "2: Dichotomous Tests". Evidence-BasedDiagnosis. Cambridge University Press. ISBN 978-0521875950. "Accuracy can be expressed asthe weighted average of Sensitivity and Specificity based on the condition's Prevalence: Accuracy= (Prevalence × Sensitivity) + ((1 - Prevalence) × Specificity)."
+17. Williams, Christopher K. I. (2021-04-01). "The Effect of Class Imbalance on Precision-RecallCurves". Neural Computation. 33 (4): 853–857. arXiv:2007.01905 (https://arxiv.org/abs/2007.01905). doi:10.1162/neco_a_01362 (https://doi.org/10.1162%2Fneco_a_01362). "Equation 2demonstrates that Precision = TPR / (TPR + (1/r)FPR). Because the maximum False Positive Rate(FPR) is 1, and the class imbalance ratio r = Prevalence / (1 - Prevalence), this establishes a strictlower bound for precision given a specific prevalence and recall."
+18. Mower, Jeffrey P. (2005-04-12). "PREP-Mt: predictive RNA editor for plant mitochondrial genes" (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1087475). BMC Bioinformatics. 6: 96.doi:10.1186/1471-2105-6-96 (https://doi.org/10.1186%2F1471-2105-6-96). ISSN 1471-2105 (https://search.worldcat.org/issn/1471-2105). PMC 1087475 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1087475). PMID 15826309 (https://pubmed.ncbi.nlm.nih.gov/15826309).
+
+=== SECTION 11 | Trang 12 ===
+19. Williams, Christopher K. I. (2021-04-01). "The Effect of Class Imbalance on Precision-RecallCurves". Neural Computation. 33 (4): 853–857. arXiv:2007.01905 (https://arxiv.org/abs/2007.01905). doi:10.1162/neco_a_01362 (https://doi.org/10.1162%2Fneco_a_01362).hdl:20.500.11820/8a709831-cbfe-4c8e-a65b-aee5429e5b9b (https://hdl.handle.net/20.500.11820%2F8a709831-cbfe-4c8e-a65b-aee5429e5b9b). ISSN 0899-7667 (https://search.worldcat.org/issn/0899-7667).
+20. Saito, Takaya; Rehmsmeier, Marc (2015-03-04). Brock, Guy (ed.). "The Precision-Recall Plot IsMore Informative than the ROC Plot When Evaluating Binary Classifiers on Imbalanced Datasets"(https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4349800). PLOS ONE. 10 (3) e0118432.Bibcode:2015PLoSO..1018432S (https://ui.adsabs.harvard.edu/abs/2015PLoSO..1018432S).doi:10.1371/journal.pone.0118432 (https://doi.org/10.1371%2Fjournal.pone.0118432). ISSN 1932-6203 (https://search.worldcat.org/issn/1932-6203). PMC 4349800 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4349800). PMID 25738806 (https://pubmed.ncbi.nlm.nih.gov/25738806).
+21. Suzanne Ekelund (March 2017). "Precision-recall curves – what are they and how are they used?"(https://acutecaretesting.org/en/articles/precision-recall-curves-what-are-they-and-how-are-they-used). Acute Care Testing.
+22. Tripicchio, Paolo; Camacho-Gonzalez, Gerardo; D'Avella, Salvatore (2020). "Welding defectdetection: coping with artifacts in the production line" (https://link.springer.com/article/10.1007/s00170-020-06146-4). The International Journal of Advanced Manufacturing Technology. 111 (5):1659–1669. doi:10.1007/s00170-020-06146-4 (https://doi.org/10.1007%2Fs00170-020-06146-4).S2CID 225136860 (https://api.semanticscholar.org/CorpusID:225136860).
+23. Zając, Zygmunt (19 September 2013). "What you wanted to know about AUC" (http://fastml.com/what-you-wanted-to-know-about-auc/). FastML.
+24. Opitz, Juri (2024). "A Closer Look at Classification Evaluation Metrics and a Critical Reflection ofCommon Evaluation Practice". Transactions of the Association for Computational Linguistics. 12:820–836. arXiv:2404.16958 (https://arxiv.org/abs/2404.16958). doi:10.1162/tacl_a_00675 (https://doi.org/10.1162%2Ftacl_a_00675).
+25. PCT patent application WO 2026/096670.
+Baeza-Yates, Ricardo; Ribeiro-Neto, Berthier (1999). Modern Information Retrieval. New York, NY:ACM Press, Addison-Wesley, Seiten 75 ff. ISBN 0-201-39829-X
+Hjørland, Birger (2010); The foundation of the concept of relevance, Journal of the AmericanSociety for Information Science and Technology, 61(2), 217–237
+Makhoul, John; Kubala, Francis; Schwartz, Richard; and Weischedel, Ralph (1999); Performancemeasures for information extraction (http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.27.4637), in Proceedings of DARPA Broadcast News Workshop, Herndon, VA, February 1999
+van Rijsbergen, Cornelis Joost "Keith" (1979); Information Retrieval, London, GB; Boston, MA:Butterworth, 2nd Edition, ISBN 0-408-70929-4
+Information Retrieval – C. J. van Rijsbergen 1979 (http://www.dcs.gla.ac.uk/Keith/Preface.html)
+Computing Precision and Recall for a Multi-class Classification Problem (http://www.text-analytics101.com/2014/10/computing-precision-and-recall-for.html)
+Retrieved from "https://en.wikipedia.org/w/index.php?title=Precision_and_recall&oldid=1366666540"
+External links
+
+
