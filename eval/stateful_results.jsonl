@@ -1,0 +1,41 @@
+{"id": "EDU-PROF-get_profile_field_scope", "category": "profile", "pass": true, "detail": "fields=['preferred_level', 'learning_goal', 'effective_level', 'effective_level_source', 'updated_at']"}
+{"id": "EDU-PROF-write_persist", "category": "profile", "pass": true, "detail": "status=200 body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'updated_at': '2026-09-13T05:22:46.990888'}"}
+{"id": "EDU-PROF-persistence_across_refresh", "category": "profile", "pass": true, "detail": "body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'effective_level': 'advanced', 'effective_level_source': 'declared', 'updated_at': '2026-09-13T05:22:46.990888'}"}
+{"id": "EDU-PROF-write_time_guardrail", "category": "profile", "pass": true, "detail": "status=400"}
+{"id": "EDU-PROF-reset_scope_boundary", "category": "profile", "pass": true, "detail": "after_reset={'preferred_level': None, 'learning_goal': None, 'effective_level': None, 'effective_level_source': None, 'updated_at': None}"}
+{"id": "EDU-PROF-reset_noop", "category": "profile", "pass": true, "detail": "status=200"}
+{"id": "EDU-DOC-unsupported_extension_txt", "category": "document_management", "pass": true, "detail": "status=400 body={\"detail\":\"Định dạng .txt không được hỗ trợ. Chỉ chấp nhận PDF/DOCX.\"}"}
+{"id": "EDU-DOC-corrupted_file_upload_accepted_then_marked_error", "category": "document_management", "pass": true, "detail": "status=200, doc_id=2d7cee2e-a8ad-4fa4-a2ea-704749a98096"}
+{"id": "EDU-DOC-corrupted_file_categorized_error", "category": "error_handling", "pass": true, "detail": "final_status=lỗi"}
+{"id": "EDU-DOC-missing_filename", "category": "document_management", "pass": true, "detail": "status=422"}
+{"id": "EDU-DOC-list_default_vs_include_old_versions", "category": "document_management", "pass": true, "detail": "default_count=1 all_count=1"}
+{"id": "EDU-DOC-deletion_atomicity", "category": "document_management", "pass": true, "detail": "delete_status=200 still_present=False"}
+{"id": "EDU-DOC-view_file_ownership_check", "category": "document_management", "pass": true, "detail": "status=404"}
+{"id": "EDU-ERR-missing_quiz_item_404", "category": "error_handling", "pass": true, "detail": "status=404"}
+{"id": "EDU-ERR-invalid_flashcard_rating", "category": "error_handling", "pass": true, "detail": "status=400"}
+{"id": "EDU-ERR-malformed_request_missing_field", "category": "error_handling", "pass": true, "detail": "status=422"}
+{"id": "EDU-QUIZ-partial_generation_invariant", "category": "quiz", "pass": true, "detail": "requested=5 generated=5 partial=False"}
+{"id": "EDU-QUIZ-content_type_present", "category": "quiz", "pass": true, "detail": "items=5"}
+{"id": "EDU-QUIZ-submit_ownership_check", "category": "quiz", "pass": true, "detail": "status=404"}
+{"id": "EDU-QUIZ-submit_response_shape", "category": "quiz", "pass": true, "detail": "keys=['is_correct', 'correct_answer', 'explanation', 'updated_mastery_score', 'source_document', 'source_position']"}
+{"id": "EDU-QUIZ-mastery_update_full_history", "category": "quiz", "pass": true, "detail": "updated_mastery_score=0.5999999989966579"}
+{"id": "EDU-MAST-compute_mastery_reflected_in_api", "category": "mastery", "pass": true, "detail": "topic_row={'topic_id': '37ea22d5-2361-4653-a340-2434b1ff5b27', 'topic_name': '04_cay_quyet_dinh_vi.pdf', 'course_name': 'GoldenSetEval', 'score': 0.599999684992564, 'score_raw': 0.5999999989966579, 'days_since_practice': 0, 'level': 'trung bình', 'updated_at': '2026-09-13T05:22:59.142362'}"}
+{"id": "EDU-MAST-classify_mastery_thresholds", "category": "mastery", "pass": true, "detail": "score=0.599999684992564 level=trung bình"}
+{"id": "EDU-MAST-decay_unpractised_via_api_after_30d", "category": "mastery", "pass": true, "detail": "score_raw(unchanged)=0.5999999989966579 score(decayed)=0.29999998417873375 original=0.5999999989966579"}
+{"id": "EDU-PERSIST-decay_never_written_back", "category": "persistence", "pass": true, "detail": "score_raw stayed same after a decayed READ, confirming decay is not persisted"}
+{"id": "EDU-FLASH-partial_generation_invariant", "category": "flashcard", "pass": true, "detail": "requested=6 generated=6 partial=False"}
+{"id": "EDU-FLASH-srs_interval_formula_again", "category": "flashcard", "pass": true, "detail": "rating=again interval_days=0 ease=2.3"}
+{"id": "EDU-FLASH-srs_interval_formula_hard", "category": "flashcard", "pass": true, "detail": "rating=hard interval_days=1 ease=2.35"}
+{"id": "EDU-FLASH-srs_interval_formula_good", "category": "flashcard", "pass": true, "detail": "rating=good interval_days=1 ease=2.5"}
+{"id": "EDU-FLASH-srs_interval_formula_easy", "category": "flashcard", "pass": true, "detail": "rating=easy interval_days=2 ease=2.5"}
+{"id": "EDU-FLASH-invalid_rating", "category": "flashcard", "pass": true, "detail": "status=400"}
+{"id": "EDU-FLASH-save_from_answer_sentinel", "category": "flashcard", "pass": true, "detail": "status=200"}
+{"id": "EDU-FLASH-save_validation", "category": "flashcard", "pass": true, "detail": "status=400"}
+{"id": "EDU-FLASH-classify_status_due_via_next_due_at", "category": "flashcard", "pass": true, "detail": "item_id=56225668-6382-4dc7-ad2d-35684e2d4c79 found_in_due_bucket=True"}
+{"id": "EDU-FLASH-classify_status_three_buckets_present", "category": "flashcard", "pass": true, "detail": "buckets=['mastered', 'learning', 'due']"}
+{"id": "EDU-PLAN-exam_date_requirement", "category": "study_plan", "pass": true, "detail": "status=400"}
+{"id": "EDU-PLAN-set_exam_date", "category": "study_plan", "pass": true, "detail": "status=200"}
+{"id": "EDU-PLAN-generate_with_real_exam_date", "category": "study_plan", "pass": true, "detail": "status=200 days_count=10"}
+{"id": "EDU-PLAN-decision_tree_topic_appears_in_plan", "category": "study_plan", "pass": false, "detail": "topics_sample=[{'name': '1. Definition of \"overfitting (https://en.oxforddicti', 'course_name': 'GoldenSetEval', 'document_id': 'c2ed3333-845b-4696-8be5-a4f37458afb4', 'reviewed_today': False, 'recommended_action': 'learn', 'reason': 'Chưa có dữ liệu học tập cho chủ đề này, nên bắt đầu học.'}, {'name': '2. Lớp kích hoạt (Activation Layer)', 'course_name': 'GoldenSetEval', 'document_id': '903d159d-ff5e-413a-b15d-8342cb0a2387', 'reviewed_today': False, 'recommended_action': 'learn', 'reason': 'Chưa có dữ liệu học tập cho chủ đề này, nên bắt đầu học.'}, {'name': '15. A Brief History of Probability', 'course_name': 'GoldenSetEval', 'document_id': 'c89386f1-d120-4885-b3ba-48877e665d57', 'reviewed_today': False, 'recommended_action': 'learn', 'reason': 'Chưa có dữ liệu học tập cho chủ đề này, nên bắt đầu học.'}, {'name': '1.0 for a class C means that every item', 'course_name': 'GoldenSetEval', 'document_id': '0d3ae17b-296d-4154-97cf-aea403a11e15', 'reviewed_today': False, 'recommended_action': 'learn', 'reason': 'Chưa có dữ liệu học tập cho chủ đề này, nên bắt đầu học.'}, {'name': '15. \"OpenNMT – Open-Source Neural Machine Translation\". opennmt.net. Truy cập', 'course_name': 'GoldenSetEval', 'document_id': 'cfaf3d98-5495-4ce7-9e9a-b6e92ab2a91d', 'reviewed_today': False, 'recommended_action': 'learn', 'reason': 'Chưa có dữ liệu học tập cho chủ đề này, nên bắt đầu học.'}]"}
+{"id": "EDU-PLAN-days_left_clamp_no_crash_on_far_future_date", "category": "study_plan", "pass": true, "detail": "status=200"}
+{"id": "EDU-PLAN-past_exam_date_silently_dropped_not_error", "category": "study_plan", "pass": true, "detail": "status=200"}
