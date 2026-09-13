@@ -42,6 +42,12 @@ with open(os.path.join(HERE, "run_doc_mapping.json"), encoding="utf-8") as f:
 FILE_NAME_BY_DOC_ID = {v["file_name"]: k for k, v in DOC_MAPPING.items()}
 
 
+# Key Cohere trial hiện dùng giới hạn 10 lượt gọi/phút; mỗi /chat/ask tốn
+# ~3 lượt Cohere (embed truy vấn, rerank, embed cho memory-recall) -> giãn
+# cách tối thiểu giữa 2 request để không vượt quá 10 lượt Cohere/phút.
+_MIN_SECONDS_BETWEEN_REQUESTS = 20
+
+
 def ask(question, conversation_id=None, retries=3):
     payload = {"user_id": USER_ID, "question": question, "course_name": COURSE_NAME}
     if conversation_id:
@@ -50,11 +56,12 @@ def ask(question, conversation_id=None, retries=3):
         try:
             r = requests.post(f"{BASE_URL}/chat/ask", json=payload, timeout=90)
             if r.status_code == 200:
+                time.sleep(_MIN_SECONDS_BETWEEN_REQUESTS)
                 return r.json()
             print(f"  [HTTP {r.status_code}] {r.text[:200]}", file=sys.stderr)
         except requests.RequestException as e:
             print(f"  [request error] {e}", file=sys.stderr)
-        time.sleep(3 * (attempt + 1))
+        time.sleep(30 * (attempt + 1))
     return None
 
 
@@ -187,7 +194,16 @@ def main():
         all_cases = [json.loads(line) for line in f if line.strip()]
 
     cases = [c for c in all_cases if c["category"] in CHAT_ASK_CATEGORIES]
-    print(f"Running {len(cases)} /chat/ask-based cases out of {len(all_cases)} total.")
+
+    out_path = os.path.join(HERE, "run_results.jsonl")
+    already_done = set()
+    if os.path.exists(out_path):
+        with open(out_path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    already_done.add(json.loads(line)["id"])
+    cases = [c for c in cases if c["id"] not in already_done]
+    print(f"Resuming: {len(already_done)} cases already done, running {len(cases)} remaining.")
 
     judge_client = None
     try:
@@ -197,8 +213,7 @@ def main():
         print(f"WARNING: could not init judge LLM client, content-correctness checks skipped: {e}", file=sys.stderr)
 
     results = []
-    out_path = os.path.join(HERE, "run_results.jsonl")
-    with open(out_path, "w", encoding="utf-8") as out_f:
+    with open(out_path, "a", encoding="utf-8") as out_f:
         for i, case in enumerate(cases, 1):
             print(f"[{i}/{len(cases)}] {case['id']} ({case['category']})...", flush=True)
             if case["category"] == "conversational":
