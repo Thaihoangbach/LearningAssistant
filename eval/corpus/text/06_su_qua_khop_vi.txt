@@ -1,0 +1,63 @@
+=== SECTION 0 | Trang 1 ===
+Hình 1.  Đường màu xanh lục thể hiện mô
+hình quá khớp và đường màu đen thể hiện một
+mô hình chính quy. Trong khi đường xanh lục
+bám sát dữ liệu huấn luyện tốt nhất thì nó lại quá
+phụ thuộc vào dữ liệu và dường như sẽ có tỉ lệ lỗi
+cao trên các dữ liệu chưa biết đến (dữ liệu thử
+nghiệm) so với đường màu đen.
+Sự quá khớp
+Trong thống kê, sự quá khớp (tiếng Anh:
+overfitting) là kết quả của một phân tích mà tương
+ứng với việc đạt độ chính xác quá cao với một tập dữ
+liệu nào đó, vì vậy điều này có thể thất bại khi so
+khớp với các dữ liệu bổ sung hoặc dự đoán các quan
+sát đáng tin cậy trong tương lai.[1] Một mô hình quá
+khớp là một mô hình thống kê chứa nhiều tham số
+hơn có thể chứng minh bằng dữ liệu.[2] Bản chất của
+sự quá khớp là việc vô tình trích xuất những biến thể
+dư thừa (ví dụ như phân số phương sai chưa giải thích
+được) như khi các biến thể thể hiện cấu trúc mô hình
+cơ bản.[3]:45
+1. Definition of "overfitting (https://en.oxforddicti
+onaries.com/definition/overfitting) Lưu trữ (htt
+ps://web.archive.org/web/20190522020516/h
+ttps://en.oxforddictionaries.com/definition/ove
+rfitting) ngày 22 tháng 5 năm 2019 tại
+Wayback Machine" at Oxford Dictionaries:
+this definition is specifically for statistics.
+2. Everitt B.S., Skrondal A. (2010), Cambridge Dictionary of Statistics, Cambridge University
+Press.
+3. Burnham, K. P.; Anderson, D. R. (2002), Model Selection and Multimodel Inference (ấn bản
+thứ 2), Springer-Verlag. (This has over 44000 citations on Google Scholar.)
+Leinweber, D. J. (2007). "Stupid data miner tricks". The Journal of Investing. Quyển 16.
+tr. 15–22. doi:10.3905/joi.2007.681820.
+Tetko, I. V.; Livingstone, D. J.; Luik, A. I. (1995). "Neural network studies. 1. Comparison of
+Overfitting and Overtraining" (PDF). Journal of Chemical Information and Modeling.
+Quyển 35 số 5. tr. 826–833. doi:10.1021/ci00027a006.
+Tip 7: Minimize overfitting. Chicco, D. (tháng 12 năm 2017). "Ten quick tips for machine
+learning in computational biology". BioData Mining. Quyển 10 số 35. tr. 1–17.
+doi:10.1186/s13040-017-0155-3. PMC 5721660. PMID 29234465.
+Chú thích
+Tham khảo
+
+=== SECTION 1 | Trang 2 ===
+Christian, Brian; Griffiths, Tom (tháng 4 năm 2017), "Chapter 7: Overfitting", Algorithms To
+Live By: The computer science of human decisions, William Collins (imprint), tr. 149–168,
+ISBN 978-0-00-754799-9
+Overfitting: when accuracy measure goes wrong (http://blog.lokad.com/journal/2009/4/22/ov
+erfitting-when-accuracy-measure-goes-wrong.html) Lưu trữ (https://web.archive.org/web/20
+090425121417/http://blog.lokad.com/journal/2009/4/22/overfitting-when-accuracy-measure-
+goes-wrong.html) ngày 25 tháng 4 năm 2009 tại Wayback Machine (an introductory video
+tutorial)
+The Problem of Overfitting Data (http://www3.cs.stonybrook.edu/~skiena/jaialai/excerpts/no
+de16.html) —Stony Brook University
+What is "overfitting," exactly? (https://statmodeling.stat.columbia.edu/2017/07/15/what-is-ov
+erfitting-exactly/) —Andrew Gelman blog
+CSE546: Linear Regression Bias / Variance Tradeoff (http://courses.cs.washington.edu/cour
+ses/cse546/12wi/slides/cse546wi12LinearRegression.pdf) —Đại học Washington
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Sự_quá_khớp&oldid=75270277”
+Đọc thêm
+Liên kết ngoài
+
+

@@ -1,0 +1,140 @@
+=== SECTION 0 | Trang 1 ===
+Mạng thần kinh tích chập
+Mạng nơ-ron tích chập (tiếng Anh: Convolutional Neural Network, viết tắt: CNN hay ConvNet) là một
+lớp các mạng nơ-ron sâu trong học sâu (deep learning), được thiết kế đặc biệt để xử lý và phân tích các
+dữ liệu có cấu trúc lưới nhiều chiều, phổ biến nhất là hình ảnh hai chiều.[1]
+Khác với các mạng nơ-ron kết nối đầy đủ (MLP/FC), CNN tận dụng hai nguyên lý không gian cốt lõi:
+**sự kết nối cục bộ** (local connectivity) và **chia sẻ trọng số** (weight sharing). Nhờ đó, CNN giảm
+thiểu đáng kể số lượng tham số cần huấn luyện, hạn chế hiện tượng quá khớp (overfitting) và có khả năng
+trích xuất các đặc trưng học được mang tính bất biến tịnh tiến (translation invariance).[2]
+Ý tưởng sinh học ban đầu (1959–1962): David Hubel và Torsten Wiesel nghiên cứu vỏ
+não thị giác của mèo và phát hiện ra các tế bào thần kinh có trường tiếp nhận (receptive
+field) cục bộ, chia làm tế bào đơn giản (simple cells) và tế bào phức tạp (complex cells).
+Khám phá này đã mang về cho họ giải Nobel Y học năm 1981 và đặt nền móng sinh học
+cho CNN.[3]
+Neocognitron (1980): Kunihiko Fukushima đề xuất mô hình Neocognitron, kiến trúc nhân
+tạo đầu tiên kết hợp các lớp tích chập và lớp gom cụm (pooling), có khả năng nhận dạng
+mẫu không phụ thuộc vào vị trí.[4]
+LeNet-5 (1998): Yann LeCun và các đồng sự tại AT&T Labs đã kết hợp phép tích chập với
+thuật toán lan truyền ngược (backpropagation) để tạo ra LeNet-5, mô hình nhận dạng chữ
+số viết tay trên séc ngân hàng thành công thương mại đầu tiên.[5]
+Bước ngoặt AlexNet (2012): Alex Krizhevsky, Ilya Sutskever và Geoffrey Hinton phát triển
+AlexNet, sử dụng GPU để huấn luyện mạng CNN sâu trên tập dữ liệu ImageNet và giành
+chiến thắng áp đảo tại cuộc thi ILSVRC 2012. Bước ngoặt này mở ra kỷ nguyên bùng nổ
+của học sâu.[6]
+Một kiến trúc CNN tiêu chuẩn được cấu tạo bởi sự xếp chồng liên tiếp của các lớp chính sau:
+Là thành phần cốt lõi thực hiện tính toán nặng nhất của mạng. Lớp này sử dụng một tập hợp các bộ lọc
+(filters/kernels) có kích thước nhỏ (ví dụ:  hoặc ) trượt qua toàn bộ chiều rộng và chiều cao
+của ảnh đầu vào.
+Tại mỗi vị trí trượt, phép tích chập tính tích vô hướng (dot product) giữa các trọng số của bộ lọc và vùng
+giá trị điểm ảnh tương ứng:
+Lịch sử phát triển
+Kiến trúc cốt lõi
+1. Lớp tích chập (Convolutional Layer)
+
+=== SECTION 1 | Trang 2 ===
+Trong đó  là ma trận ảnh đầu vào,  là ma trận bộ lọc (kernel), và  là bản đồ đặc trưng (feature
+map) thu được.
+Các tham số điều khiển phép tích chập gồm:
+Kích thước bộ lọc (Kernel size): Độ rộng và cao của cửa sổ trượt.
+Bước trượt (Stride): Số điểm ảnh mà bộ lọc di chuyển mỗi bước.
+Đệm (Padding): Thêm các giá trị (thường là 0 - Zero-padding) xung quanh viền ảnh để
+kiểm soát kích thước không gian của bản đồ đặc trưng đầu ra.
+Ngay sau phép tích chập tuyến tính, một hàm kích hoạt phi tuyến được áp dụng cho từng phần tử để giúp
+mạng học được các mối quan hệ phức tạp. Hàm kích hoạt chuẩn mực trong CNN hiện đại là **ReLU**
+(Rectified Linear Unit):
+Lớp này giảm kích thước không gian (giảm chiều) của bản đồ đặc trưng, giúp giảm số lượng tham số tính
+toán và tạo ra tính bất biến đối với những biến đổi nhẹ/dịch chuyển của vật thể.
+Max Pooling: Lấy giá trị lớn nhất trong cửa sổ trượt (phổ biến nhất).
+Average Pooling: Lấy giá trị trung bình cộng các giá trị trong cửa sổ.
+Nằm ở các tầng cuối cùng của mạng. Sau khi các lớp tích chập và pooling trích xuất các đặc trưng cấp
+cao, dữ liệu được trải phẳng (flatten) thành một vectơ một chiều và đưa qua các lớp kết nối đầy đủ để
+thực hiện nhiệm vụ phân loại hoặc dự đoán (thường dùng Softmax ở lớp đầu ra).
+2. Lớp kích hoạt (Activation Layer)
+3. Lớp gộp / Lớp lấy mẫu (Pooling Layer)
+4. Lớp kết nối đầy đủ (Fully Connected Layer)
+
+=== SECTION 2 | Trang 3 ===
+Các cột mốc kiến trúc CNN quan trọng
+Mạng Năm Số
+lớp
+Độ chính xác
+Top-5 (ImageNet) Đóng góp chính
+LeNet-5 1998 5 — Kiến trúc Tích chập + Pooling + FC chuẩn mực đầu tiên.
+AlexNet 2012 8 84.7% Áp dụng ReLU, Dropout và huấn luyện song song trên
+GPU.
+VGG-16 2014 16 92.7% Đồng nhất hóa kiến trúc bằng các bộ lọc nhỏ  xếp
+chồng.
+GoogLeNet 2014 22 93.3% Giới thiệu khối Inception giúp tính toán đặc trưng ở nhiều
+tỉ lệ khác nhau.
+ResNet 2015 152 96.4%
+Giới thiệu kết nối tắt (Skip Connections/Residual Blocks),
+giải quyết triệt để bài toán biến mất đạo hàm (vanishing
+gradient).[7]
+EfficientNet 2019 Biến
+đổi 97.1% Tối ưu hóa đồng thời cả chiều sâu, chiều rộng và độ phân
+giải ảnh (Compound Scaling).[8]
+So sánh CNN và Perceptron đa lớp (MLP)
+Tiêu chí Mạng Perceptron đa lớp (MLP) Mạng nơ-ron tích chập (CNN)
+Kết nối Kết nối đầy đủ (mọi nơ-ron nối với mọi
+nơ-ron lớp trước) Kết nối cục bộ (chỉ nối trong trường tiếp nhận)
+Tham số Rất lớn (tăng theo cấp số nhân với kích
+thước ảnh)
+Nhỏ hơn rất nhiều nhờ cơ chế chia sẻ trọng số
+(weight sharing)
+Xử lý không
+gian
+Làm phẳng ảnh làm mất hoàn toàn cấu
+trúc không gian 2D
+Giữ nguyên cấu trúc không gian và mối tương
+quan giữa các điểm ảnh lân cận
+Tính chất Nhạy cảm với vị trí vật thể Bất biến với sự dịch chuyển nhẹ của vật thể trong
+ảnh
+CNN là công nghệ nền tảng thống trị trong nhiều lĩnh vực:
+Thị giác máy tính: Phân loại ảnh, phát hiện vật thể (YOLO, R-CNN), phân đoạn hình ảnh
+(U-Net).
+Y tế: Phân tích ảnh chụp X-quang, MRI, CT để chẩn đoán khối u và các bệnh lý tự động.
+Xe tự lái: Nhận diện làn đường, biển báo giao thông và người đi bộ theo thời gian thực.
+Xử lý ngôn ngữ tự nhiên: Phân tích cảm xúc văn bản, phân loại câu (dùng tích chập 1D
+trên chuỗi từ).
+Sinh học tính toán: Dự đoán sự cuộn gập cấu trúc ADN và Protein.
+Các kiến trúc kinh điển
+So sánh với Mạng nơ-ron truyền thống (MLP)
+Ứng dụng
+
+=== SECTION 3 | Trang 4 ===
+Học sâu
+Học máy
+Thị giác máy tính
+Thần kinh học tính toán
+Học chuyển giao
+1. LeCun, Yann; Bengio, Yoshua; Hinton, Geoffrey (2015). "Deep learning". Nature. 521
+(7553): 436–444. doi:10.1038/nature14539. PMID 26017442.
+2. Goodfellow, Ian; Bengio, Yoshua; Courville, Aaron (2016). Deep Learning. MIT Press.
+tr. 326–366. ISBN 978-0262035613.
+3. Hubel, D. H.; Wiesel, T. N. (1962). "Receptive fields, binocular interaction and functional
+architecture in the cat's visual cortex". The Journal of Physiology. 160 (1): 106–154.
+doi:10.1113/jphysiol.1962.sp006837.
+4. Fukushima, Kunihiko (1980). "Neocognitron: A self-organizing neural network model for a
+mechanism of pattern recognition unaffected by shift in position". Biological Cybernetics. 36
+(4): 193–202. doi:10.1007/BF00344251.
+5. LeCun, Yann; Bottou, Léon; Bengio, Yoshua; Haffner, Patrick (1998). "Gradient-based
+learning applied to document recognition". Proceedings of the IEEE. 86 (11): 2278–2324.
+doi:10.1109/5.726791.
+6. Krizhevsky, Alex; Sutskever, Ilya; Hinton, Geoffrey E. (2012). "ImageNet classification with
+deep convolutional neural networks". Advances in Neural Information Processing Systems
+(NeurIPS). tr. 1097–1105.
+7. He, Kaiming; Zhang, Xiangyu; Ren, Shaoqing; Sun, Jian (2016). "Deep Residual Learning
+for Image Recognition". CVPR. tr. 770–778. arXiv:1512.03385.
+8. Tan, Mingxing; Le, Quoc V. (2019). "EfficientNet: Rethinking Model Scaling for Convolutional
+Neural Networks". ICML. tr. 6105–6114. arXiv:1905.11946.
+CS231n: Convolutional Neural Networks for Visual Recognition (https://cs231n.github.io/) —
+Khóa học thị giác máy tính nổi tiếng của Stanford do Andrej Karpathy giảng dạy.
+Hướng dẫn xây dựng CNN cơ bản với TensorFlow/Keras (https://www.tensorflow.org/tutorial
+s/images/cnn)
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Mạng_thần_kinh_tích_chập&oldid=75349660”
+Xem thêm
+Tham khảo
+Liên kết ngoài
+
+

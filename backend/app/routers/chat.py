@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import ensure_user, get_db
+from app.database import get_db
 from app.llm.client_factory import get_llm_client
 from app.llm.guardrail import check_question
 from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
@@ -26,18 +26,33 @@ from app.models import (
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
 from app.ingestion.outline import filter_topic_titles
+from app.services.apply import build_apply_result, is_apply_request
 from app.services.capability_detector import detect_capability
 from app.services.citation import _content_words, supporting_sentences
+from app.services.compare import (
+    NEEDS_ENTITIES_MESSAGE,
+    build_comparison,
+    extract_comparison_entities,
+    is_compare_request,
+)
+from app.services.context_assembly import assemble_context
 from app.services.flashcard import count_due
 from app.services.learner_context import build_learner_context
 from app.services.mastery import decay_unpractised
 from app.services.misconception import WrongChoice, find_repeated_misconceptions
 from app.services.qa_pipeline import answer_with_fallback
+from app.services.structural_retrieval import StructuralRetrievalUnavailable
 from app.services.study_planner import TopicPriority, generate_plan
+from app.services.summarize import (
+    NEEDS_TOPIC_MESSAGE,
+    UNAVAILABLE_MESSAGE,
+    TopicCandidate,
+    build_summary,
+    is_summarize_request,
+    resolve_topic,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-MAX_HISTORY_TURNS = 3
 
 # Golden Set (eval/report.md, mục 14) đo được Config A (dense-only, lọc lỏng
 # hơn) đạt Personalization 0.67 trong khi Config B (hybrid+reranker, lọc gắt
@@ -52,26 +67,6 @@ LEVEL_TOP_K_BOOST = 3
 
 # Số chủ đề gợi ý kèm theo khi hệ thống từ chối trả lời.
 MAX_SUGGESTED_TOPICS = 4
-
-
-def _load_conversation_history(db: Session, conversation_id: str) -> list[ConversationTurn]:
-    """Lấy N lượt hỏi-đáp gần nhất của hội thoại, dùng để giải ngữ cảnh câu hỏi
-    tiếp nối (vd: "nó" ám chỉ chủ đề đã hỏi trước đó) — xem app/llm/rag.py."""
-    messages = (
-        db.query(Message)
-        .filter(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
-    turns: list[ConversationTurn] = []
-    pending_question: str | None = None
-    for m in messages:
-        if m.role == "user":
-            pending_question = m.content
-        elif m.role == "assistant" and pending_question is not None:
-            turns.append(ConversationTurn(question=pending_question, answer=m.content))
-            pending_question = None
-    return turns[-MAX_HISTORY_TURNS:]
 
 
 # Loại ký ức dùng làm LÝ DO một chủ đề bị coi là yếu — chỉ lấy các sự kiện
@@ -295,6 +290,52 @@ def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
     return AnswerResult(answer=answer, is_grounded=True, sources=[])
 
 
+def _build_summarize_result(
+    db: Session, user_id: str, question: str, ready_docs: list[Document], llm_client
+) -> AnswerResult:
+    """Tóm tắt một DocumentTopic — xem app/services/summarize.py cho thiết kế
+    đầy đủ (structural retrieval thay semantic, output dạng bullet). Ở đây chỉ
+    lo phần đặc thù router: lấy danh sách chủ đề ứng viên trong phạm vi tài
+    liệu đã chọn, lọc chất lượng (cùng bộ lọc với gợi ý chủ đề khi từ chối trả
+    lời — BUG-001/BUG-006), rồi giao việc còn lại cho summarize.py."""
+    document_ids = {d.id for d in ready_docs}
+    rows = (
+        db.query(DocumentTopic)
+        .filter(DocumentTopic.user_id == user_id, DocumentTopic.document_id.in_(document_ids))
+        .all()
+    )
+    plausible_titles = set(filter_topic_titles([r.title for r in rows]))
+    candidates = [
+        TopicCandidate(topic_id=r.id, document_id=r.document_id, title=r.title)
+        for r in rows
+        if r.title in plausible_titles
+    ]
+
+    topic = resolve_topic(question, candidates)
+    if topic is None:
+        return AnswerResult(answer=NEEDS_TOPIC_MESSAGE, is_grounded=False, sources=[], needs_clarification=True)
+
+    try:
+        return build_summary(db, user_id, topic, llm_client)
+    except StructuralRetrievalUnavailable:
+        return AnswerResult(answer=UNAVAILABLE_MESSAGE, is_grounded=False, sources=[])
+
+
+def _build_compare_result(
+    db: Session, user_id: str, question: str, document_ids: set[str], llm_client
+) -> AnswerResult:
+    """So sánh hai khái niệm/chủ đề — xem app/services/compare.py cho thiết kế
+    đầy đủ (retrieval riêng từng vế). Ở đây chỉ lo phần đặc thù router: tách 2
+    vế từ câu hỏi, hỏi lại nếu không tách được rõ ràng thay vì đoán bừa."""
+    entities = extract_comparison_entities(question)
+    if entities is None:
+        return AnswerResult(
+            answer=NEEDS_ENTITIES_MESSAGE, is_grounded=False, sources=[], needs_clarification=True
+        )
+    entity_a, entity_b = entities
+    return build_comparison(db, user_id, document_ids, entity_a, entity_b, question, llm_client)
+
+
 @router.post("/ask")
 def ask(req: AskRequest, db: Session = Depends(get_db)):
     # Câu hỏi rỗng/toàn khoảng trắng vẫn qua được validation kiểu `str` của
@@ -311,31 +352,11 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
     guardrail_result = None
     qa_result = None
 
-    if capability is None:
-        # Chỉ tìm trong tài liệu "sẵn sàng", phiên bản mới nhất, thuộc quyền
-        # user_id — thực thi AC F2/F5 + ưu tiên bản mới khi tài liệu có version.
-        ready_docs = (
-            db.query(Document)
-            .filter(Document.user_id == req.user_id, Document.status == "sẵn sàng", Document.is_latest == True)
-            .all()
-        )
-        if req.course_name:
-            ready_docs = [d for d in ready_docs if d.course_name == req.course_name]
-
-        if not ready_docs:
-            raise HTTPException(400, "Chưa có tài liệu nào sẵn sàng để hỏi đáp.")
-
-        document_ids = {d.id for d in ready_docs}
-
-    conversation_id = req.conversation_id
-    if not conversation_id:
-        ensure_user(db, req.user_id)
-        convo = Conversation(user_id=req.user_id, course_name=req.course_name)
-        db.add(convo)
-        db.commit()
-        conversation_id = convo.id
-
-    history = _load_conversation_history(db, conversation_id)
+    context = assemble_context(db, req, needs_document_scope=capability is None)
+    ready_docs = context.ready_docs
+    document_ids = context.document_ids
+    conversation_id = context.conversation_id
+    history = context.history
 
     if capability is not None:
         # Các năng lực này chỉ đọc lại dữ liệu đã tính sẵn (mastery, kế hoạch,
@@ -362,6 +383,19 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         guardrail_result = check_question(req.question, llm_client=llm_client)
         if guardrail_result.blocked:
             result = AnswerResult(answer=guardrail_result.message, is_grounded=False, sources=[])
+        elif is_summarize_request(req.question):
+            # Intent riêng có output contract khác (bullet, structural
+            # retrieval) — xem app/services/summarize.py. Vẫn qua guardrail ở
+            # trên trước, cùng lý do an toàn với đường hỏi đáp chung bên dưới.
+            result = _build_summarize_result(db, req.user_id, req.question, ready_docs, llm_client)
+        elif is_compare_request(req.question):
+            # Intent riêng có output contract khác (retrieval riêng từng vế) —
+            # xem app/services/compare.py.
+            result = _build_compare_result(db, req.user_id, req.question, document_ids, llm_client)
+        elif is_apply_request(req.question):
+            # Intent riêng có output contract khác (3 phần: khái niệm/ví dụ/
+            # giải thích) — xem app/services/apply.py.
+            result = build_apply_result(db, req.user_id, document_ids, req.question, llm_client)
         else:
             learner = build_learner_context(
                 db, req.user_id, requested_level=req.level, query=req.question
@@ -474,7 +508,14 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         "answer": result.answer,
         "is_grounded": result.is_grounded,
         "abstained": qa_result.abstained if qa_result else False,
-        "needs_clarification": qa_result.needs_clarification if qa_result else False,
+        # Hợp cả hai nguồn: qa_result (đường RAG chung, answer_with_fallback
+        # không copy needs_clarification sang `result` khi tái dựng
+        # AnswerResult ở trên) VÀ result.needs_clarification (đường Summarize,
+        # app/services/summarize.py không đi qua qa_result) — thiếu vế nào
+        # cũng làm sai tín hiệu clarification của MỘT trong hai đường, phát
+        # hiện được khi test /chat/ask thật với yêu cầu tóm tắt mơ hồ.
+        "needs_clarification": (qa_result.needs_clarification if qa_result else False)
+        or result.needs_clarification,
         # Hậu quét injection trên câu trả lời cuối (app/services/qa_pipeline.py)
         # — phát hiện, không tự chặn. `False` mặc định cho các nhánh không sinh
         # bằng LLM (capability rule-based, guardrail chặn từ đầu vào).

@@ -6,8 +6,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
 venv/
 .venv/
+
+# Shell crash dumps (Git Bash on Windows)
+*.stackdump
 
 # Backend runtime data (DB, uploads, vector store) — tự tạo lại khi chạy app
 backend/data/

@@ -96,6 +96,86 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
         self.assertEqual(result.sources, [])
 
+    def test_self_declined_no_info_reversed_word_order_is_also_filtered(self):
+        """Fix regex: EDU-DECOMP-007 cho thấy generator đôi khi đặt "thông
+        tin" TRƯỚC "không có" ("Còn thông tin về X không có trong đoạn
+        trích") thay vì thứ tự "không có ... thông tin" — regex ban đầu chỉ
+        bắt một thứ tự, bỏ sót thứ tự này khiến câu tự-từ-chối lẫn vào
+        verifier và vẫn bị hiểu nhầm thành addresses_question=KHÔNG."""
+        llm = FakeLLMClient(scripted_responses=[
+            "LeNet-5 có 5 lớp theo tài liệu CNN [1]. Còn thông tin về random forest không có trong đoạn trích.",
+            '{"addresses_question": "ĐẦY ĐỦ", "1": "CÓ"}',
+        ])
+        result = answer_question(
+            question="LeNet-5 có mấy lớp và random forest giảm variance thế nào?",
+            retrieved_chunks=[self.make_chunk(score=0.9)],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertNotIn("không có", result.answer.lower())
+        self.assertIn("LeNet-5 có 5 lớp", result.answer)
+
+    def test_addresses_question_partial_does_not_trigger_clarification(self):
+        """Fix cho root cause thật của 4/11 case decomposition/multi_document
+        (xem eval/attribution_report.jsonl): câu hỏi ghép nhiều phần mà câu
+        trả lời chỉ phủ được MỘT phần từng bị addresses_question đánh KHÔNG
+        cho toàn bộ câu trả lời (all-or-nothing). VIỆC 1 giờ có giá trị
+        'MỘT PHẦN' — phải KHÔNG bị coi là từ chối."""
+        llm = FakeLLMClient(scripted_responses=[
+            "AlexNet có 8 lớp. VGGNet có 16-19 lớp. [1]",
+            '{"addresses_question": "MỘT PHẦN", "1": "CÓ"}',
+        ])
+        result = answer_question(
+            question="So sánh AlexNet và VGGNet về số lớp, và giải thích tại sao GoogLeNet dùng Inception?",
+            retrieved_chunks=[self.make_chunk(score=0.9)],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertFalse(result.needs_clarification)
+
+    def test_self_declined_no_info_returns_not_grounded_without_calling_verifier(self):
+        """Fix cho bug thật phát hiện qua Golden Set attribution (eval/trace.jsonl):
+        generator được chỉ thị nói "không có thông tin" khi đoạn trích không
+        chứa câu trả lời — nhưng nếu đưa nguyên câu đó vào verifier, VIỆC 1
+        (addresses_question) thường trả KHÔNG cho chính câu tự-từ-chối này,
+        khiến hệ thống trả NEEDS_CLARIFICATION_MESSAGE ("câu hỏi chưa đủ rõ")
+        — sai lệch, vì câu hỏi không mơ hồ, chỉ là thiếu căn cứ. Phải nhận ra
+        câu tự-từ-chối TRƯỚC khi gọi verifier và trả NOT_GROUNDED_MESSAGE
+        (đỡ luôn 1 lượt gọi LLM)."""
+        llm = FakeLLMClient(scripted_responses=["Không có thông tin về random forest trong đoạn trích."])
+        result = answer_question(
+            question="Random forest giúp giảm variance như thế nào?",
+            retrieved_chunks=[self.make_chunk(score=0.9)],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+        self.assertFalse(result.is_grounded)
+        self.assertFalse(result.needs_clarification)
+        self.assertEqual(len(llm.prompts_received), 1)  # chỉ generator, verifier bị skip
+
+    def test_partial_decline_keeps_substantive_claim_and_still_calls_verifier(self):
+        """Câu hỏi ghép nhiều ý (decomposition): một phần có căn cứ, một phần
+        generator tự nhận không có thông tin — phần tự-từ-chối phải bị loại
+        khỏi verifier VÀ khỏi câu trả lời cuối, chỉ giữ phần thực chất."""
+        llm = FakeLLMClient(scripted_responses=[
+            "LeNet-5 có 5 lớp theo tài liệu CNN [1]. Không có thông tin về random forest trong đoạn trích.",
+            '{"addresses_question": "CÓ", "1": "CÓ"}',
+        ])
+        result = answer_question(
+            question="LeNet-5 có mấy lớp và random forest giảm variance thế nào?",
+            retrieved_chunks=[self.make_chunk(score=0.9)],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertNotIn("không có thông tin", result.answer.lower())
+        self.assertIn("LeNet-5 có 5 lớp", result.answer)
+        # verifier chi nhan 1 luan diem (da loc cau tu-tu-choi truoc khi goi)
+        self.assertNotIn("Không có thông tin", llm.prompts_received[1])
+
     def test_chunks_below_threshold_are_filtered_out(self):
         llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", "CÓ"])
         strong = self.make_chunk(score=0.9, text="Chunk mạnh", pos="Trang 2")
@@ -122,6 +202,27 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertIn("Đoạn trích gốc quan trọng.", generator_prompt)
         self.assertIn("Câu trả lời nháp.", verifier_prompt)
         self.assertIn("Đoạn trích gốc quan trọng.", verifier_prompt)
+
+    def test_verifier_prompt_instructs_premise_correction_counts_as_addressing(self):
+        """Fix cho Finding #2 (Golden Set): case hỏi xác nhận một tiền đề SAI
+        (vd "LeNet-5 được phát triển tại Google, đúng không?") khiến generator
+        trả lời đúng-và-sửa-lại ("...không phải Google, mà là AT&T Labs...")
+        nhưng verifier's VIỆC 1 (addresses_question) vẫn trả KHÔNG — xác nhận
+        qua trace thật (eval/trace.jsonl) generator/verifier đều xử lý đúng
+        TỪNG luận điểm (VIỆC 2 = CÓ) nhưng addresses_question vẫn sai vì
+        prompt cũ không nói rõ "sửa lại tiền đề sai = trả lời đúng câu hỏi".
+        Test này chỉ đảm bảo chỉ dẫn đó có mặt trong prompt — hành vi thật
+        của verifier (một LLM) không kiểm được bằng unit test thuần."""
+        llm = FakeLLMClient(scripted_responses=["Câu trả lời nháp.", "CÓ"])
+        answer_question(
+            question="X đúng không?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            min_score=0.3,
+        )
+        _, verifier_prompt = llm.prompts_received
+        self.assertIn("tiền đề", verifier_prompt)
+        self.assertIn("sửa lại", verifier_prompt)
 
     def test_chunk_text_is_wrapped_as_data_not_instruction(self):
         """Đoạn trích tài liệu (nguồn KHÔNG đáng tin — người dùng tự tải lên)
@@ -748,6 +849,100 @@ class TestAnswerAddressesQuestion(unittest.TestCase):
         llm = FakeLLMClient(scripted_responses=["Trả lời. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}'])
         answer_question(question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm)
         self.assertEqual(len(llm.prompts_received), 2)
+
+
+class TestBulletOutputStyle(unittest.TestCase):
+    """Tính năng Tóm tắt (app/services/summarize.py) dùng output_style="bullets"
+    để tái sử dụng NGUYÊN generator+verifier — chỉ khác cách nối các claim còn
+    sống sót lại thành câu trả lời cuối (xuống dòng thay vì khoảng trắng, để
+    mỗi ý chính giữ một dòng riêng khi frontend render)."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_bullet_instruction_is_included_in_generator_prompt(self):
+        llm = FakeLLMClient(
+            scripted_responses=["- Ý một. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}']
+        )
+        answer_question(
+            question="Tóm tắt chủ đề X.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="bullets",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("- ", generator_prompt)
+        self.assertIn("danh sách", generator_prompt)
+
+    def test_surviving_bullets_are_joined_by_newline_not_space(self):
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "- Ý một. [1]\n- Ý hai. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Tóm tắt chủ đề X.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="bullets",
+        )
+        self.assertTrue(result.is_grounded)
+        lines = result.answer.split("\n")
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0].startswith("- Ý một."))
+        self.assertTrue(lines[1].startswith("- Ý hai."))
+
+    def test_default_output_style_still_joins_by_space(self):
+        # Hồi quy: KHÔNG truyền output_style phải giữ nguyên hành vi cũ.
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "Câu một. [1] Câu hai. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Hỏi?", retrieved_chunks=[self.make_chunk()], llm_client=llm
+        )
+        self.assertNotIn("\n", result.answer)
+
+
+class TestApplyOutputStyle(unittest.TestCase):
+    """Tính năng Vận dụng (app/services/apply.py) dùng output_style="apply" —
+    cùng cơ chế nối claim bằng xuống dòng như "bullets" (mỗi phần khái niệm/
+    ví dụ/giải thích giữ một dòng riêng), chỉ khác nội dung chỉ dẫn generator."""
+
+    def make_chunk(self, text="Nội dung nguồn.", doc="a.pdf", pos="Trang 1", score=0.8):
+        return RetrievedChunk(text=text, document_name=doc, position_ref=pos, score=score)
+
+    def test_apply_instruction_is_included_in_generator_prompt(self):
+        llm = FakeLLMClient(
+            scripted_responses=["- Khái niệm. [1]", '{"addresses_question": "CÓ", "1": "CÓ"}']
+        )
+        answer_question(
+            question="Áp dụng khái niệm X vào một ví dụ cụ thể.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="apply",
+        )
+        generator_prompt, _ = llm.prompts_received
+        self.assertIn("VẬN DỤNG", generator_prompt)
+
+    def test_surviving_claims_are_joined_by_newline_not_space(self):
+        llm = FakeLLMClient(
+            scripted_responses=[
+                "- Khái niệm. [1]\n- Ví dụ áp dụng. [1]\n- Giải thích. [1]",
+                '{"addresses_question": "CÓ", "1": "CÓ", "2": "CÓ", "3": "CÓ"}',
+            ]
+        )
+        result = answer_question(
+            question="Áp dụng khái niệm X vào một ví dụ cụ thể.",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            output_style="apply",
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertEqual(len(result.answer.split("\n")), 3)
 
 
 if __name__ == "__main__":

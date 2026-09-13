@@ -31,6 +31,14 @@ class Chunk:
     text: str
     position_ref: str
     chunk_index: int
+    # Chỉ số (0-based) của section trong danh sách `sections` truyền vào
+    # chunk_sections() mà chunk này sinh ra từ đó — dùng để lấy lại TOÀN BỘ
+    # chunk thuộc một DocumentTopic theo đúng thứ tự đọc gốc (structural
+    # retrieval cho Summarize), khác với truy hồi theo độ liên quan ngữ nghĩa.
+    # Chunk bắc cầu (nối 2 section) mang section_index của section ĐẦU (bên
+    # trái) — coi như thuộc về section đó, phần nội dung bắc cầu chỉ là phần
+    # đuôi/đầu chồng lấn.
+    section_index: int = 0
 
 
 def _hard_split(text: str, max_chars: int, overlap_chars: int) -> List[str]:
@@ -112,8 +120,9 @@ def chunk_sections(
     chunks: List[Chunk] = []
     prev_ref = None
     prev_text = None
+    prev_section_index = None
 
-    for position_ref, text in sections:
+    for section_index, (position_ref, text) in enumerate(sections):
         stripped = text.strip()
         if not stripped:
             continue
@@ -133,13 +142,23 @@ def chunk_sections(
                     text=bridge,
                     position_ref=f"{prev_ref}–{position_ref}",
                     chunk_index=len(chunks),
+                    # Gán cho section BÊN TRÁI — xem docstring `Chunk.section_index`.
+                    section_index=prev_section_index,
                 )
             )
 
         for piece in _split_text(stripped, max_chars, overlap_chars):
-            chunks.append(Chunk(text=piece, position_ref=position_ref, chunk_index=len(chunks)))
+            chunks.append(
+                Chunk(
+                    text=piece,
+                    position_ref=position_ref,
+                    chunk_index=len(chunks),
+                    section_index=section_index,
+                )
+            )
 
         prev_ref = position_ref
         prev_text = stripped
+        prev_section_index = section_index
 
     return chunks

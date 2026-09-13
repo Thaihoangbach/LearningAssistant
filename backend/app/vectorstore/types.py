@@ -13,3 +13,6 @@ class IndexedChunk:
     document_name: str
     position_ref: str
     text: str
+    # Xem app/ingestion/chunker.py::Chunk.section_index — mặc định None cho
+    # chunk dựng tay ở test cũ/nơi khác chưa quan tâm structural retrieval.
+    section_index: "int | None" = None

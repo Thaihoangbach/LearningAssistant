@@ -1,0 +1,337 @@
+=== SECTION 0 | Trang 1 ===
+Xác suất của việc tung một số con số
+bằng cách sử dụng hai con xúc xắc.
+Xác suất
+Xác suất (Tiếng Anh: probability) là một nhánh của toán học
+liên quan đến các mô tả bằng số về khả năng xảy ra một sự
+kiện, hoặc khả năng một mệnh đề là đúng. Xác suất của một
+sự kiện là một số trong khoảng từ 0 đến 1, trong đó, nói một
+cách đại khái, 0 biểu thị sự bất khả thi của sự kiện và 1 biểu
+thị sự chắc chắn.[chú thích 1] [1][2] Xác suất của sự kiện càng
+cao thì khả năng xảy ra sự kiện càng cao. Một ví dụ đơn giản
+là tung đồng xu cân bằng (không thiên lệch). Vì đồng xu là
+cân bằng, nên cả hai kết quả ("sấp" và "ngửa") đều có thể xảy
+ra như nhau; xác suất của "sấp" bằng xác suất của "ngửa"; và
+vì không có kết quả nào khác có thể xảy ra, xác suất xảy ra
+"sấp" hoặc "ngửa" là  (cũng có thể được viết là 0,5 hoặc
+50%).
+Những khái niệm này đã được chuẩn hóa toán học bằng tiên đề trong lý thuyết xác suất, được sử dụng
+rộng rãi trong các lĩnh vực nghiên cứu như toán học, thống kê, tài chính, cờ bạc, khoa học (đặc biệt là vật
+lý), trí tuệ nhân tạo, học máy, khoa học máy tính, lý thuyết trò chơi, và triết học, ví dụ, rút ra suy luận về
+tần suất dự kiến của các sự kiện. Lý thuyết xác suất cũng được sử dụng để mô tả cơ học và quy luật cơ
+bản của các hệ thống phức tạp.[3]
+Khi xử lý các thử nghiệm ngẫu nhiên và được xác định rõ ràng trong bối cảnh lý thuyết thuần túy (như
+tung đồng xu cân bằng), xác suất có thể được mô tả bằng số bằng số lượng kết quả mong muốn, chia cho
+tổng số tất cả các kết quả. Ví dụ: tung một đồng xu cân bằng hai lần sẽ mang lại kết quả "sấp-sấp", "sấp-
+ngửa", "ngửa-sấp" và "ngửa-ngửa". Xác suất nhận được kết quả của "sấp-sấp" là 1 trong 4 kết quả, hoặc,
+về mặt số học, 1/4, 0,25 hoặc 25%. Tuy nhiên, khi nói đến ứng dụng thực tế, có hai loại diễn giải xác suất
+cạnh tranh chính, mà những người dùng nó có quan điểm khác nhau về bản chất cơ bản của xác suất:
+1. Những người theo chủ nghĩa khách quan ấn định các con số để mô tả một số trạng thái
+khách quan hoặc thực tế của sự việc. Phiên bản phổ biến nhất của xác suất khách quan là
+xác suất thường xuyên, cho rằng xác suất của một sự kiện ngẫu nhiên biểu thị tần suất xuất
+hiện tương đối của kết quả của một thử nghiệm, khi thử nghiệm được lặp lại vô thời hạn.
+Cách hiểu này coi xác suất là tần suất tương đối "về lâu dài" của các kết quả.[4] Một sửa đổi
+của điều này là xác suất xu hướng, diễn giải xác suất là xu hướng của một số thử nghiệm
+để mang lại một kết quả nhất định, ngay cả khi nó chỉ được thực hiện một lần.
+2. Những người theo chủ nghĩa chủ quan ấn định các con số cho mỗi xác suất chủ quan,
+nghĩa là, như một mức độ của niềm tin.[5] Mức độ tin tưởng được hiểu là "mức giá mà bạn
+sẽ mua hoặc bán một vụ đặt cược trả 1 đơn vị tiện ích nếu E, 0 nếu không E."[6] Phiên bản
+phổ biến nhất của xác suất chủ quan là xác suất Bayes, bao gồm kiến thức chuyên môn
+cũng như dữ liệu thực nghiệm để tạo ra xác suất. Kiến thức chuyên môn được đại diện bởi
+Diễn giải
+
+=== SECTION 1 | Trang 2 ===
+một số phân phối xác suất trước (chủ quan). Những dữ liệu này được kết hợp trong một
+hàm xác suất. Tích của khả năng xảy ra trước và khả năng xảy ra, khi được chuẩn hóa, dẫn
+đến một phân phối xác suất hậu nghiệm kết hợp tất cả các thông tin đã biết cho đến nay.[7]
+Theo định lý thỏa thuận của Aumann, các tác nhân Bayes có niềm tin trước đó giống nhau
+sẽ kết thúc với niềm tin hậu duệ tương tự. Tuy nhiên, đủ các yếu tố khác nhau có thể dẫn
+đến các kết luận khác nhau, bất kể lượng thông tin mà các đại lý chia sẻ.[8]
+Từ xác suất (probability) bắt nguồn từ chữ probabilitas trong tiếng Latin và có nghĩa là "để chứng minh,
+để kiểm chứng". Nói một cách đơn giản, probable là một trong nhiều từ dùng để chỉ những sự kiện hoặc
+kiến thức chưa chắc chắn, và thường đi kèm với các từ như "có vẻ là", "mạo hiểm", "may rủi", "không
+chắc chắn" hay "nghi ngờ", tùy vào ngữ cảnh. Theo một nghĩa nào đó, điều này khác nhiều so với ý nghĩa
+hiện đại của xác suất, ngược lại, là thước đo trọng lượng của bằng chứng thực nghiệm, và được hình
+thành từ suy luận quy nạp và suy luận thống kê.[9]
+"Cơ hội" (chance), "cá cược" (odds, bet) là những từ cho khái niệm tương tự. Nếu lý thuyết cơ học có
+định nghĩa chính xác cho "công" và "lực", thì lý thuyết xác suất nhằm mục đích định nghĩa "khả năng".
+Nghiên cứu khoa học về xác suất là một bước phát triển hiện đại của toán học. Cờ bạc cho thấy rằng đã
+có sự quan tâm đến việc định lượng các ý tưởng về xác suất trong nhiều thiên niên kỷ, nhưng các mô tả
+toán học chính xác đã xuất hiện muộn hơn nhiều. Có những lý do giải thích cho sự phát triển chậm chạp
+của toán học xác suất. Trong khi các trò chơi may rủi tạo động lực cho việc nghiên cứu toán học về xác
+suất, vẫn bị che lấp bởi những mê tín của những người chơi cờ bạc.[10]
+Theo Richard Jeffrey, "Trước giữa thế kỷ XVII, thuật ngữ 'có thể xảy ra' (tiếng Latinh xác suất) có nghĩa
+là có thể chấp thuận được, và được áp dụng theo nghĩa đó, cho ý kiến và hành động. Một hành động hoặc
+ý kiến có thể xảy ra là một hành động chẳng hạn như những người hợp lý sẽ thực hiện hoặc nắm giữ,
+trong hoàn cảnh." [11] Tuy nhiên, đặc biệt là trong các bối cảnh pháp lý, 'có thể xảy ra' cũng có thể áp
+dụng cho các mệnh đề có bằng chứng xác đáng.[12]
+Các dạng xác suất và thống kê sớm nhất được biết đến đã được phát triển bởi các nhà toán học Trung
+Đông nghiên cứu mật mã từ thế kỷ 8 đến thế kỷ 13. Al-Khalil (717–786) đã viết cuốn sách Thông điệp
+mật mã trong đó có lần đầu tiên sử dụng các hoán vị và tổ hợp để liệt kê tất cả các từ tiếng Ả Rập có thể
+có và không có nguyên âm. Al-Kindi (801–873) đã sử dụng suy luận thống kê sớm nhất được biết đến
+trong công việc của mình về phân tích mật mã và phân tích tần số. Một đóng góp quan trọng của Ibn
+Adlan (1187–1268) là về kích thước mẫu để sử dụng phân tích tần số.[13]
+Nhà nghiên cứu đa ngành người Ý ở thế kỷ XVI Gerolamo Cardano đã chứng minh hiệu quả của việc xác
+định tỷ lệ cược là tỷ lệ giữa các kết quả thuận lợi và không thuận lợi (ngụ ý rằng xác suất của một sự kiện
+được cho bằng tỷ lệ các kết quả thuận lợi trên tổng số các kết quả có thể xảy ra [14]). Ngoài công trình cơ
+bản của Cardano, học thuyết về xác suất còn có từ sự tương ứng của Pierre de Fermat và Blaise Pascal
+(1654). Christiaan Huygens (1657) đã đưa ra phương pháp điều trị khoa học sớm nhất được biết đến đối
+với chủ đề này.[15] Ars Conjectandi của Jakob Bernoulli (di cảo, 1713) và Học thuyết Cơ hội của
+Từ nguyên
+Lịch sử
+
+=== SECTION 2 | Trang 3 ===
+Cuốn sách Thông điệp
+mật mã của Al-Kindi chứa
+cách sử dụng suy luận
+thống kê sớm nhất được
+biết đến (thế kỷ thứ 9)
+Gerolamo Cardano (thế
+kỷ 16)
+Christiaan Huygens đã
+xuất bản một trong những
+cuốn sách đầu tiên về xác
+suất (thế kỷ 17)
+Abraham de Moivre (1718) coi chủ đề này như một nhánh của toán
+học.[16] Xem Sự xuất hiện của Xác suất [9] Ian Hacking và Khoa học về
+Phỏng đoán [17] của James Franklin để biết lịch sử về sự phát triển ban
+đầu của khái niệm xác suất toán học.
+Lý thuyết sai số có thể bắt nguồn từ cuốn Opera Miscellanea của Roger
+Cotes (di cảo, 1722), nhưng một cuốn hồi ký do Thomas Simpson soạn
+năm 1755 (in năm 1756) lần đầu tiên áp dụng lý thuyết này vào cuộc thảo
+luận về sai số khi quan sát.[18] Lần tái bản (1757) của cuốn hồi ký này đưa
+ra tiên đề rằng các lỗi tích cực và tiêu cực đều có thể xảy ra như nhau, và
+các giới hạn có thể ấn định nhất định xác định phạm vi của tất cả các lỗi.
+Simpson cũng thảo luận về các lỗi liên tục và mô tả một đường cong xác
+suất.
+Hai định luật sai số đầu tiên được đề xuất đều bắt nguồn từ Pierre-Simon
+Laplace. Luật đầu tiên được xuất bản vào năm 1774, và tuyên bố rằng tần
+suất của một lỗi có thể được biểu thị dưới dạng một hàm số mũ của mức
+độ lỗi - dấu hiệu bỏ qua. Định luật sai số thứ hai được Laplace đề xuất vào
+năm 1778, và tuyên bố rằng tần số của sai số là một hàm số mũ của bình
+phương sai số.[19] Luật sai số thứ hai được gọi là phân phối chuẩn hay luật
+Gauss. "Về mặt lịch sử, rất khó để gán định luật đó cho Gauss, người mặc
+dù có sự thông minh nổi tiếng của mình nhưng có lẽ đã không phát hiện ra
+điều này trước khi được hai tuổi." [19]
+Daniel Bernoulli (1778) đã đưa ra nguyên tắc tích cực đại của các xác suất
+của một hệ thống các lỗi đồng thời.
+Adrien-Marie Legendre (1805) đã phát triển phương pháp bình phương
+nhỏ nhất và giới thiệu nó trong tác phẩm Nouvelles méthodes pour la
+détermination des obitanes des comètes (Phương pháp mới để xác định
+quỹ đạo của sao chổi).[20] Khi thiếu hiểu biết về đóng góp của Legendre,
+một nhà văn người Mỹ gốc Ireland, Robert Adrain, biên tập viên của "The
+Analyst" (1808), lần đầu tiên suy luận ra quy luật điều kiện của sai số:
+Ở đây  là một hằng số phụ thuộc vào độ chính xác của quan sát, và  là
+một hệ số tỷ lệ đảm bảo rằng diện tích dưới đường cong bằng 1. Ông đã
+đưa ra hai bằng chứng, chứng minh thứ hai về cơ bản giống với của John
+Herschel (1850). Gauss đã đưa ra bằng chứng đầu tiên dường như đã được
+biết đến ở Châu Âu (thứ ba sau Adrain) vào năm 1809. Các bằng chứng
+khác được đưa ra bởi Laplace (1810, 1812), Gauss (1823), James Ivory
+(1825, 1826), Hagen (1837), Friedrich Bessel (1838), WF Donkin (1844,
+1856) và Morgan Crofton (1870). Những người đóng góp khác là Ellis
+(1844), De Morgan (1864), Glaisher (1872), và Giovanni Schiaparelli
+(1875). Công thức của Peters (1856) đối với r, lỗi có thể xảy ra của một lần quan sát, đã được biết tường
+tận.
+
+
+=== SECTION 3 | Trang 4 ===
+Về cơ bản có một tập hợp những quy luật toán để có thể biến đổi các giá trị của xác suất; những quy luật
+nầy sẽ được liệt kê ra trong phần "Sự hình thành của xác suất" dưới đâỵ. (Có một số các quy luật được
+khác dùng để định lượng sự ngẫu nhiên như trong lý thuyết Dempster-Shafer và lý thuyết khả tạo nhưng
+những quy luật này thì khác biệt từ bản chất và không tương hợp với cách hiểu thông thường các định
+luật về xác suất. Tuy nhiên, người ta vẫn còn tranh biện về những đối tượng chính xác nào mà trên đó
+những quy luật này được áp dụng. Đây là đầu đề của những diễn dịch của xác suất.
+Ý tưởng chung của xác suất thường được chia thành 2 khái niệm liên quan:
+Xác suất may rủi (aleatory probability), đề cập đến khả năng xảy ra của các sự kiện trong
+tương lai mà khả năng xảy ra của các sự kiện này phụ thuộc vào một hiện tượng vật lý nào
+đó mang tính ngẫu nhiên. Khái niệm này còn được chia ra thành (1) các hiện tượng vật lý,
+về cơ bản, có thể dự đoán được khi có đủ thông tin và (2) các hiện tượng không thể dự
+đoán được. Ví dụ của loại trước là việc thả một con súc sắc hay quay một bánh xe roulette;
+ví dụ của loại sau là sự phân rã hạt nhân.
+Xác suất trong tri thức (epistemic probability), đề cập đến sự không chắc chắn của chúng ta
+về một mệnh đề nào đó vì thiếu thông tin cung cấp để suy luận. Ví dụ việc xác định khả
+năng một nghi phạm là có phạm tội, dựa trên các chứng cứ cung cấp.
+Như các lý thuyết khác, lý thuyết xác suất là một biểu diễn của khái niệm xác suất bằng các thuật ngữ
+hình thức - nghĩa là các thuật ngữ mà có thể xác định một cách độc lập với ý nghĩa của nó. Các thuật ngữ
+hình thức này được thao tác bởi các quy luật toán học và logic, và kết quả thu được sẽ được chuyển dịch
+trở lại miền (domain) của bài toán.
+Có hai hướng công thức hóa xác suất đã thành công là sự hình thành công thức Kolmogorov và sự hình
+thành công thức Cox. Trong công thức của Kolmogorov, các tập được hiểu là các biến cố và xác suất
+chính là một phép đo trên một lớp các tập đó.
+Trong công thức của Cox, xác suất được xem là cái cơ bản (primitive - không thể phân tích thêm được
+nữa) và tập trung nghiên cứu vào việc xây dựng một phép gán tốt các giá trị xác suất đến các mệnh đề.
+Trong cả hai trường hợp, các định luật về xác suất là như nhau, ngoại trừ yếu tố chi tiết kĩ thuật:
+1. xác suất là một giá trị số trong khoảng 0 và 1;
+2. xác suất của một sự kiện hay mệnh đề và phần bù của nó cộng lại phải bằng 1; và
+3. xác suất kết hợp của hai sự kiện hay hai mệnh đề là tích của các xác suất của một trong
+chúng và xác suất của cái thứ hai với điều kiện biết cái trước xảy ra.
+Xác suất của một sự kiện thương được biểu diễn bằng số thực trong khoảng 0 và 1, bao gồm 2 giá trị
+biên. Và một sự kiện không thể xảy ra thì có xác suất là 0, còn một sự kiện chắc chắn thì có xác suất là 1,
+nhưng điều ngược lại không đúng. Sự khác biệt giữa "chắc chắn" và "xác suất xảy ra 1" là rất quan trọng.
+Hầu hết các giá trị xác suất xảy ra trong thực tế là giữa 0 và 1.
+Khái niệm
+Sự hình thành xác suất
+Cách biểu diễn và chuyển đổi các giá trị xác suất
+
+=== SECTION 4 | Trang 5 ===
+Xúc xắc 6 mặt -
+một biểu tượng của
+xác suất
+Một phân bố xác suất là một hàm số nhằm gán các giá trị (gọi là xác suất) cho các sự kiện. Các giá trị số
+này đặc trưng cho khả năng xảy ra của các sự kiện. Với một tập bất kì các sự kiện, có rất nhiều cách để
+gán các xác suất, và thường dựa vào sự lựa chọn loại phân bố của các sự kiện đang xem xét.
+Có nhiều cách để chỉ định một phân bố xác suất. Thông thường nhất có lẽ là chỉ định một hàm mật độ xác
+suất (probability density function). Từ đó, xác suất của một sự kiện sẽ được bằng cách lấy tích phân hàm
+mật độ. Tuy nhiên, hàm phân bố cũng có thể được chỉ định rõ trực tiếp. Trong trường hợp chỉ có một biến
+(hay một chiều), thì hàm phân bố được gọi là hàm phân bố tích lũy (cumulative distribution function).
+Phân bố xác suất cũng có thể được chỉ định thông qua các giá trị mômen hay hàm đặc trưng
+(characteristic function), hay các cách khác nữa.
+Một phân bố được gọi là phân bố rời rạc nếu nó được định ra trên một tập rời rạc, đếm được; ví dụ tập
+các số nguyên.
+Một phân bố được gọi là phân bố liên tục nếu nó được định ra trên một tập vô hạn, không đếm được.
+Hầu hết các phân bố trong các ứng dụng thực tế đều hoặc là một trong hai, nhưng có một số ví dụ về phân
+bố bao gồm của cả hai, gọi là phân bố hỗn hợp.
+Các phân bố rời rạc quan trọng bao gồm phân bố đồng nhất, phân bố Poisson, phân bố nhị thức, phân bố
+nhị thức âm và phân bố Maxwell-Boltzmann.
+Các phân bố liên tục quan trọng bao gồm phân bố chuẩn (hay còn gọi là phân bố Gauss), phân bố gamma,
+phân bố-t của Student (Student's t-distribution), và phân bố hàm mũ (exponential distribution).
+Tiên đề xác suất tạo thành nền tảng cho lý thuyết xác suất. Việc ĩính toán các xác
+suất thường dựa vào phép tổ hợp hoÚặc áp dụng trực tiếp các tiên đề. Các ứng
+dụng xác suất bao gồm thống kê, nó dựa vào ý tưởng phân bố xác suất và định lý
+giới hạn trung tâm.
+Để minh họa, ta xem việc tung một đồng xu cân đối. Về mặt trực quan, xác suất
+để head xuất hiện phía trên là 50%; nhưng phát biểu này thiếu tính toán học -
+Vậy con số 50% có ý nghĩa thực sự thế nào trong ví dụ này?
+Một hướng là dùng định luật số lớn. Giả sử là ta thực hiện một số lần gieo đồng
+xu, với mỗi lần gieo là độc lập nhau - nghĩa là, kết quả của 2 lần gieo khác nhau
+là độc lập nhau. Nếu ta tiến hành N lần gieo (trials), và đặt NH là số lần mà mặt
+head xuất hiện, thì với tỉ lệ NH/N.
+Khi số lần gieo N trở nên lớn, ta kì vọng rằng tỉ lệ NH/N sẽ tiến gần hơn đến giá trị 1/2. Điều này cho
+phép ta định nghĩa xác suất Pr(H) của mặt head xuất hiện là giới hạn, khi N tiến ra vô cùng, của chuỗi các
+tỉ lệ này:
+Sự phân bố
+Xác suất với toán học
+
+
+=== SECTION 5 | Trang 6 ===
+Trong thực tế, dĩ nhiên ta không thể tiến hành vô hạn lần các lần gieo được; vì thế, nói chung công thức
+này áp dụng chính xác cho tình huống khi mà chúng ta biết được một xác suất cho sẵn (a priori) cho một
+kết quả đầu ra nào đó (mà trong ví dụ này là thông tin đồng xu cân đối). Khi đó, định luật số lớn phát biểu
+rằng, khi cho biết Pr(H), và với một số nhỏ bất kì ε, luôn tồn tại một giá trị n sao cho với mọi N > n,
+Khía cạnh thông tin cho sẵn a priori của hướng tiếp cận này đôi khi gặp khó khăn trong thực tiễn. Ví dụ,
+trong với kịch Rosencrantz and Guildenstern are Dead của Tom Stoppard, một nhân vật gieo đồng xu mà
+luôn xuất hiện mặt head, sau 100 lần gieo. Ông ta không thể xác định đây là sự kiện ngẫu nhiên hay
+không - vì dù sao, điều này vẫn có thể xảy ra với đồng xu cân đối (dù hiếm).
+Khó khăn trong việc tính toán xác suất nằm ở việc xác định số sự kiện có thể xảy ra (possible events):
+đếm số lần xuất hiện của mỗi sự kiện, và đếm số lượng sự kiện có thể xảy ra đó. Đặc biệt khó khăn trong
+việc rút ra một kết luận có ý nghĩa từ các xác suất tính được. Một bài toán đố thú vị, bài toán Monty Hall
+sẽ cho thấy điều này.
+Để học thêm về cơ bản của lý thuyết xác suất, xem bài viết về tiên đề xác suất và định lý Bayes giải thích
+việc sử dụng xác suất có điều kiện trong trường hợp sự xuất hiện của 2 sự kiện là có liên quan nhau.
+Ảnh hưởng chính của lý thuyết xác suất trong cuộc sống hằng ngày đó là việc xác định rủi ro và trong
+buôn bán hàng hóa. Chính phủ cũng áp dụng các phương pháp xác suất để điều tiết môi trường hay còn
+gọi là phân tích đường lối.
+Lý thuyết trò chơi cũng dựa trên nền tảng xác suất. Một ứng dụng khác là trong xác định độ tin cậy.
+Nhiều sản phẩm tiêu dùng như xe hơi, đồ điện tử sử dụng lý thuyết độ tin cậy trong thiết kế sản phẩm để
+giảm thiểu xác suất hỏng hóc. Xác suất hư hỏng cũng gắn liền với sự bảo hành của sản phẩm.
+Lý thuyết quyết định
+Lý thuyết trò chơi
+Lý thuyết thông tin
+Định luật số lớn
+Phân phối chuẩn
+Biến ngẫu nhiên
+Thống kê
+Quá trình ngẫu nhiên
+Những chú ý khi tính toán xác suất
+Ứng dụng của xác suất với đời sống hàng ngày
+Xem thêm
+
+=== SECTION 6 | Trang 7 ===
+1. Nói một cách chính xác, xác suất bằng 0 chỉ ra rằng một biến cố hầu như không bao giờ
+(almost never) xảy ra, trong khi xác suất bằng 1 chỉ ra rằng biến cố đó hầu như chắc chắn
+(almost surely) xảy ra. Đây là một sự phân biệt quan trọng khi không gian mẫu là vô hạn.Ví
+dụ, đối với phân phối xác suất đều trên khoảng số thực [5, 10], có vô số kết quả có thể xảy
+ra, và xác suất để quan sát được một kết quả cụ thể - chẳng hạn như chính xác là 7 - bằng
+0. Điều này có nghĩa là khi chúng ta thực hiện quan sát, kết quả hầu như chắc chắn không
+phải là chính xác 7. Tuy nhiên, nó không có nghĩa là kết quả chính xác bằng 7 là không thể.
+Cuối cùng, một kết quả cụ thể nào đó (với xác suất bằng 0) sẽ được quan sát thấy, và một
+trong những khả năng cho kết quả cụ thể đó chính là 7.
+1. "Kendall's Advanced Theory of Statistics, Volume 1: Distribution Theory", Alan Stuart and
+Keith Ord, 6th Ed, (2009), ISBN 978-0-534-24312-8.
+2. William Feller, An Introduction to Probability Theory and Its Applications, (Vol 1), 3rd Ed,
+(1968), Wiley, ISBN 0-471-25708-7.
+3. Probability Theory (http://www.britannica.com/EBchecked/topic/477530/probability-theory)
+The Britannica website
+4. Hacking, Ian (1965). The Logic of Statistical Inference. Cambridge University Press.
+ISBN 978-0-521-05165-1.
+5. Finetti, Bruno de (1970). "Logical foundations and measurement of subjective probability".
+Acta Psychologica. Quyển 34. tr. 129–145. doi:10.1016/0001-6918(70)90012-0.
+6. Hájek, Alan (ngày 21 tháng 10 năm 2002). "Interpretations of Probability". The Stanford
+Encyclopedia of Philosophy . Truy cập ngày 22 tháng 4 năm 2013.
+7. Hogg, Robert V.; Craig, Allen; McKean, Joseph W. (2004). Introduction to Mathematical
+Statistics (ấn bản thứ 6). Upper Saddle River: Pearson. ISBN 978-0-13-008507-8.
+8. Jaynes, E.T. (2003). "Section 5.3 Converging and diverging views". Trong Bretthorst, G.
+Larry (biên tập). Probability Theory: The Logic of Science (bằng tiếng Anh) (ấn bản thứ 1).
+Cambridge University Press. ISBN 978-0-521-59271-0.
+9. Hacking, I. (2006) The Emergence of Probability: A Philosophical Study of Early Ideas about
+Probability, Induction and Statistical Inference, Cambridge University Press, ISBN 978-0-
+521-68557-3
+10. Freund, John. (1973) Introduction to Probability. Dickenson ISBN 978-0-8221-0078-2 (p. 1)
+11. Jeffrey, R.C., Probability and the Art of Judgment, Cambridge University Press. (1992). pp.
+54–55. ISBN 0-521-39459-7
+12. Franklin, J. (2001) The Science of Conjecture: Evidence and Probability Before Pascal,
+Johns Hopkins University Press. (pp. 22, 113, 127)
+13. Broemeling, Lyle D. (ngày 1 tháng 11 năm 2011). "An Account of Early Statistical Inference
+in Arab Cryptology". The American Statistician. Quyển 65 số 4. tr. 255–257.
+doi:10.1198/tas.2011.10191.
+14. Some laws and problems in classical probability and how Cardano anticipated them
+Gorrochum, P. Chance magazine 2012 (http://www.columbia.edu/~pg2113/index_files/Gorro
+ochurn-Some%20Laws.pdf)
+15. A Brief History of Probability
+16. Ivancevic, Vladimir G.; Ivancevic, Tijana T. (2008). Quantum leap: from Dirac and Feynman,
+across the universe, to human body and mind. Singapore; Hackensack, NJ: World Scientific.
+tr. 16. ISBN 978-981-281-927-7.
+Ghi chú
+Tham khảo
+
+=== SECTION 7 | Trang 8 ===
+17. Franklin, James (2001). The Science of Conjecture: Evidence and Probability Before
+Pascal. Johns Hopkins University Press. ISBN 978-0-8018-6569-5.
+18. Shoesmith, Eddie (tháng 11 năm 1985). "Thomas Simpson and the arithmetic mean".
+Historia Mathematica (bằng tiếng Anh). Quyển 12 số 4. tr. 352–355. doi:10.1016/0315-
+0860(85)90044-8.
+19. Wilson EB (1923) "First and second laws of error". Journal of the American Statistical
+Association, 18, 143
+20. Seneta, Eugene William. ""Adrien-Marie Legendre" (version 9)". StatProb: The
+Encyclopedia Sponsored by Statistics and Probability Societies. Bản gốc lưu trữ ngày 3
+tháng 2 năm 2016. Truy cập ngày 27 tháng 1 năm 2016.
+Kallenberg, O. (2005) Probabilistic Symmetries and Invariance Principles. Springer-Verlag,
+New York. 510 pp. ISBN 0-387-25115-4
+Kallenberg, O. (2002) Foundations of Modern Probability, 2nd ed. Springer Series in
+Statistics. 650 pp. ISBN 0-387-95313-2
+Olofsson, Peter (2005) Probability, Statistics, and Stochastic Processes, Wiley-Interscience.
+504 pp ISBN 0-471-67969-0.
+ Tư liệu liên quan tới Probability tại Wikimedia Commons
+A Collection of articles on Probability, many of which are accompanied by Java simulations
+(http://www.cut-the-knot.org/probability.shtml)
+Edwin Thompson Jaynes. Probability Theory: The Logic of Science. Preprint: Washington
+University, (1996). -- HTML (http://omega.albany.edu:8008/JaynesBook.html) Lưu trữ (http
+s://web.archive.org/web/20160119131820/http://omega.albany.edu:8008/JaynesBook.html)
+ngày 19 tháng 1 năm 2016 tại Wayback Machine and PDF (http://bayes.wustl.edu/etj/prob/b
+ook.pdf)
+An online probability textbook which uses computer programming as a teaching aid (http://w
+ww.dartmouth.edu/~chance/teaching_aids/books_articles/probability_book/book.html) Lưu
+trữ (https://web.archive.org/web/20110727200156/http://www.dartmouth.edu/~chance/teachi
+ng_aids/books_articles/probability_book/book.html) ngày 27 tháng 7 năm 2011 tại Wayback
+Machine
+Probabilistic football prediction competition (http://www.csse.monash.edu.au/~footy),
+probabilistic scoring (http://www.csse.monash.edu.au/~footy/about.shtml) and Đọc thêm (htt
+p://www.csse.monash.edu.au/~footy/bibliography.shtml).
+"The Not So Random Coin Toss (http://www.npr.org/display_pages/features/feature_169747
+5.html), Mathematicians Say Slight but Real Bias Toward Heads". NPR.
+Figuring the Odds (Probability Puzzles) (http://www.benbest.com/science/theodds.html)
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Xác_suất&oldid=75506008”
+Tài liêu
+Liên kết ngoài
+
+

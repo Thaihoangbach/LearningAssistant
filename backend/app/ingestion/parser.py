@@ -27,9 +27,16 @@ class UnsupportedFileType(ValueError):
     pass
 
 
+# Nguồn DUY NHẤT cho hằng số này — app/ingestion/outline.py import từ đây
+# thay vì tự định nghĩa lại, để việc gom section của outline (dùng để suy
+# section_index của một heading) không bao giờ lệch khỏi cách parse_document
+# gom section (dùng để chunk) chỉ vì một bên đổi số mà quên bên kia.
+DEFAULT_PARAGRAPHS_PER_SECTION = 10
+
+
 def parse_document(
     file_path: str,
-    paragraphs_per_section: int = 10,
+    paragraphs_per_section: int = DEFAULT_PARAGRAPHS_PER_SECTION,
 ) -> List[Tuple[str, str]]:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Không tìm thấy file: {file_path}")
@@ -46,7 +53,12 @@ def _parse_pdf(file_path: str) -> List[Tuple[str, str]]:
     reader = PdfReader(file_path)
     sections = []
     for i, page in enumerate(reader.pages, start=1):
-        text = page.extract_text() or ""
+        # Một số PDF (vd bảng infobox Wikipedia với ký tự đặc biệt) khiến
+        # pypdf trích ra byte NUL (0x00) lẫn trong text — cột text của
+        # Postgres từ chối thẳng NUL byte, làm job xử lý nền crash giữa
+        # chừng và document kẹt mãi ở trạng thái "đang xử lý" (phát hiện khi
+        # chạy Golden Set thật với tài liệu Phở).
+        text = (page.extract_text() or "").replace("\x00", "")
         sections.append((f"Trang {i}", text))
     return sections
 

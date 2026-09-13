@@ -81,6 +81,25 @@ class TestExtractOutlineDocx(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_section_index_matches_parse_document_section_for_same_file(self):
+        # Bằng chứng cross-consistency: section_index một topic trỏ ra PHẢI
+        # đúng section mà app/ingestion/parser.py::parse_document tạo cho
+        # cùng file — đây là điều kiện bắt buộc để structural retrieval (lấy
+        # đúng dải chunk của một DocumentTopic) hoạt động đúng.
+        from app.ingestion.parser import parse_document
+
+        first = ("Chương một", [f"Đoạn số {i}." for i in range(12)])
+        second = ("Chương hai", ["Nội dung chương hai."])
+        path = _make_docx([first, second])
+        try:
+            outline = extract_outline(path)
+            sections = parse_document(path)
+            for entry in outline:
+                self.assertLess(entry.section_index, len(sections))
+                self.assertEqual(sections[entry.section_index][0], entry.position_ref)
+        finally:
+            os.remove(path)
+
     def test_duplicate_headings_are_kept_once(self):
         path = _make_docx([("Trùng", ["A."]), ("Trùng", ["B."])])
         try:
@@ -205,7 +224,18 @@ class TestFilterTopicTitles(unittest.TestCase):
         entries = [e.title for e in extract_outline(path)]
         final = filter_topic_titles(entries)
         # Trước fix: 26/27 dòng lọt qua is_plausible_topic từng dòng riêng lẻ.
-        self.assertLess(len(final), len(entries) * 0.3, "khối lượng nhiễu phải giảm mạnh, không chỉ lọt vài dòng")
+        # Sau khi bỏ nhánh Title-Case/ALL-CAPS (outline.py::_looks_like_heading
+        # chỉ còn nhận mục đánh số), tài liệu scan này — không có mục đánh số
+        # — có thể không còn sinh ra entry thô nào cả, tức nhiễu bằng 0 ngay
+        # từ bước trích xuất, còn mạnh hơn yêu cầu gốc của test (giảm mạnh ở
+        # bước lọc). len(entries)==0 thì assertLess gốc so sánh 0 < 0 (sai) dù
+        # đúng ý test muốn kiểm — tách riêng case này.
+        if not entries:
+            self.assertEqual(final, [])
+        else:
+            self.assertLess(
+                len(final), len(entries) * 0.3, "khối lượng nhiễu phải giảm mạnh, không chỉ lọt vài dòng"
+            )
 
 
 class TestIsBibliographyLikeChunk(unittest.TestCase):

@@ -1,0 +1,169 @@
+=== SECTION 0 | Trang 1 ===
+Quyết định bản chất nó là sự lựa chọn
+Cây quyết định
+Trong lý thuyết quyết định (chẳng hạn quản lý rủi ro),
+một cây quyết định (tiếng Anh: decision tree) là một
+đồ thị của các quyết định và các hậu quả có thể của nó
+(bao gồm rủi ro và hao phí tài nguyên).[1] Cây quyết
+định được sử dụng để xây dựng một kế hoạch nhằm
+đạt được mục tiêu mong muốn. Các cây quyết định
+được dùng để hỗ trợ quá trình ra quyết định. Cây
+quyết định là một dạng đặc biệt của cấu trúc cây.
+Trong lĩnh vực máy học, cây quyết định là một kiểu
+mô hình dự báo (predictive model), nghĩa là một ánh
+xạ từ các quan sát về một sự vật/hiện tượng tới các kết luận về giá trị mục tiêu của sự vật/hiện tượng. Mỗi
+một nút trong (internal node) tương ứng với một biến; đường nối giữa nó với nút con của nó thể hiện một
+giá trị cụ thể cho biến đó. Mỗi nút lá đại diện cho giá trị dự đoán của biến mục tiêu, cho trước các giá trị
+của các biến được biểu diễn bởi đường đi từ nút gốc tới nút lá đó. Kỹ thuật học máy dùng trong cây quyết
+định được gọi là học bằng cây quyết định, hay chỉ gọi với cái tên ngắn gọn là cây quyết định.
+Học bằng cây quyết định cũng là một phương pháp thông dụng trong khai phá dữ liệu. Khi đó, cây quyết
+định mô tả một cấu trúc cây, trong đó, các lá đại diện cho các phân loại còn cành đại diện cho các kết hợp
+của các thuộc tính dẫn tới phân loại đó[1]. Một cây quyết định có thể được học bằng cách chia tập hợp
+nguồn thành các tập con dựa theo một kiểm tra giá trị thuộc tính [1]. Quá trình này được lặp lại một cách
+đệ quy cho mỗi tập con dẫn xuất. Quá trình đệ quy hoàn thành khi không thể tiếp tục thực hiện việc chia
+tách được nữa, hay khi một phân loại đơn có thể áp dụng cho từng phần tử của tập con dẫn xuất. Một bộ
+phân loại rừng ngẫu nhiên (random forest) sử dụng một số cây quyết định để có thể cải thiện tỉ lệ phân
+loại.
+Cây quyết định cũng là một phương tiện có tính mô tả dành cho việc tính toán các xác suất có điều kiện.
+Cây quyết định có thể được mô tả như là sự kết hợp của các kỹ thuật toán học và tính toán nhằm hỗ trợ
+việc mô tả, phân loại và tổng quát hóa một tập dữ liệu cho trước.
+Dữ liệu được cho dưới dạng các bản ghi có dạng:
+(x, y) = (x1, x2, x3..., xk, y)
+Biến phụ thuộc (dependant variable) y là biến mà chúng ta cần tìm hiểu, phân loại hay tổng quát hóa. x1,
+x2, x3... là các biến sẽ giúp ta thực hiện công việc đó
+Giới thiệu chung
+
+=== SECTION 1 | Trang 2 ===
+Cây quyết định còn có hai tên khác:
+Cây hồi quy (Regression tree) ước lượng các hàm giá có giá trị là số thực thay vì được sử
+dụng cho các nhiệm vụ phân loại. (ví dụ: ước tính giá một ngôi nhà hoặc khoảng thời gian
+một bệnh nhân nằm viện).
+Cây phân loại (Classification tree), nếu y là một biến phân loại như: giới tính (nam hay nữ),
+kết quả của một trận đấu (thắng hay thua).
+Ta sẽ dùng một ví dụ để giải thích về cây quyết định:
+David là quản lý của một câu lạc bộ đánh golf nổi tiếng. Anh ta đang có rắc rối chuyện các thành viên đến
+hay không đến. Có ngày ai cũng muốn chơi golf nhưng số nhân viên câu lạc bộ lại không đủ phục vụ. Có
+hôm, không hiểu vì lý do gì mà chẳng ai đến chơi, và câu lạc bộ lại thừa nhân viên.
+Mục tiêu của David là tối ưu hóa số nhân viên phục vụ mỗi ngày bằng cách dựa theo thông tin dự báo
+thời tiết để đoán xem khi nào người ta sẽ đến chơi golf. Để thực hiện điều đó, anh cần hiểu được tại sao
+khách hàng quyết định chơi và tìm hiểu xem có cách giải thích nào cho việc đó hay không.
+Vậy là trong hai tuần, anh ta thu thập thông tin về:
+Trời hôm ấy nắng, âm u, hay mưa
+Nhiệt độ không khí
+Độ ẩm
+Hôm ấy có gió hay không
+Và liệu mọi người có đến chơi golf vào hôm đó hay không. David thu được một bộ dữ liệu gồm 14 dòng
+và 5 cột.
+Các kiểu cây quyết định
+Ví dụ thực hành
+
+=== SECTION 2 | Trang 3 ===
+Có chơi golf dataset
+Biến độc lập Biến phụ thuộc
+Trời Nhiệt độ Độ ẩm Gió Có chơi hay không
+nắng 29 85 KHÔNG Không chơi
+nắng 27 90 CÓ Không chơi
+âm u 28 78 KHÔNG Có chơi
+mưa 21 96 KHÔNG Có chơi
+mưa 20 80 KHÔNG Có chơi
+mưa 18 70 CÓ Không chơi
+âm u 18 65 CÓ Có chơi
+nắng 22 95 KHÔNG Không chơi
+nắng 21 70 KHÔNG Có chơi
+mưa 24 80 KHÔNG Có chơi
+nắng 24 70 CÓ Có chơi
+âm u 22 90 CÓ Có chơi
+âm u 27 75 KHÔNG Có chơi
+mưa 22 80 CÓ Không chơi
+Sau đó, để giải quyết bài toán của David, người ta đã đưa ra một mô hình cây quyết định.
+Nhóm người chơi golf khi trời nắng, nhóm chơi khi trời nhiều mây, và nhóm chơi khi trời mưa.
+
+=== SECTION 3 | Trang 4 ===
+Kết luận thứ nhất: nếu trời nhiều mây, người ta luôn luôn chơi golf. Và có một số người ham mê đến mức
+chơi golf cả khi trời mưa.
+Tiếp theo, ta lại chia nhóm trời nắng thành hai nhóm con. Ta thấy rằng khách hàng không muốn chơi golf
+nếu độ ẩm lên quá 70%.
+Cuối cùng, ta chia nhóm trời mưa thành hai và thấy rằng khách hàng sẽ không chơi golf nếu trời nhiều
+gió.
+Và đây là lời giải ngắn gọn cho bài toán mô tả bởi cây phân loại. David cho phần lớn nhân viên nghỉ vào
+những ngày trời nắng và ẩm, hoặc những ngày mưa gió. Vì hầu như sẽ chẳng có ai chơi golf trong những
+ngày đó. Vào những hôm khác, khi nhiều người sẽ đến chơi golf, anh ta có thể thuê thêm nhân viên thời
+vụ để phụ giúp công việc.
+Kết luận là cây quyết định giúp ta biến một biểu diễn dữ liệu phức tạp thành một cấu trúc đơn giản hơn
+rất nhiều.
+Dùng trong thuật toán CART (Classification and Regression Trees). Nó dựa vào việc bình phương các
+xác suất thành viên cho mỗi thể loại đích trong nút. Giá trị của nó tiến đến cực tiểu (bằng 0) khi mọi
+trường hợp trong nút rơi vào một thể loại đích duy nhất.
+Giả sử y nhận các giá trị trong {1, 2,..., m} và gọi f(i,j) là tần suất của giá trị j trong nút i. Nghĩa là f(i,j) là
+tỷ lệ các bản ghi với y=j được xếp vào nhóm i.
+Dùng trong các thuật toán sinh cây ID3, C4.5 và C5.0. Số đo này dựa trên khái niệm entropy trong lý
+thuyết thông tin (information theory).
+So với các phương pháp khai phá dữ liệu khác, cây quyết định là phương pháp có một số ưu điểm:
+Cây quyết định dễ hiểu. Người ta có thể hiểu mô hình cây quyết định sau khi được giải
+thích ngắn.
+Các công thức
+Gini impurity
+Entropy
+Ưu điểm của cây quyết định
+
+=== SECTION 4 | Trang 5 ===
+Việc chuẩn bị dữ liệu cho một cây quyết định là cơ bản hoặc không cần thiết. Các kỹ thuật
+khác thường đòi hỏi chuẩn hóa dữ liệu, cần tạo các biến phụ (dummy variable) và loại bỏ
+các giá trị rỗng.
+Cây quyết định có thể xử lý cả dữ liệu có giá trị bằng số và dữ liệu có giá trị là tên thể loại.
+Các kỹ thuật khác thường chuyên để phân tích các bộ dữ liệu chỉ gồm một loại biến. Chẳng
+hạn, các luật quan hệ chỉ có thể dùng cho các biến tên, trong khi mạng nơ-ron chỉ có thể
+dùng cho các biến có giá trị bằng số.
+Cây quyết định là một mô hình hộp trắng. Nếu có thể quan sát một tình huống cho trước
+trong một mô hình, thì có thể dễ dàng giải thích điều kiện đó bằng logic Boolean. Mạng nơ-
+ron là một ví dụ về mô hình hộp đen, do lời giải thích cho kết quả quá phức tạp để có thể
+hiểu được.
+Có thể thẩm định một mô hình bằng các kiểm tra thống kê. Điều này làm cho ta có thể tin
+tưởng vào mô hình.
+Cây quyết định có thể xử lý tốt một lượng dữ liệu lớn trong thời gian ngắn. Có thể dùng máy
+tính cá nhân để phân tích các lượng dữ liệu lớn trong một thời gian đủ ngắn để cho phép
+các nhà chiến lược đưa ra quyết định dựa trên phân tích của cây quyết định.
+Trong cây quyết định, mọi đường đi từ nút gốc đến nút lá được tiến hành bằng các phép hội (AND).
+Trong đồ thị quyết định, có thể dùng các phép tuyển (OR) để kết nối ghép hai hay nhiều đường lại với
+nhau.
+Phần bù của cây quyết định là phân tích hình thái học (Morphological Analysis).
+1. Von Winterfeldt, Detlof; Edwards, Ward (1986). Decision analysis and behavioral research.
+Cambridge [Cambridgeshire] ; New York: Cambridge University Press. ISBN 978-0-521-
+25308-6.
+[1] T. Menzies, Y. Hu, Data Mining For Very Busy People. IEEE Computer, tháng 10 năm
+2003, pgs. 18-25.
+Decision Tree Analysis (http://www.mindtools.com/pages/article/newTED_04.htm)
+mindtools.com
+J.W. Comley and D.L. Dowe (http://www.csse.monash.edu.au/~dld), "Minimum Message
+Length, MDL and Generalised Bayesian Networks with Asymmetric Languages", chapter 11
+(http://mitpress.mit.edu/catalog/item/default.asp?ttype=2&tid=10478&mode=toc) Lưu trữ (htt
+ps://web.archive.org/web/20060909003748/http://mitpress.mit.edu/catalog/item/default.asp?
+ttype=2&tid=10478&mode=toc) ngày 9 tháng 9 năm 2006 tại Wayback Machine (pp265–
+294) in P. Grunwald, M.A. Pitt and I.J. Myung (eds)., Advances in Minimum Description
+Length: Theory and Applications (http://mitpress.mit.edu/catalog/item/default.asp?sid=4C10
+0C6F-2255-40FF-A2ED-02FC49FEBE7C&ttype=2&tid=10478) Lưu trữ (https://web.archive.
+org/web/20060619060230/http://mitpress.mit.edu/catalog/item/default.asp?sid=4C100C6F-2
+255-40FF-A2ED-02FC49FEBE7C&ttype=2&tid=10478) ngày 19 tháng 6 năm 2006 tại
+Wayback Machine, M.I.T. Press, tháng 4 năm 2005, ISBN 0262072629. (Bài báo này xem
+xét cây quyết định trong các nốt bên trong của mạng Bayes dùng Minimum Message
+Mở rộng cây quyết định thành đồ thị quyết định
+Tham khảo
+Đọc thêm
+
+=== SECTION 5 | Trang 6 ===
+Length (http://www.csse.monash.edu.au/~dld/MML.html) (MML). Phiên bản trước tại
+Comley and Dowe (2003) (http://www.csse.monash.edu.au/~dld/Publications/2003/Comley+
+Dowe03_HICS2003.ref), [1].)
+P.J. Tan and D.L. Dowe (http://www.csse.monash.edu.au/~dld) (2004), MML Inference of
+Oblique Decision Trees (http://www.csse.monash.edu.au/~dld/Publications/2004/Tan+Dowe
+AI2004.pdf), Lecture Notes in Artificial Intelligence (LNAI) 3339, Springer-Verlag, pp1082-
+1088 (http://www.csse.monash.edu.au/~dld/Publications/2004/Tan+Dowe2004.ref). (Bào
+báo này dùng Minimum Message Length.)
+Eruditionhome (http://www.eruditionhome.com/datamining) Lưu trữ (https://web.archive.org/
+web/20060212195322/http://www.eruditionhome.com/datamining) ngày 12 tháng 2 năm
+2006 tại Wayback Machine Site thư mục lớn nhất chứa các nguồn tài nguyên trong khai phá
+dữ liệu
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Cây_quyết_định&oldid=75157813”
+Liên kết ngoài
+
+

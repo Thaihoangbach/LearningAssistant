@@ -1,0 +1,37 @@
+=== SECTION 0 | Trang 1 ===
+Hồi quy tuyến tính
+Phân tích hồi quy tuyến tính là một phương pháp phân tích quan hệ giữa biến phụ thuộc Y với một hay
+nhiều biến độc lập X. Mô hình hóa sử dụng hàm tuyến tính (bậc 1). Các tham số của mô hình (hay hàm
+số) được ước lượng từ dữ liệu.
+Hồi quy tuyến tính được sử dụng rộng rãi trong thực tế do tính chất đơn giản hóa của hồi quy. Nó cũng dễ
+ước lượng.
+Giới thiệu mô hình
+Trong đó,
+ giá trị của biến phụ thuộc
+ giá trị của biến độc lập
+ điểm cắt của đường thẳng hồi quy và trục Y
+ hệ số góc
+ sai số. Lưu ý,  thực tế không tính được
+Trong đó,
+ giá trị của biến phụ thuộc
+ giá trị của biến độc lập
+ điểm cắt của đường thẳng hồi quy và trục Y
+ hệ số góc
+Hàm ước lượng thống kê được sử dụng phổ biến nhất là phương pháp bình phương nhỏ nhất. Khi mô
+hình có các phần sai số thỏa mãn bốn Giả thuyết Gauss-Markov, thì phương pháp ước lượng đó được coi
+là không chệch.
+Mô hình / phương trình hồi quy tuyến tính quần thể
+Mô hình / phương trình hồi quy tuyến tính mẫu
+Phương pháp ước lượng
+
+=== SECTION 1 | Trang 2 ===
+Tiếp đó là phương pháp bình phương tối thiểu tổng quát hóa. Phương pháp được sử dụng khi sai số hoặc
+bị tương quan với nhau hoặc có hiệp phương sai không đồng nhất hoặc cả hai. Khi đó, phương pháp này
+sẽ hiệu quả để ước lượng (tính) các tham số beta.
+Kiểm định t được sử dụng để kiểm tra xem các tham số beta đã được lượng ở trên có khác không hoặc
+lớn (nhỏ hơn) một giá trị nhất định.
+Lấy từ “https://vi.wikipedia.org/w/index.php?title=Hồi_quy_tuyến_tính&oldid=75509587”
+Kiểm định t
+Tham khảo
+
+

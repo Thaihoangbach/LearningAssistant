@@ -1,0 +1,67 @@
+{
+  "01_hoc_sau_vi": {
+    "document_id": "ef95c9b1-d16b-4260-b818-e03411c7c0aa",
+    "file_name": "01_hoc_sau_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "02_mang_than_kinh_nhan_tao_vi": {
+    "document_id": "483c59bf-8049-4457-8e7e-95c48bdba0d5",
+    "file_name": "02_mang_than_kinh_nhan_tao_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "03_mang_than_kinh_tich_chap_vi": {
+    "document_id": "903d159d-ff5e-413a-b15d-8342cb0a2387",
+    "file_name": "03_mang_than_kinh_tich_chap_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "04_cay_quyet_dinh_vi": {
+    "document_id": "807dbe8b-ddea-4ae6-8284-244603e3dba1",
+    "file_name": "04_cay_quyet_dinh_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "05_hoi_quy_tuyen_tinh_vi": {
+    "document_id": "5cdda615-0a92-470d-b413-9efd508dd29e",
+    "file_name": "05_hoi_quy_tuyen_tinh_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "06_su_qua_khop_vi": {
+    "document_id": "c2ed3333-845b-4696-8be5-a4f37458afb4",
+    "file_name": "06_su_qua_khop_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "07_xac_suat_vi": {
+    "document_id": "c89386f1-d120-4885-b3ba-48877e665d57",
+    "file_name": "07_xac_suat_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "08_dich_may_bang_no_ron_vi": {
+    "document_id": "cfaf3d98-5495-4ce7-9e9a-b6e92ab2a91d",
+    "file_name": "08_dich_may_bang_no_ron_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "09_random_forest_en": {
+    "document_id": "e236855e-8d25-49c7-a8c0-2c53c542a2bf",
+    "file_name": "09_random_forest_en.pdf",
+    "status": "sẵn sàng"
+  },
+  "10_gradient_descent_en": {
+    "document_id": "826e0353-35d4-4070-91ba-96a48ea5c192",
+    "file_name": "10_gradient_descent_en.pdf",
+    "status": "sẵn sàng"
+  },
+  "11_precision_and_recall_en": {
+    "document_id": "0d3ae17b-296d-4154-97cf-aea403a11e15",
+    "file_name": "11_precision_and_recall_en.pdf",
+    "status": "sẵn sàng"
+  },
+  "12_reinforcement_learning_en": {
+    "document_id": "6ddadfb3-1af8-42d5-8f21-52314cc6df12",
+    "file_name": "12_reinforcement_learning_en.pdf",
+    "status": "sẵn sàng"
+  },
+  "13_offtopic_am_thuc_vi": {
+    "document_id": "3bc449d9-befa-4d2e-b16f-32d20b1e4323",
+    "file_name": "13_offtopic_am_thuc_vi.pdf",
+    "status": "sẵn sàng"
+  }
+}

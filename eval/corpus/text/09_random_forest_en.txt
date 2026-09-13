@@ -1,0 +1,562 @@
+=== SECTION 0 | Trang 1 ===
+Random forest
+Random forests or random decision forests is an ensemble learning method for classification,
+regression and other tasks that works by creating a multitude of decision trees during training. For
+classification tasks, the output of the random forest is the class selected by most trees. For regression
+tasks, the output is the average of the predictions of the trees.[1][2] Random forests correct for decision
+trees' habit of overfitting to their training set.[3]: 587–588 
+The first algorithm for random decision forests was created in 1995 by Tin Kam Ho[1] using the random
+subspace method,[2] which, in Ho's formulation, is a way to implement the "stochastic discrimination"
+approach to classification proposed by Eugene Kleinberg.[4][5][6]
+An extension of the algorithm was developed by Leo Breiman[7] and Adele Cutler,[8] who registered[9]
+"Random Forests" as a trademark in 2006 (as of 2019, owned by Minitab, Inc.).[10] The extension
+combines Breiman's "bagging" idea and random selection of features, introduced first by Ho[1] and later
+independently by Amit and Geman[11] in order to construct a collection of decision trees with controlled
+variance.
+The general method of random decision forests was first proposed by Salzberg and Heath in 1993,[12]
+with a method that used a randomized decision tree algorithm to create multiple trees and then combine
+them using majority voting. This idea was developed further by Ho in 1995.[1] Ho established that forests
+of trees splitting with oblique hyperplanes can gain accuracy as they grow without suffering from
+overtraining, as long as the forests are randomly restricted to be sensitive to only selected feature
+dimensions. A subsequent work along the same lines[2] concluded that other splitting methods behave
+similarly, as long as they are randomly forced to be insensitive to some feature dimensions. This
+observation that a more complex classifier (a larger forest) gets more accurate nearly monotonically is in
+sharp contrast to the common belief that the complexity of a classifier can only grow to a certain level of
+accuracy before being hurt by overfitting. The explanation of the forest method's resistance to
+overtraining can be found in Kleinberg's theory of stochastic discrimination.[4][5][6]
+The early development of Breiman's notion of random forests was influenced by the work of Amit and
+Geman[11] who introduced the idea of searching over a random subset of the available decisions when
+splitting a node, in the context of growing a single tree. The idea of random subspace selection from
+Ho[2] was also influential in the design of random forests. This method grows a forest of trees, and
+introduces variation among the trees by projecting the training data into a randomly chosen subspace
+before fitting each tree or each node. Finally, the idea of randomized node optimization, where the
+decision at each node is selected by a randomized procedure, rather than a deterministic optimization was
+first introduced by Thomas G. Dietterich.[13]
+History
+
+=== SECTION 1 | Trang 2 ===
+The proper introduction of random forests was made in a paper by Leo Breiman,[7] that has become one
+of the world's most cited papers.[14] This paper describes a method of building a forest of uncorrelated
+trees using a CART-like procedure, combined with randomized node optimization and bagging. In
+addition, this paper combines several ingredients, some previously known and some novel, which form
+the basis of the modern practice of random forests, in particular:
+1. Using out-of-bag error as an estimate of the generalization error.
+2. Measuring variable importance through permutation.
+The report also offers the first theoretical result for random forests in the form of a bound on the
+generalization error which depends on the strength of the trees in the forest and their correlation.
+Decision trees are a popular method for various machine learning tasks. Tree learning is almost "an off-
+the-shelf procedure for data mining", say Hastie et al., "because it is invariant under scaling and various
+other transformations of feature values, is robust to inclusion of irrelevant features, and produces
+inspectable models. However, they are seldom accurate".[3]: 352 
+In particular, trees that are grown very deep tend to learn highly irregular patterns: they overfit their
+training sets, i.e. have low bias, but very high variance. Random forests are a way of averaging multiple
+deep decision trees, trained on different parts of the same training set, with the goal of reducing the
+variance.[3]: 587–588  This comes at the expense of a small increase in the bias and some loss of
+interpretability, but generally greatly boosts the performance in the final model.
+The training algorithm for random forests applies the general technique of bootstrap aggregating, or
+bagging, to tree learners. Given a training set X = x1, ..., xn with responses Y = y1, ..., yn, bagging
+repeatedly (B times) selects a random sample with replacement of the training set and fits trees to these
+samples:
+For b = 1, ..., B:
+1. Sample, with replacement, n training examples from X, Y; call these Xb, Yb.
+2. Train a classification or regression tree fb on Xb, Yb.
+After training, predictions for unseen samples x' can be made by averaging the predictions from all the
+individual regression trees on x':
+or by taking the plurality vote in the case of classification trees.
+Algorithm
+Preliminaries: decision tree learning
+Bagging
+
+=== SECTION 2 | Trang 3 ===
+Illustration of training a Random
+Forest model. The training dataset (in this
+case, of 250 rows and 100 columns) is
+randomly sampled with replacement n
+times. Then, a decision tree is trained on
+each sample. Finally, for prediction, the
+results of all n trees are aggregated to
+produce a final decision.
+This bootstrapping procedure leads to better model
+performance because it decreases the variance of the model,
+without increasing the bias. This means that while the
+predictions of a single tree are highly sensitive to noise in its
+training set, the average of many trees is not, as long as the
+trees are not correlated. Simply training many trees on a
+single training set would give strongly correlated trees (or
+even the same tree many times, if the training algorithm is
+deterministic); bootstrap sampling is a way of de-correlating
+the trees by showing them different training sets.
+Additionally, an estimate of the uncertainty of the prediction
+can be made as the standard deviation of the predictions from
+all the individual regression trees on x′:
+The number B of samples (equivalently, of trees) is a free
+parameter. Typically, a few hundred to several thousand trees are used, depending on the size and nature
+of the training set. B can be optimized using cross-validation, or by observing the out-of-bag error: the
+mean prediction error on each training sample xi, using only the trees that did not have xi in their
+bootstrap sample.[15]
+The training and test error tend to level off after some number of trees have been fit.
+The above procedure describes the original bagging algorithm for trees. Random forests also include
+another type of bagging scheme: they use a modified tree learning algorithm that selects, at each
+candidate split in the learning process, a random subset of the features. This process is sometimes called
+"feature bagging". The reason for doing this is the correlation of the trees in an ordinary bootstrap
+sample: if one or a few features are very strong predictors for the response variable (target output), these
+features will be selected in many of the B trees, causing them to become correlated. An analysis of how
+bagging and random subspace projection contribute to accuracy gains under different conditions is given
+by Ho.[16]
+Typically, for a classification problem with  features,  (rounded down) features are used in each
+split.[3]: 592  For regression problems the inventors recommend  (rounded down) with a minimum node
+size of 5 as the default.[3]: 592  In practice, the best values for these parameters should be tuned on a case-
+to-case basis for every problem.[3]: 592 
+Adding one further step of randomization yields extremely randomized trees, or ExtraTrees. As with
+ordinary random forests, they are an ensemble of individual trees, but there are two main differences: (1)
+each tree is trained using the whole learning sample (rather than a bootstrap sample), and (2) the top-
+From bagging to random forests
+ExtraTrees
+
+=== SECTION 3 | Trang 4 ===
+down splitting is randomized: for each feature under consideration, a number of random cut-points are
+selected, instead of computing the locally optimal cut-point (based on, e.g., information gain or the Gini
+impurity). The values are chosen from a uniform distribution within the feature's empirical range (in the
+tree's training set). Then, of all the randomly chosen splits, the split that yields the highest score is chosen
+to split the node.
+Similar to ordinary random forests, the number of randomly selected features to be considered at each
+node can be specified. Default values for this parameter are  for classification and  for regression,
+where  is the number of features in the model.[17]
+The basic random forest procedure may not work well in situations where there are a large number of
+features but only a small proportion of these features are informative with respect to sample
+classification. This can be addressed by encouraging the procedure to focus mainly on features and trees
+that are informative. Some methods for accomplishing this are:
+Prefiltering: Eliminate features that are mostly just noise.[18][19]
+Enriched Random Forest (ERF): Use weighted random sampling instead of simple random
+sampling at each node of each tree, giving greater weight to features that appear to be more
+informative.[20][21][22]
+Tree-weighted random forest (TWRF): Give more weight to more accurate trees.[23][24]
+Random forests can be used to rank the importance of variables in a regression or classification problem
+in a natural way. The following technique was described in Breiman's original paper[7] and is
+implemented in the R package randomForest.[8]
+To measure a feature's importance in a data set , first a random forest is trained on
+the data. During training, the out-of-bag error for each data point is recorded and averaged over the forest.
+(If bagging is not used during training, we can instead compute errors on an independent test set.)
+After training, the values of the feature are permuted in the out-of-bag samples and the out-of-bag error is
+again computed on this perturbed data set. The importance for the feature is computed by averaging the
+difference in out-of-bag error before and after the permutation over all trees. The score is normalized by
+the standard deviation of these differences.
+Features which produce large values for this score are ranked as more important than features which
+produce small values. The statistical definition of the variable importance measure was given and
+analyzed by Zhu et al.[25]
+This method of determining variable importance has some drawbacks:
+Random forests for high-dimensional data
+Properties
+Variable importance
+Permutation importance
+
+=== SECTION 4 | Trang 5 ===
+When features have different numbers of values, random forests favor features with more
+values. Solutions to this problem include partial permutations[26][27][28] and growing
+unbiased trees.[29][30]
+If the data contain groups of correlated features of similar relevance, then smaller groups
+are favored over large groups.[31]
+If there are collinear features, the procedure may fail to identify important features. A
+solution is to permute groups of correlated features together.[32]
+This approach to feature importance for random forests considers as important the variables which
+decrease a lot the impurity during splitting.[33] It is described in the book Classification and Regression
+Trees by Leo Breiman[34] and is the default implementation in scikit learn and R. The definition is:
+where
+ is a feature
+ is the number of trees in the forest
+ is tree 
+ is the fraction of samples reaching node 
+ is the change in impurity in tree  at node .
+As impurity measure for samples falling in a node e.g. the following statistics can be used:
+Entropy
+Gini coefficient
+Mean squared error
+The normalized importance is then obtained by normalizing over all features, so that the sum of
+normalized feature importances is 1.
+The scikit learn default implementation can report misleading feature importance:[32]
+it favors high cardinality features
+it uses training statistics and so does not reflect a feature's usefulness for predictions on a
+test set[35]
+A relationship between random forests and the k-nearest neighbor algorithm (k-NN) was pointed out by
+Lin and Jeon in 2002.[36] Both can be viewed as so-called weighted neighborhoods schemes. These are
+models built from a training set  that make predictions  for new points x' by looking at the
+"neighborhood" of the point, formalized by a weight function W:
+Mean decrease in impurity feature importance
+Relationship to nearest neighbors
+
+=== SECTION 5 | Trang 6 ===
+Here,  is the non-negative weight of the i'th training point relative to the new point x' in the
+same tree. For any x', the weights for points  must sum to 1. Weight functions are as follows:
+In k-NN,  if xi is one of the k points closest to x', and zero otherwise.
+In a tree,  if xi is one of the k' points in the same leaf as x', and zero
+otherwise.
+Since a forest averages the predictions of a set of m trees with individual weight functions , its
+predictions are
+This shows that the whole forest is again a weighted neighborhood scheme, with weights that average
+those of the individual trees. The neighbors of x' in this interpretation are the points  sharing the same
+leaf in any tree . In this way, the neighborhood of x' depends in a complex way on the structure of the
+trees, and thus on the structure of the training set. Lin and Jeon show that the shape of the neighborhood
+used by a random forest adapts to the local importance of each feature.[36]
+As part of their construction, random forest predictors naturally lead to a dissimilarity measure among
+observations. One can analogously define dissimilarity between unlabeled data, by training a forest to
+distinguish original "observed" data from suitably generated synthetic data drawn from a reference
+distribution.[7][37] A random forest dissimilarity is attractive because it handles mixed variable types very
+well, is invariant to monotonic transformations of the input variables, and is robust to outlying
+observations. Random forest dissimilarity easily deals with a large number of semi-continuous variables
+due to its intrinsic variable selection; for example, the "Addcl 1" random forest dissimilarity weighs the
+contribution of each variable according to how dependent it is on other variables. Random forest
+dissimilarity has been used in a variety of applications, e.g. to find clusters of patients based on tissue
+marker data.[38]
+Instead of decision trees, linear models have been proposed and evaluated as base estimators in random
+forests, in particular multinomial logistic regression and naive Bayes classifiers.[39][40][41] In cases that
+the relationship between the predictors and the target variable is linear, the base learners may have an
+equally high accuracy as the ensemble learner.[42][39]
+Unsupervised learning
+Variants
+
+=== SECTION 6 | Trang 7 ===
+In machine learning, kernel random forests (KeRF) establish the connection between random forests and
+kernel methods. By slightly modifying their definition, random forests can be rewritten as kernel
+methods, which are more interpretable and easier to analyze.[43]
+Leo Breiman[44] was the first person to notice the link between random forest and kernel methods. He
+pointed out that random forests trained using i.i.d. random vectors in the tree construction are equivalent
+to a kernel acting on the true margin. Lin and Jeon[45] established the connection between random forests
+and adaptive nearest neighbor, implying that random forests can be seen as adaptive kernel estimates.
+Davies and Ghahramani[46] proposed Kernel Random Forest (KeRF) and showed that it can empirically
+outperform state-of-art kernel methods. Scornet[43] first defined KeRF estimates and gave the explicit
+link between KeRF estimates and random forest. He also gave explicit expressions for kernels based on
+centered random forest[47] and uniform random forest,[48] two simplified models of random forest. He
+named these two KeRFs Centered KeRF and Uniform KeRF, and proved upper bounds on their rates of
+consistency.
+Centered forest[47] is a simplified model for Breiman's original random forest, which uniformly selects an
+attribute among all attributes and performs splits at the center of the cell along the pre-chosen attribute.
+The algorithm stops when a fully binary tree of level  is built, where  is a parameter of the
+algorithm.
+Uniform forest[48] is another simplified model for Breiman's original random forest, which uniformly
+selects a feature among all features and performs splits at a point uniformly drawn on the side of the cell,
+along the preselected feature.
+Given a training sample  of -valued independent random variables
+distributed as the independent prototype pair , where . We aim at predicting the
+response , associated with the random variable , by estimating the regression function
+. A random regression forest is an ensemble of  randomized regression trees.
+Denote  the predicted value at point  by the -th tree, where  are independent
+random variables, distributed as a generic random variable , independent of the sample . This
+random variable can be used to describe the randomness induced by node splitting and the sampling
+procedure for tree construction. The trees are combined to form the finite forest estimate
+Kernel random forest
+History
+Notations and definitions
+Preliminaries: Centered forests
+Uniform forest
+From random forest to KeRF
+
+=== SECTION 7 | Trang 8 ===
+. For regression trees, we have
+, where  is the cell containing , designed with randomness 
+and dataset , and .
+Thus random forest estimates satisfy, for all ,
+. Random regression forest has two levels
+of averaging, first over the samples in the target cell of a tree, then over all trees. Thus the contributions
+of observations that are in cells with a high density of data points are smaller than that of observations
+which belong to less populated cells. In order to improve the random forest methods and compensate the
+misestimation, Scornet[43] defined KeRF by
+which is equal to the mean of the 's falling in the cells containing  in the forest. If we define the
+connection function of the  finite forest as , i.e. the proportion of
+cells shared between  and , then almost surely we have
+, which defines the KeRF.
+The construction of Centered KeRF of level  is the same as for centered forest, except that predictions
+are made by , the corresponding kernel function, or connection function is
+Uniform KeRF is built in the same way as uniform forest, except that predictions are made by
+, the corresponding kernel function, or connection function is
+Centered KeRF
+Uniform KeRF
+
+=== SECTION 8 | Trang 9 ===
+Predictions given by KeRF and random forests are close if the number of points in each cell is controlled:
+Assume that there exist sequences  such that, almost surely,
+Then almost surely,
+When the number of trees  goes to infinity, then we have infinite random forest and infinite KeRF.
+Their estimates are close if the number of observations in each cell is bounded:
+Assume that there exist sequences  such that, almost surely
+Then almost surely,
+Assume that , where  is a centered Gaussian noise, independent of , with finite
+variance . Moreover,  is uniformly distributed on  and  is Lipschitz. Scornet[43]
+proved upper bounds on the rates of consistency for centered KeRF and uniform KeRF.
+Providing  and , there exists a constant  such that, for all ,
+.
+Providing  and , there exists a constant  such that,
+.
+Properties
+Relation between KeRF and random forest
+Relation between infinite KeRF and infinite random forest
+Consistency results
+Consistency of centered KeRF
+Consistency of uniform KeRF
+
+=== SECTION 9 | Trang 10 ===
+While random forests often achieve higher accuracy than a single decision tree, they sacrifice the intrinsic
+interpretability of decision trees. Decision trees are among a fairly small family of machine learning
+models that are easily interpretable along with linear models, rule-based models, and attention-based
+models. This interpretability is one of the main advantages of decision trees. It allows developers to
+confirm that the model has learned realistic information from the data and allows end-users to have trust
+and confidence in the decisions made by the model.[39][3] For example, following the path that a decision
+tree takes to make its decision is quite trivial, but following the paths of tens or hundreds of trees is much
+harder. To achieve both performance and interpretability, some model compression techniques allow
+transforming a random forest into a minimal "born-again" decision tree that faithfully reproduces the
+same decision function.[39][49][50]
+Another limitation of random forests is that if features are linearly correlated with the target, random
+forest may not enhance the accuracy of the base learner.[39][42] Likewise in problems with multiple
+categorical variables.[51]
+Boosting – Ensemble learning method
+Decision tree learning – Machine learning algorithm
+Ensemble learning – Statistics and machine learning technique
+Gradient boosting – Machine learning technique
+Non-parametric statistics – Type of statistical analysis
+Randomized algorithm – Algorithm that employs a degree of randomness as part of its logic
+or procedure
+1. Ho, Tin Kam (1995). Random Decision Forests (https://web.archive.org/web/201604170302
+18/http://ect.bell-labs.com/who/tkh/publications/papers/odt.pdf) (PDF). Proceedings of the
+3rd International Conference on Document Analysis and Recognition, Montreal, QC, 14–16
+August 1995. pp. 278–282. Archived from the original (http://ect.bell-labs.com/who/tkh/public
+ations/papers/odt.pdf) (PDF) on 17 April 2016. Retrieved 5 June 2016.
+2. Ho TK (1998). "The Random Subspace Method for Constructing Decision Forests" (http://ec
+t.bell-labs.com/who/tkh/publications/papers/df.pdf) (PDF). IEEE Transactions on Pattern
+Analysis and Machine Intelligence. 20 (8): 832–844. Bibcode:1998ITPAM..20..832T (https://
+ui.adsabs.harvard.edu/abs/1998ITPAM..20..832T). doi:10.1109/34.709601 (https://doi.org/1
+0.1109%2F34.709601). S2CID 206420153 (https://api.semanticscholar.org/CorpusID:20642
+0153).
+3. Hastie, Trevor; Tibshirani, Robert; Friedman, Jerome (2008). The Elements of Statistical
+Learning (http://www-stat.stanford.edu/~tibs/ElemStatLearn/) (2nd ed.). Springer. ISBN 0-
+387-95284-5.
+Disadvantages
+See also
+References
+
+=== SECTION 10 | Trang 11 ===
+4. Kleinberg E (1990). "Stochastic Discrimination" (https://web.archive.org/web/201801181240
+07/https://pdfs.semanticscholar.org/faa4/c502a824a9d64bf3dc26eb90a2c32367921f.pdf)
+(PDF). Annals of Mathematics and Artificial Intelligence. 1 (1–4): 207–239.
+Bibcode:1990AnMAI...1..207K (https://ui.adsabs.harvard.edu/abs/1990AnMAI...1..207K).
+doi:10.1007/BF01531079 (https://doi.org/10.1007%2FBF01531079). S2CID 206795835 (htt
+ps://api.semanticscholar.org/CorpusID:206795835). Archived from the original (https://pdfs.s
+emanticscholar.org/faa4/c502a824a9d64bf3dc26eb90a2c32367921f.pdf) (PDF) on 2018-01-
+18.
+5. Kleinberg E (1996). "An Overtraining-Resistant Stochastic Modeling Method for Pattern
+Recognition" (https://doi.org/10.1214%2Faos%2F1032181157). Annals of Statistics. 24 (6):
+2319–2349. doi:10.1214/aos/1032181157 (https://doi.org/10.1214%2Faos%2F1032181157).
+MR 1425956 (https://mathscinet.ams.org/mathscinet-getitem?mr=1425956).
+6. Kleinberg E (2000). "On the Algorithmic Implementation of Stochastic Discrimination" (http
+s://web.archive.org/web/20180118124006/https://pdfs.semanticscholar.org/8956/845b0701e
+c57094c7a8b4ab1f41386899aea.pdf) (PDF). IEEE Transactions on Pattern Analysis and
+Machine Intelligence. 22 (5): 473–490. Bibcode:2000ITPAM..22..473K (https://ui.adsabs.har
+vard.edu/abs/2000ITPAM..22..473K). doi:10.1109/34.857004 (https://doi.org/10.1109%2F34.
+857004). S2CID 3563126 (https://api.semanticscholar.org/CorpusID:3563126). Archived
+from the original (https://pdfs.semanticscholar.org/8956/845b0701ec57094c7a8b4ab1f4138
+6899aea.pdf) (PDF) on 2018-01-18.
+7. Breiman L (2001). "Random Forests" (https://doi.org/10.1023%2FA%3A1010933404324).
+Machine Learning. 45 (1): 5–32. Bibcode:2001MachL..45....5B (https://ui.adsabs.harvard.ed
+u/abs/2001MachL..45....5B). doi:10.1023/A:1010933404324 (https://doi.org/10.1023%2FA%
+3A1010933404324).
+8. Liaw A (16 October 2012). "Documentation for R package randomForest" (https://cran.r-proj
+ect.org/web/packages/randomForest/randomForest.pdf) (PDF). Retrieved 15 March 2013.
+9. U.S. trademark registration number 3185828, registered 2006/12/19.
+10. "RANDOM FORESTS Trademark of Health Care Productivity, Inc. - Registration Number
+3185828 - Serial Number 78642027 :: Justia Trademarks" (https://trademarks.justia.com/78
+6/42/random-78642027.html).
+11. Amit Y, Geman D (1997). "Shape quantization and recognition with randomized trees" (http
+s://web.archive.org/web/20180205094828/http://www.cis.jhu.edu/publications/papers_in_dat
+abase/GEMAN/shape.pdf) (PDF). Neural Computation. 9 (7): 1545–1588.
+doi:10.1162/neco.1997.9.7.1545 (https://doi.org/10.1162%2Fneco.1997.9.7.1545).
+S2CID 12470146 (https://api.semanticscholar.org/CorpusID:12470146). Archived from the
+original (http://www.cis.jhu.edu/publications/papers_in_database/GEMAN/shape.pdf) (PDF)
+on 2018-02-05. Retrieved 2008-04-01.
+12. Heath, D., Kasif, S. and Salzberg, S. (1993). k-DT: A multi-tree learning method. In
+Proceedings of the Second Intl. Workshop on Multistrategy Learning, pp. 138-149.
+13. Dietterich, Thomas (2000). "An Experimental Comparison of Three Methods for
+Constructing Ensembles of Decision Trees: Bagging, Boosting, and Randomization" (https://
+doi.org/10.1023%2FA%3A1007607513941). Machine Learning. 40 (2): 139–157.
+doi:10.1023/A:1007607513941 (https://doi.org/10.1023%2FA%3A1007607513941).
+14. Helen Pearson; Heidi Ledford; Matthew Hutson; Richard Van Noorden (15 April 2025).
+"Exclusive: the most-cited papers of the twenty-first century". Nature. 640 (8059): 588–592.
+doi:10.1038/d41586-025-01125-9 (https://doi.org/10.1038%2Fd41586-025-01125-9).
+ISSN 1476-4687 (https://search.worldcat.org/issn/1476-4687). Wikidata Q135104889.
+15. Gareth James; Daniela Witten; Trevor Hastie; Robert Tibshirani (2013). An Introduction to
+Statistical Learning (http://www-bcf.usc.edu/~gareth/ISL/). Springer. pp. 316–321.
+
+=== SECTION 11 | Trang 12 ===
+16. Ho, Tin Kam (2002). "A Data Complexity Analysis of Comparative Advantages of Decision
+Forest Constructors" (https://web.archive.org/web/20160417091232/http://ect.bell-labs.com/
+who/tkh/publications/papers/compare.pdf) (PDF). Pattern Analysis and Applications. 5 (2):
+102–112. doi:10.1007/s100440200009 (https://doi.org/10.1007%2Fs100440200009).
+S2CID 7415435 (https://api.semanticscholar.org/CorpusID:7415435). Archived from the
+original (http://ect.bell-labs.com/who/tkh/publications/papers/compare.pdf) (PDF) on 2016-
+04-17. Retrieved 2015-11-13.
+17. Geurts P, Ernst D, Wehenkel L (2006). "Extremely randomized trees" (http://orbi.ulg.ac.be/bit
+stream/2268/9357/1/geurts-mlj-advance.pdf) (PDF). Machine Learning. 63: 3–42.
+doi:10.1007/s10994-006-6226-1 (https://doi.org/10.1007%2Fs10994-006-6226-1).
+18. Dessi, N. & Milia, G. & Pes, B. (2013). Enhancing random forests performance in microarray
+data classification. Conference paper, 99-103. 10.1007/978-3-642-38326-7_15.
+19. Ye, Y., Li, H., Deng, X., and Huang, J. (2008) Feature weighting random forest for detection
+of hidden web search interfaces. Journal of Computational Linguistics and Chinese
+Language Processing, 13, 387–404.
+20. Amaratunga, D., Cabrera, J., Lee, Y.S. (2008) Enriched Random Forest. Bioinformatics, 24,
+2010-2014.
+21. Ghosh D, Cabrera J. (2022) Enriched random forest for high dimensional genomic data.
+IEEE/ACM Trans Comput Biol Bioinform. 19(5):2817-2828.
+doi:10.1109/TCBB.2021.3089417.
+22. Amaratunga, D., Cabrera, J., Shkedy, Z. (2014). Exploration and Analysis of DNA Microarray
+and Other High-Dimensional Data. New York: John Wiley. Second Edition.
+0.1002/9781118364505.
+23. Winham, Stacey & Freimuth, Robert & Biernacka, Joanna. (2013). A weighted random
+forests approach to improve predictive performance. Statistical Analysis and Data Mining. 6.
+10.1002/sam.11196.
+24. Li, H. B., Wang, W., Ding, H. W., & Dong, J. (2010, 10-12 Nov. 2010). Trees weighting
+random forest method for classifying high-dimensional noisy data. Paper presented at the
+2010 IEEE 7th International Conference on E-Business Engineering.
+25. Zhu R, Zeng D, Kosorok MR (2015). "Reinforcement Learning Trees" (https://www.ncbi.nlm.
+nih.gov/pmc/articles/PMC4760114). Journal of the American Statistical Association. 110
+(512): 1770–1784. Bibcode:2015JASA..110.1770Z (https://ui.adsabs.harvard.edu/abs/2015J
+ASA..110.1770Z). doi:10.1080/01621459.2015.1036994 (https://doi.org/10.1080%2F016214
+59.2015.1036994). PMC 4760114 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4760114).
+PMID 26903687 (https://pubmed.ncbi.nlm.nih.gov/26903687).
+26. Deng, H.; Runger, G.; Tuv, E. (2011). Bias of importance measures for multi-valued
+attributes and solutions (https://www.researchgate.net/publication/221079908). Proceedings
+of the 21st International Conference on Artificial Neural Networks (ICANN). pp. 293–300.
+27. Altmann A, Toloşi L, Sander O, Lengauer T (May 2010). "Permutation importance: a
+corrected feature importance measure" (https://doi.org/10.1093%2Fbioinformatics%2Fbtq13
+4). Bioinformatics. 26 (10): 1340–7. doi:10.1093/bioinformatics/btq134 (https://doi.org/10.10
+93%2Fbioinformatics%2Fbtq134). PMID 20385727 (https://pubmed.ncbi.nlm.nih.gov/20385
+727).
+28. Piryonesi S. Madeh; El-Diraby Tamer E. (2020-06-01). "Role of Data Analytics in
+Infrastructure Asset Management: Overcoming Data Size and Quality Problems". Journal of
+Transportation Engineering, Part B: Pavements. 146 (2): 04020022.
+doi:10.1061/JPEODX.0000175 (https://doi.org/10.1061%2FJPEODX.0000175).
+S2CID 216485629 (https://api.semanticscholar.org/CorpusID:216485629).
+29. Strobl C, Boulesteix AL, Augustin T (2007). "Unbiased split selection for classification trees
+based on the Gini index" (https://epub.ub.uni-muenchen.de/1833/1/paper_464.pdf) (PDF).
+Computational Statistics & Data Analysis. 52: 483–501. doi:10.1016/j.csda.2006.12.030 (htt
+ps://doi.org/10.1016%2Fj.csda.2006.12.030).
+
+=== SECTION 12 | Trang 13 ===
+30. Painsky A, Rosset S (2017). "Cross-Validated Variable Selection in Tree-Based Methods
+Improves Predictive Performance". IEEE Transactions on Pattern Analysis and Machine
+Intelligence. 39 (11): 2142–2153. arXiv:1512.03444 (https://arxiv.org/abs/1512.03444).
+Bibcode:2017ITPAM..39.2142P (https://ui.adsabs.harvard.edu/abs/2017ITPAM..39.2142P).
+doi:10.1109/tpami.2016.2636831 (https://doi.org/10.1109%2Ftpami.2016.2636831).
+PMID 28114007 (https://pubmed.ncbi.nlm.nih.gov/28114007). S2CID 5381516 (https://api.se
+manticscholar.org/CorpusID:5381516).
+31. Tolosi L, Lengauer T (July 2011). "Classification with correlated features: unreliability of
+feature ranking and solutions" (https://doi.org/10.1093%2Fbioinformatics%2Fbtr300).
+Bioinformatics. 27 (14): 1986–94. doi:10.1093/bioinformatics/btr300 (https://doi.org/10.109
+3%2Fbioinformatics%2Fbtr300). PMID 21576180 (https://pubmed.ncbi.nlm.nih.gov/2157618
+0).
+32. "Beware Default Random Forest Importances" (http://explained.ai/decision-tree-viz/index.ht
+ml). explained.ai. Retrieved 2023-10-25.
+33. Ortiz-Posadas, Martha Refugio (2020-02-29). Pattern Recognition Techniques Applied to
+Biomedical Problems (https://books.google.com/books?id=d6LTDwAAQBAJ&dq=Mean+Dec
+rease+in+Impurity+Feature+Importance&pg=PA116). Springer Nature. ISBN 978-3-030-
+38021-2.
+34. Breiman, Leo (2017-10-25). Classification and Regression Trees (https://www.taylorfrancis.c
+om/books/mono/10.1201/9781315139470/classification-regression-trees-leo-breiman). New
+York: Routledge. doi:10.1201/9781315139470 (https://doi.org/10.1201%2F9781315139470).
+ISBN 978-1-315-13947-0.
+35. https://scikit-learn.org/stable/auto_examples/inspection/plot_permutation_importance.html
+31. Aug. 2023
+36. Lin, Yi; Jeon, Yongho (2002). Random forests and adaptive nearest neighbors (Technical
+report). Technical Report No. 1055. University of Wisconsin. CiteSeerX 10.1.1.153.9168 (htt
+ps://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.153.9168). {{cite tech
+report}}: Cite uses deprecated parameter |citeseerx= (help)
+37. Shi, T.; Horvath, S. (2006). "Unsupervised Learning with Random Forest Predictors".
+Journal of Computational and Graphical Statistics. 15 (1): 118–138.
+doi:10.1198/106186006X94072 (https://doi.org/10.1198%2F106186006X94072).
+JSTOR 27594168 (https://www.jstor.org/stable/27594168). S2CID 245216 (https://api.sema
+nticscholar.org/CorpusID:245216).
+38. Shi T, Seligson D, Belldegrun AS, Palotie A, Horvath S (April 2005). "Tumor classification by
+tissue microarray profiling: random forest clustering applied to renal cell carcinoma" (https://
+doi.org/10.1038%2Fmodpathol.3800322). Modern Pathology. 18 (4): 547–57.
+doi:10.1038/modpathol.3800322 (https://doi.org/10.1038%2Fmodpathol.3800322).
+PMID 15529185 (https://pubmed.ncbi.nlm.nih.gov/15529185).
+39. Piryonesi, S. Madeh; El-Diraby, Tamer E. (2021-02-01). "Using Machine Learning to
+Examine Impact of Type of Performance Indicator on Flexible Pavement Deterioration
+Modeling" (http://ascelibrary.org/doi/10.1061/%28ASCE%29IS.1943-555X.0000602).
+Journal of Infrastructure Systems. 27 (2): 04021005. doi:10.1061/(ASCE)IS.1943-
+555X.0000602 (https://doi.org/10.1061%2F%28ASCE%29IS.1943-555X.0000602).
+ISSN 1076-0342 (https://search.worldcat.org/issn/1076-0342). S2CID 233550030 (https://ap
+i.semanticscholar.org/CorpusID:233550030).
+40. Prinzie, A.; Van den Poel, D. (2008). "Random Forests for multiclass classification: Random
+MultiNomial Logit". Expert Systems with Applications. 34 (3): 1721–1732.
+doi:10.1016/j.eswa.2007.01.029 (https://doi.org/10.1016%2Fj.eswa.2007.01.029).
+
+=== SECTION 13 | Trang 14 ===
+41. Prinzie, Anita (2007). "Random Multiclass Classification: Generalizing Random Forests to
+Random MNL and Random NB". In Roland Wagner; Norman Revell; Günther Pernul (eds.).
+Database and Expert Systems Applications: 18th International Conference, DEXA 2007,
+Regensburg, Germany, September 3-7, 2007, Proceedings. Lecture Notes in Computer
+Science. Vol. 4653. pp. 349–358. doi:10.1007/978-3-540-74469-6_35 (https://doi.org/10.100
+7%2F978-3-540-74469-6_35). ISBN 978-3-540-74467-2.
+42. Smith, Paul F.; Ganesh, Siva; Liu, Ping (2013-10-01). "A comparison of random forest
+regression and multiple linear regression for prediction in neuroscience" (https://linkinghub.e
+lsevier.com/retrieve/pii/S0165027013003026). Journal of Neuroscience Methods. 220 (1):
+85–91. doi:10.1016/j.jneumeth.2013.08.024 (https://doi.org/10.1016%2Fj.jneumeth.2013.08.
+024). PMID 24012917 (https://pubmed.ncbi.nlm.nih.gov/24012917). S2CID 13195700 (http
+s://api.semanticscholar.org/CorpusID:13195700).
+43. Scornet, Erwan (2015). "Random forests and kernel methods". arXiv:1502.03836 (https://arx
+iv.org/abs/1502.03836) [math.ST (https://arxiv.org/archive/math.ST)].
+44. Breiman, Leo (2000). "Some infinity theory for predictor ensembles" (https://statistics.berkel
+ey.edu/tech-reports/579). Technical Report 579, Statistics Dept. UCB. {{cite journal}}:
+Cite journal requires |journal= (help)
+45. Lin, Yi; Jeon, Yongho (2006). "Random forests and adaptive nearest neighbors". Journal of
+the American Statistical Association. 101 (474): 578–590. Bibcode:2006JASA..101..578L (ht
+tps://ui.adsabs.harvard.edu/abs/2006JASA..101..578L). doi:10.1198/016214505000001230
+(https://doi.org/10.1198%2F016214505000001230). S2CID 2469856 (https://api.semanticsc
+holar.org/CorpusID:2469856).
+46. Davies, Alex; Ghahramani, Zoubin (2014). "The Random Forest Kernel and other kernels for
+big data from random partitions". arXiv:1402.4293 (https://arxiv.org/abs/1402.4293) [stat.ML
+(https://arxiv.org/archive/stat.ML)].
+47. Breiman L, Ghahramani Z (2004). "Consistency for a simple model of random forests".
+Statistical Department, University of California at Berkeley. Technical Report (670).
+CiteSeerX 10.1.1.618.90 (https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.618.9
+0). {{cite journal}}: Cite uses deprecated parameter |citeseerx= (help)
+48. Arlot S, Genuer R (2014). "Analysis of purely random forests bias". arXiv:1407.3939 (https://
+arxiv.org/abs/1407.3939) [math.ST (https://arxiv.org/archive/math.ST)].
+49. Sagi, Omer; Rokach, Lior (2020). "Explainable decision forest: Transforming a decision
+forest into an interpretable tree" (https://www.sciencedirect.com/science/article/pii/S1566253
+519307869). Information Fusion. 61: 124–138. Bibcode:2020InfFu..61..124S (https://ui.adsa
+bs.harvard.edu/abs/2020InfFu..61..124S). doi:10.1016/j.inffus.2020.03.013 (https://doi.org/1
+0.1016%2Fj.inffus.2020.03.013). S2CID 216444882 (https://api.semanticscholar.org/Corpus
+ID:216444882).
+50. Vidal, Thibaut; Schiffer, Maximilian (2020). "Born-Again Tree Ensembles" (http://proceeding
+s.mlr.press/v119/vidal20a.html). International Conference on Machine Learning. 119. PMLR:
+9743–9753. arXiv:2003.11132 (https://arxiv.org/abs/2003.11132).
+51. Piryonesi, Sayed Madeh (November 2019). The Application of Data Analytics to Asset
+Management: Deterioration and Climate Change Adaptation in Ontario Roads (Doctoral
+dissertation) (https://tspace.library.utoronto.ca/handle/1807/97601) (Thesis).
+Prinzie A, Poel D (2007). "Random Multiclass Classification: Generalizing Random Forests
+to Random MNL and Random NB" (https://www.researchgate.net/publication/225175169).
+Database and Expert Systems Applications. Lecture Notes in Computer Science. Vol. 4653.
+p. 349. doi:10.1007/978-3-540-74469-6_35 (https://doi.org/10.1007%2F978-3-540-74469-6_
+35). ISBN 978-3-540-74467-2.
+Further reading
+
+=== SECTION 14 | Trang 15 ===
+Denisko D, Hoffman MM (February 2018). "Classification and interaction in random forests"
+(https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5828645). Proceedings of the National
+Academy of Sciences of the United States of America. 115 (8): 1690–1692.
+Bibcode:2018PNAS..115.1690D (https://ui.adsabs.harvard.edu/abs/2018PNAS..115.1690D).
+doi:10.1073/pnas.1800256115 (https://doi.org/10.1073%2Fpnas.1800256115).
+PMC 5828645 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5828645). PMID 29440440
+(https://pubmed.ncbi.nlm.nih.gov/29440440).
+Hajjem, Ahlem; Bellavance, François; Larocque, Denis (2014-06-03). "Mixed-effects random
+forest for clustered data" (http://www.tandfonline.com/doi/abs/10.1080/00949655.2012.7415
+99). Journal of Statistical Computation and Simulation. 84 (6): 1313–1328.
+doi:10.1080/00949655.2012.741599 (https://doi.org/10.1080%2F00949655.2012.741599).
+ISSN 0094-9655 (https://search.worldcat.org/issn/0094-9655).
+Random Forests classifier description (https://www.stat.berkeley.edu/~breiman/RandomFore
+sts/cc_home.htm) (Leo Breiman's site)
+Liaw, Andy & Wiener, Matthew "Classification and Regression by randomForest" R News
+(2002) Vol. 2/3 p. 18 (https://cran.r-project.org/doc/Rnews/Rnews_2002-3.pdf) (Discussion
+of the use of the random forest package for R)
+Retrieved from "https://en.wikipedia.org/w/index.php?title=Random_forest&oldid=1373673788"
+External links
+
+

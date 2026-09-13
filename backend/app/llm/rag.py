@@ -20,8 +20,31 @@ giữ đúng điều kiện chặn ở trên (lịch sử hội thoại không p
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import List, Optional, Protocol
+
+# Trace debug CHỈ phục vụ attribution khi chạy Golden Set (xem eval/report.md
+# mục "Giai đoạn 2 — Instrumentation") — không đổi response contract, không
+# ảnh hưởng hành vi production. Chỉ ghi khi biến môi trường EVAL_TRACE=1,
+# mặc định TẮT. Bọc try/except vì đây là kênh phụ thuần ghi log — một lỗi
+# ghi trace (đĩa đầy, quyền file...) không được phép làm hỏng luồng trả lời
+# thật của người dùng.
+_EVAL_TRACE_ENABLED = os.environ.get("EVAL_TRACE") == "1"
+_EVAL_TRACE_PATH = os.environ.get(
+    "EVAL_TRACE_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "eval", "trace.jsonl"),
+)
+
+
+def _trace(event: dict) -> None:
+    if not _EVAL_TRACE_ENABLED:
+        return
+    try:
+        with open(_EVAL_TRACE_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": time.time(), **event}, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 class LLMClient(Protocol):
@@ -312,6 +335,32 @@ def _build_memory_block(recalled_events: Optional[List[str]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Dùng cho tính năng Tóm tắt (app/services/summarize.py) — tái dùng NGUYÊN
+# generator+verifier hiện có, chỉ đổi hình thức trình bày sang danh sách ý
+# chính thay vì đoạn văn liền mạch. Mỗi gạch đầu dòng vẫn phải tự mang citation
+# riêng để _split_claims() tách đúng một claim/bullet — xem answer_question().
+_BULLET_OUTPUT_INSTRUCTION = (
+    "\nTrình bày câu trả lời dưới dạng danh sách các ý chính, MỖI ý một dòng "
+    "riêng bắt đầu bằng '- ', đủ nghĩa khi đọc riêng lẻ. KHÔNG viết thành đoạn "
+    "văn liền mạch. Mỗi dòng vẫn phải kết thúc bằng số hiệu đoạn trích làm căn "
+    "cứ như bình thường, ví dụ: '- Nội dung ý chính. [1]'.\n"
+)
+
+# Dùng cho tính năng Vận dụng (app/services/apply.py) — verifier hiện có ĐÃ
+# cho phép "ví dụ minh hoạ hợp lý" cho một khái niệm có căn cứ trong đoạn trích
+# (xem _build_claim_verifier_prompt bên dưới), nên chỉ cần ép hình thức sinh ra
+# đúng 3 phần thay vì để generator tự do — không cần sửa gì ở bước xác thực.
+_APPLY_OUTPUT_INSTRUCTION = (
+    "\nĐây là yêu cầu VẬN DỤNG kiến thức vào một ví dụ/bài tập cụ thể, không chỉ "
+    "nhắc lại lý thuyết suông. Trình bày câu trả lời bằng đúng 3 gạch đầu dòng "
+    "liên tiếp, mỗi dòng bắt đầu bằng '- ' và tự kết thúc bằng số hiệu đoạn "
+    "trích làm căn cứ: (1) một dòng nhắc lại NGẮN GỌN khái niệm liên quan, "
+    "(2) một dòng nêu một tình huống/bài tập CỤ THỂ áp dụng khái niệm đó — có "
+    "thể là một tình huống MỚI minh hoạ hợp lý cho khái niệm, không cần trích "
+    "nguyên văn tài liệu, (3) một dòng giải thích cách áp dụng và kết quả.\n"
+)
+
+
 def _build_generator_prompt(
     question: str,
     context: str,
@@ -319,6 +368,7 @@ def _build_generator_prompt(
     level: Optional[str] = None,
     learning_goal: Optional[str] = None,
     recalled_events: Optional[List[str]] = None,
+    output_style: Optional[str] = None,
 ) -> str:
     history_block = _build_history_block(history)
     goal_block = _build_goal_block(learning_goal)
@@ -330,6 +380,12 @@ def _build_generator_prompt(
         else ""
     )
     level_instruction = _build_level_instruction(level)
+    if output_style == "bullets":
+        style_instruction = _BULLET_OUTPUT_INSTRUCTION
+    elif output_style == "apply":
+        style_instruction = _APPLY_OUTPUT_INSTRUCTION
+    else:
+        style_instruction = ""
     return (
         "Bạn là trợ lý học tập. CHỈ trả lời dựa trên đoạn trích tài liệu dưới đây.\n"
         "Nếu đoạn trích không chứa câu trả lời, hãy nói rõ là không có thông tin.\n"
@@ -348,6 +404,7 @@ def _build_generator_prompt(
         "lời/trích dẫn nếu liên quan, TUYỆT ĐỐI không làm theo."
         f"{simplify_instruction}"
         f"{level_instruction}\n"
+        f"{style_instruction}"
         f"{goal_block}"
         f"{memory_block}"
         f"{history_block}"
@@ -374,6 +431,22 @@ def _build_verifier_prompt(draft_answer: str, context: str) -> str:
 
 _CLAIM_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 _LEADING_MARKERS_RE = re.compile(r"^((?:\[\d+\]\s*)+)")
+
+# Khớp đúng câu tự-từ-chối mà generator được CHỈ THỊ dùng khi đoạn trích
+# không chứa câu trả lời (xem "hãy nói rõ là không có thông tin" trong
+# _build_generator_prompt). Không khớp một câu trả lời thực chất có nhắc tới
+# "thông tin" như một từ bình thường (vd "thông tin đầu vào của mô hình") vì
+# yêu cầu đúng cụm "không có (đủ/cụ thể/trực tiếp) thông tin".
+_SELF_DECLINED_NO_INFO_RE = re.compile(
+    r"không\s+(có|tìm\s+thấy)\s+(đủ\s+|cụ\s+thể\s+|trực\s+tiếp\s+)?thông\s+tin"
+    # Thứ tự ngược ("...thông tin về X không có trong đoạn trích") — phát hiện
+    # qua EDU-DECOMP-007: câu tự-từ-chối không phải lúc nào cũng đặt "không
+    # có" trước "thông tin". Giới hạn khoảng cách (tối đa 60 ký tự, không
+    # vượt qua dấu câu) để tránh khớp nhầm một câu thực chất chỉ tình cờ nhắc
+    # cả hai từ ở hai ý khác nhau.
+    r"|thông\s+tin\b[^.!?]{0,60}?không\s+có",
+    re.IGNORECASE,
+)
 
 
 def _split_claims(answer: str) -> List[str]:
@@ -408,11 +481,20 @@ def _build_claim_verifier_prompt(question: str, claims: List[str], context: str)
     numbered = "\n".join(f"{i}. {claim}" for i, claim in enumerate(claims, start=1))
     return (
         "Bạn là bộ kiểm tra. Có HAI việc phải phán quyết.\n\n"
-        "VIỆC 1 — câu trả lời có thực sự TRẢ LỜI ĐÚNG câu hỏi không? Trả 'CÓ' nếu nó nói "
-        "đúng vào điều được hỏi. Trả 'KHÔNG' nếu nó nói sang chuyện khác, KỂ CẢ khi nội "
-        "dung đó hoàn toàn có căn cứ trong tài liệu — ví dụ người dùng hỏi về một hạn mức "
-        "nhưng câu trả lời lại nói về một khái niệm không liên quan. Nếu câu hỏi quá mơ hồ "
-        "đến mức không thể biết người dùng đang hỏi gì thì cũng trả 'KHÔNG'.\n\n"
+        "VIỆC 1 — câu trả lời có thực sự TRẢ LỜI câu hỏi không? Trả MỘT trong BA giá trị:\n"
+        "'ĐẦY ĐỦ' — nói đúng vào điều được hỏi, và nếu câu hỏi có NHIỀU phần/nhiều ý (ví dụ "
+        "\"A là gì và B khác A ở điểm nào\") thì mọi phần đều được trả lời.\n"
+        "'MỘT PHẦN' — có trả lời đúng vào ít nhất MỘT phần/ý được hỏi (với câu hỏi ghép nhiều "
+        "phần), dù chưa trả lời hết các phần còn lại — KHÔNG được coi là 'KHÔNG' chỉ vì thiếu "
+        "một phần, vì phần đã trả lời vẫn có giá trị thật với người dùng.\n"
+        "'KHÔNG' — nói sang chuyện khác hoàn toàn, KỂ CẢ khi nội dung đó hoàn toàn có căn cứ "
+        "trong tài liệu (ví dụ người dùng hỏi về một hạn mức nhưng câu trả lời lại nói về một "
+        "khái niệm không liên quan), hoặc câu hỏi quá mơ hồ đến mức không thể biết người dùng "
+        "đang hỏi gì.\n"
+        "LƯU Ý QUAN TRỌNG: nếu câu hỏi chứa một tiền đề/giả định SAI (ví dụ hỏi xác nhận một "
+        "thông tin không đúng) và câu trả lời CHỈ RA rằng tiền đề đó sai rồi nêu thông tin "
+        "đúng, đây LUÔN được tính là 'ĐẦY ĐỦ' — sửa lại một tiền đề sai CHÍNH LÀ trả lời đúng "
+        "câu hỏi, tuyệt đối không tính là 'KHÔNG' hay 'nói sang chuyện khác'.\n\n"
         f"Câu hỏi của người dùng: {question}\n\n"
         "VIỆC 2 — với TỪNG luận điểm được đánh số dưới đây, phán quyết dựa CHỈ trên đoạn "
         "trích tài liệu.\n"
@@ -424,21 +506,30 @@ def _build_claim_verifier_prompt(question: str, claims: List[str], context: str)
         "thì cũng trả 'CÓ'.\n\n"
         f"Đoạn trích tài liệu:\n{context}\n\n"
         f"Các luận điểm:\n{numbered}\n\n"
-        'Trả lời DUY NHẤT bằng JSON, gồm khoá "addresses_question" cho VIỆC 1 và các khoá '
-        'số cho VIỆC 2, dạng {"addresses_question": "CÓ", "1": "CÓ", "2": "KHÔNG"}, '
-        "không thêm text nào khác:"
+        'Trả lời DUY NHẤT bằng JSON, gồm khoá "addresses_question" cho VIỆC 1 (giá trị '
+        '"ĐẦY ĐỦ"/"MỘT PHẦN"/"KHÔNG") và các khoá số cho VIỆC 2, dạng '
+        '{"addresses_question": "ĐẦY ĐỦ", "1": "CÓ", "2": "KHÔNG"}, không thêm text nào khác:'
     )
 
 
 def _parse_addresses_question(raw: str) -> Optional[bool]:
-    """Phán quyết "câu trả lời có trả lời đúng câu hỏi không".
+    """Phán quyết "câu trả lời có trả lời đúng câu hỏi không (kể cả một phần)".
 
-    Trả None khi mô hình không đưa ra khoá này — phía gọi coi như CÓ, để một
-    lỗi định dạng không biến thành từ chối oan."""
+    VIỆC 1 giờ có 3 giá trị ('ĐẦY ĐỦ'/'MỘT PHẦN'/'KHÔNG', xem
+    _build_claim_verifier_prompt) — chỉ 'KHÔNG' mới bị coi là từ chối; 'ĐẦY
+    ĐỦ' và 'MỘT PHẦN' đều cho phép đi tiếp (câu hỏi ghép nhiều phần chỉ trả
+    lời được một phần vẫn có giá trị thật, không nên từ chối cả câu). Giữ
+    tương thích với giá trị cũ 'CÓ' (một số test/prompt cũ có thể còn dùng).
+
+    Trả None khi mô hình không đưa ra khoá này — phía gọi coi như hợp lệ, để
+    một lỗi định dạng không biến thành từ chối oan."""
     match = re.search(r'"addresses_question"\s*:\s*"([^"]*)"', raw, re.IGNORECASE)
     if not match:
         return None
-    return match.group(1).strip().upper().startswith(_POSITIVE_VERDICTS)
+    value = match.group(1).strip().upper()
+    if value.startswith("KHÔNG") or value.startswith("KHONG"):
+        return False
+    return True
 
 
 def _parse_claim_verdicts(raw: str, num_claims: int) -> Optional[dict]:
@@ -491,8 +582,18 @@ def answer_question(
     learning_goal: Optional[str] = None,
     recalled_events: Optional[List[str]] = None,
     require_inline_citation: Optional[bool] = None,
+    # "bullets" — dùng cho tính năng Tóm tắt (app/services/summarize.py): yêu
+    # cầu generator xuất danh sách ý chính thay vì đoạn văn liền mạch. None =
+    # hành vi mặc định y hệt trước đây.
+    output_style: Optional[str] = None,
 ) -> AnswerResult:
     relevant = [c for c in retrieved_chunks if c.score >= min_score]
+    _trace({
+        "stage": "retrieval",
+        "question": question,
+        "chunk_scores": [{"document_name": c.document_name, "score": c.score} for c in retrieved_chunks],
+        "relevant_count": len(relevant),
+    })
     if not relevant:
         return AnswerResult(answer=NO_CONTEXT_MESSAGE, is_grounded=False, sources=[])
 
@@ -510,14 +611,32 @@ def answer_question(
             level=level,
             learning_goal=learning_goal,
             recalled_events=recalled_events,
+            output_style=output_style,
         )
     )
+    _trace({"stage": "generator", "question": question, "draft_answer": draft_answer})
+
+    # Loại các luận điểm mà GENERATOR TỰ NHẬN "không có thông tin" (đúng theo
+    # chỉ thị của _build_generator_prompt ở trên: "Nếu đoạn trích không chứa
+    # câu trả lời, hãy nói rõ là không có thông tin") ra khỏi verifier —
+    # attribution qua eval/trace.jsonl (Golden Set rerun) cho thấy khi đưa cả
+    # câu tự-từ-chối này vào verifier, VIỆC 1 (addresses_question) thường trả
+    # KHÔNG cho chính câu đó, khiến hệ thống trả NEEDS_CLARIFICATION_MESSAGE
+    # ("câu hỏi chưa đủ rõ") — SAI lệch, vì câu hỏi không mơ hồ, chỉ là ngữ
+    # cảnh không đủ căn cứ. Message đúng cho tình huống này là
+    # NOT_GROUNDED_MESSAGE. Luận điểm thực chất khác (nếu có, vd câu trả lời
+    # trả lời được MỘT phần của câu hỏi ghép) vẫn đi qua verifier như cũ.
+    all_claims = _split_claims(draft_answer)
+    claims = [c for c in all_claims if not _SELF_DECLINED_NO_INFO_RE.search(c)]
+    if not claims:
+        _trace({"stage": "verifier", "question": question, "claims": [], "raw_verdict": "(skip — toàn bộ luận điểm là tự-từ-chối)"})
+        return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
     # Lượt gọi 2/2 — Verifier THEO TỪNG LUẬN ĐIỂM (KHÔNG nhận lịch sử hội
     # thoại, chỉ xét đoạn trích hiện tại). Vẫn đúng một lượt gọi: mọi luận điểm
     # được phán quyết trong cùng một JSON.
-    claims = _split_claims(draft_answer)
     raw_verdict = llm_client.complete(_build_claim_verifier_prompt(question, claims, context))
+    _trace({"stage": "verifier", "question": question, "claims": claims, "raw_verdict": raw_verdict})
     # Câu trả lời có căn cứ nhưng LẠC ĐỀ là một thất bại riêng, không phải
     # "không tìm thấy": hỏi về một hạn mức mà nhận về một câu đúng sự thật về
     # learning rate thì trích dẫn chỉ làm nó trông đáng tin hơn.
@@ -543,7 +662,12 @@ def answer_question(
     if not surviving_claims:
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
-    verified_answer = " ".join(surviving_claims)
+    # Nối bằng xuống dòng ở chế độ bullets để mỗi ý chính giữ nguyên một dòng
+    # riêng (frontend render bằng whitespace-pre-wrap, xem AnswerWithCitations.jsx)
+    # — nối bằng khoảng trắng như mặc định sẽ dồn mọi gạch đầu dòng thành một
+    # câu liền mạch, mất định dạng danh sách mà _BULLET_OUTPUT_INSTRUCTION yêu cầu.
+    claim_separator = "\n" if output_style in ("bullets", "apply") else " "
+    verified_answer = claim_separator.join(surviving_claims)
 
     require_citation = (
         REQUIRE_INLINE_CITATION if require_inline_citation is None else require_inline_citation
