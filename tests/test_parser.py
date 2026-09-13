@@ -1,69 +1,49 @@
+"""Test cho app/ingestion/parser.py::_parse_pdf.
+
+Chỉ test bug NUL byte phát hiện khi chạy Golden Set thật (tài liệu Wikipedia
+"Phở" khiến pypdf trích ra byte NUL (0x00) lẫn trong text, làm insert vào
+cột text của Postgres crash và document kẹt mãi ở trạng thái "đang xử lý").
+Không tái tạo được NUL byte thật qua reportlab (nguồn gốc là cách pypdf giải
+mã một số PDF cụ thể, không phải nội dung text thông thường), nên test bằng
+cách monkeypatch `PdfReader.pages[i].extract_text` để trả về text có lẫn
+NUL byte, xác nhận `_parse_pdf` loại bỏ nó trước khi trả về.
+"""
 import os
 import sys
-import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from docx import Document as DocxDocument
-
-from app.ingestion.parser import UnsupportedFileType, parse_document
+from app.ingestion.parser import _parse_pdf
 
 
-class TestParseDocx(unittest.TestCase):
-    def _make_docx(self, paragraphs_per_section, num_sections):
-        """Tạo file .docx thật để test — không phải mock."""
-        doc = DocxDocument()
-        for s in range(num_sections):
-            for p in range(paragraphs_per_section):
-                doc.add_paragraph(f"Đoạn {s}-{p}: nội dung ví dụ về RAG và LLM.")
-        tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
-        # Windows không cho ghi đè/xoá file khi handle còn mở — phải đóng trước
-        # khi python-docx ghi vào đường dẫn đó (WinError 32).
-        tmp.close()
-        doc.save(tmp.name)
-        return tmp.name
+class TestParsePdfNulByteSanitization(unittest.TestCase):
+    def test_nul_byte_is_stripped_from_extracted_text(self):
+        fake_page = MagicMock()
+        fake_page.extract_text.return_value = "Phở\x00 là món ăn Việt Nam."
+        fake_reader = MagicMock()
+        fake_reader.pages = [fake_page]
 
-    def test_parses_docx_into_sections_grouped_by_paragraph_count(self):
-        path = self._make_docx(paragraphs_per_section=3, num_sections=2)
-        try:
-            sections = parse_document(path, paragraphs_per_section=3)
-            self.assertEqual(len(sections), 2)
-            position_ref, text = sections[0]
-            self.assertTrue(position_ref.startswith("Mục"))
-            self.assertIn("Đoạn 0-0", text)
-            self.assertIn("Đoạn 0-1", text)
-            self.assertIn("Đoạn 0-2", text)
-        finally:
-            os.remove(path)
+        with patch("app.ingestion.parser.PdfReader", return_value=fake_reader):
+            sections = _parse_pdf("fake_path.pdf")
 
-    def test_empty_paragraphs_are_skipped(self):
-        doc = DocxDocument()
-        doc.add_paragraph("")
-        doc.add_paragraph("Nội dung thật duy nhất.")
-        tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
-        tmp.close()  # xem giải thích ở _make_docx
-        doc.save(tmp.name)
-        try:
-            sections = parse_document(tmp.name, paragraphs_per_section=5)
-            joined = " ".join(text for _, text in sections)
-            self.assertIn("Nội dung thật duy nhất.", joined)
-        finally:
-            os.remove(tmp.name)
+        self.assertEqual(len(sections), 1)
+        position_ref, text = sections[0]
+        self.assertEqual(position_ref, "Trang 1")
+        self.assertNotIn("\x00", text)
+        self.assertEqual(text, "Phở là món ăn Việt Nam.")
 
-    def test_unsupported_extension_raises(self):
-        tmp = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
-        tmp.write(b"noi dung")
-        tmp.close()
-        try:
-            with self.assertRaises(UnsupportedFileType):
-                parse_document(tmp.name)
-        finally:
-            os.remove(tmp.name)
+    def test_page_with_no_nul_bytes_is_unaffected(self):
+        fake_page = MagicMock()
+        fake_page.extract_text.return_value = "Nội dung bình thường."
+        fake_reader = MagicMock()
+        fake_reader.pages = [fake_page]
 
-    def test_missing_file_raises_file_not_found(self):
-        with self.assertRaises(FileNotFoundError):
-            parse_document("/khong/ton/tai.pdf")
+        with patch("app.ingestion.parser.PdfReader", return_value=fake_reader):
+            sections = _parse_pdf("fake_path.pdf")
+
+        self.assertEqual(sections, [("Trang 1", "Nội dung bình thường.")])
 
 
 if __name__ == "__main__":

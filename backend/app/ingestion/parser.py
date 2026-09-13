@@ -53,7 +53,12 @@ def _parse_pdf(file_path: str) -> List[Tuple[str, str]]:
     reader = PdfReader(file_path)
     sections = []
     for i, page in enumerate(reader.pages, start=1):
-        text = page.extract_text() or ""
+        # Một số PDF (vd bảng infobox Wikipedia với ký tự đặc biệt) khiến
+        # pypdf trích ra byte NUL (0x00) lẫn trong text — cột text của
+        # Postgres từ chối thẳng NUL byte, làm job xử lý nền crash giữa
+        # chừng và document kẹt mãi ở trạng thái "đang xử lý" (phát hiện khi
+        # chạy Golden Set thật với tài liệu Phở).
+        text = (page.extract_text() or "").replace("\x00", "")
         sections.append((f"Trang {i}", text))
     return sections
 
