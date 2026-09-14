@@ -173,8 +173,9 @@ Case duy nhất fail (Study Plan) là một phát hiện thật — xem
 |---|---|---|
 | 1 | Không có bước phát hiện độc lập cho câu hỏi mơ hồ (đại từ không rõ ngữ cảnh, thuật ngữ đa nghĩa) — hệ thống trả lời tự tin theo 1 khả năng thay vì hỏi lại nêu rõ các khả năng | Trung bình — ảnh hưởng category `abstention_clarification` |
 | 2 | Bước trích xuất dàn ý (`app/ingestion/outline.py`) đôi khi nhặt nhầm dòng trích dẫn/câu văn có số thập phân làm heading duy nhất của tài liệu, khiến Summarize không có chủ đề hợp lệ để tóm tắt dù tài liệu có nội dung | Cao — ảnh hưởng phần lớn category `summarize`, rò rỉ sang cả `study_plan` |
-| 3 | Bộ lọc trích dẫn web (`is_plausible_topic`) chưa bắt được mọi biến thể bị cắt ngắn bởi giới hạn độ dài heading | Thấp — 1 case hành vi `study_plan` |
-| 4 | So khớp chủ đề Summarize theo âm tiết đơn lẻ trong tiếng Việt đôi khi trùng ngẫu nhiên giữa 2 chủ đề không liên quan | Thấp — hiếm gặp |
+| 3 | Ngữ cảnh hội thoại (`conversation_history`) không luôn được `build_retrieval_query()` tận dụng đủ để truy hồi đúng đoạn trích cho câu hỏi tiếp nối dùng đại từ | Trung bình — phần lớn nguyên nhân fail của category `conversational` |
+| 4 | Bộ lọc trích dẫn web (`is_plausible_topic`) chưa bắt được mọi biến thể bị cắt ngắn bởi giới hạn độ dài heading | Thấp — 1 case hành vi `study_plan` |
+| 5 | So khớp chủ đề Summarize theo âm tiết đơn lẻ trong tiếng Việt đôi khi trùng ngẫu nhiên giữa 2 chủ đề không liên quan | Thấp — hiếm gặp |
 
 Nguyên nhân gốc, bằng chứng cụ thể, và đề xuất hướng xử lý cho từng mục xem
 **[failure_analysis.md](failure_analysis.md)**.
