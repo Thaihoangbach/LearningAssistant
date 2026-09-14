@@ -41,7 +41,7 @@ from app.services.learner_context import build_learner_context
 from app.services.mastery import decay_unpractised
 from app.services.misconception import WrongChoice, find_repeated_misconceptions
 from app.services.qa_pipeline import answer_with_fallback
-from app.services.structural_retrieval import StructuralRetrievalUnavailable
+from app.services.structural_retrieval import StructuralRetrievalUnavailable, fetch_topic_chunks
 from app.services.study_planner import TopicPriority, generate_plan
 from app.services.summarize import (
     NEEDS_TOPIC_MESSAGE,
@@ -290,6 +290,13 @@ def _build_flashcard_due_result(db: Session, user_id: str) -> AnswerResult:
     return AnswerResult(answer=answer, is_grounded=True, sources=[])
 
 
+# Số ký tự tối đa lấy làm preview nội dung mỗi chủ đề ứng viên khi khớp
+# resolve_topic (xem app/services/summarize.py). Chỉ cần đủ vài chục từ đầu
+# đoạn để mở rộng từ vựng khớp — không phải toàn bộ nội dung chủ đề (đó là
+# việc của build_summary/fetch_topic_chunks sau khi đã CHỌN xong 1 chủ đề).
+_SUMMARIZE_PREVIEW_CHARS = 300
+
+
 def _build_summarize_result(
     db: Session, user_id: str, question: str, ready_docs: list[Document], llm_client
 ) -> AnswerResult:
@@ -305,11 +312,24 @@ def _build_summarize_result(
         .all()
     )
     plausible_titles = set(filter_topic_titles([r.title for r in rows]))
-    candidates = [
-        TopicCandidate(topic_id=r.id, document_id=r.document_id, title=r.title)
-        for r in rows
-        if r.title in plausible_titles
-    ]
+    candidates = []
+    for r in rows:
+        if r.title not in plausible_titles:
+            continue
+        # Lấy trước 1 chunk đầu mỗi chủ đề ứng viên để resolve_topic khớp
+        # được cả theo NỘI DUNG, không chỉ tiêu đề (Golden Set Finding #4 —
+        # xem docstring resolve_topic). Chi phí: 1 truy vấn DB nhỏ/ứng viên,
+        # chấp nhận được vì số chủ đề của một người dùng thường chỉ vài chục.
+        preview = ""
+        try:
+            preview_chunks = fetch_topic_chunks(db, user_id, r.document_id, r.id, max_chunks=1)
+        except StructuralRetrievalUnavailable:
+            preview_chunks = []
+        if preview_chunks:
+            preview = preview_chunks[0].text[:_SUMMARIZE_PREVIEW_CHARS]
+        candidates.append(
+            TopicCandidate(topic_id=r.id, document_id=r.document_id, title=r.title, preview=preview)
+        )
 
     topic = resolve_topic(question, candidates)
     if topic is None:

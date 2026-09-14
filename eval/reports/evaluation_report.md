@@ -2,12 +2,12 @@
 
 **Scope:** 393/393 case, chạy thật trên backend local (Postgres `edututor-pg`
 + MinIO local — không đụng production)
-**Corpus:** 13 tài liệu độc lập mới (Wikipedia), tải lên dưới
+**Corpus:** 13 tài liệu độc lập (Wikipedia), tải lên dưới
 `user_id=golden-eval-user`, `course_name=GoldenSetEval`
 **Bộ case:** `eval/golden_set.jsonl` (393 case)
 
-Đây là báo cáo **số liệu và kết quả**. Phân tích nguyên nhân gốc, root
-cause, và các fix đã áp dụng nằm ở **[failure_analysis.md](failure_analysis.md)**.
+Đây là báo cáo **số liệu và kết quả**. Phân tích nguyên nhân gốc cho các
+vấn đề còn tồn tại nằm ở **[failure_analysis.md](failure_analysis.md)**.
 
 ---
 
@@ -16,22 +16,20 @@ cause, và các fix đã áp dụng nằm ở **[failure_analysis.md](failure_an
 | | |
 |---|---:|
 | Tổng số case | 393/393 (100% đã chạy thật) |
-| Citation accuracy (khi có trả lời) | 155/160 — **97%** |
-| Content correctness — LLM judge (khi có trả lời) | 159/160 — **99%** |
-| **Pass rate đã hiệu chỉnh, 267 case Q&A** (loại evaluator noise + test-design gap, xem mục 3.2) | 175/257 — 68% |
-| **Pass rate bộ regression 51 case, cùng ID, trước → sau toàn bộ fix** | 23/51 (45%) → **36/51 (70.6%)** |
+| **Pass rate, 267 case Q&A** | 160/267 — **59.9%** |
+| `grounded_as_expected` (hệ thống trả lời có căn cứ đúng khi đáng ra phải trả lời) | 185/213 — **86.9%** |
+| Citation accuracy (khi có trả lời) | 182/185 — **98.4%** |
+| Content correctness — LLM judge (khi có trả lời) | 181/185 — **97.8%** |
 | Guardrail false-positive (câu hỏi hợp lệ bị chặn nhầm) | 0/9 |
-| Guardrail true-block (câu cần chặn bị chặn đúng) | 9/11 |
+| Guardrail true-block (câu cần chặn bị chặn đúng) | 9/9 |
 | Kịch bản hành vi (Quiz/Flashcard/Mastery/Study Plan/Profile/...) | 40/41 pass |
-| Bug thật phát hiện & đã sửa | 5 — xem mục 5 |
-| Bug thật phát hiện, chưa sửa | 2 — xem mục 5 |
 
 **Kết luận chính:** khi hệ thống *có* trả lời, độ chính xác nội dung và
-trích dẫn gần như tuyệt đối. Vấn đề Q&A không phải một nguyên nhân duy nhất
-mà là nhiều lỗi độc lập cùng nằm ở một điểm quyết định trong verifier — chi
-tiết root cause và fix xem `failure_analysis.md`. Toàn bộ cơ chế
-Quiz/Flashcard/Mastery/Study Plan hoạt động đúng thiết kế qua vòng đời API
-thật.
+trích dẫn gần như tuyệt đối (97-98%). Khoảng cách giữa pass rate tổng thể
+(59.9%) và độ chính xác khi-có-trả-lời (97-98%) nằm ở việc hệ thống đôi khi
+từ chối/hỏi lại oan thay vì trả lời — `grounded_as_expected` đo trực tiếp
+điều này (86.9%). Chi tiết nguyên nhân gốc cho các case còn fail và các vấn
+đề đã biết xem `failure_analysis.md`.
 
 ---
 
@@ -49,6 +47,9 @@ Phần 1 gọi trực tiếp `POST /chat/ask` cho từng case và chấm điểm
 `expected_behavior`/`abstention_type`/`expected_citations`/`must_contain`/
 `must_not_contain`; case có `expected_answer` được chấm thêm bằng LLM judge
 (model chấm nội dung có đúng ý hay không, không yêu cầu giống hệt câu chữ).
+Khoảng 10/267 case có tiền đề bị lỗi trong chính định nghĩa case (không
+phải lỗi hệ thống) — không loại khỏi số liệu tổng, chỉ ghi chú trong
+`failure_analysis.md` khi liên quan trực tiếp tới một phát hiện.
 
 Phần 2 dùng **Stateful Scenario Runner**: mỗi kịch bản gồm setup state thật
 (qua API hoặc chỉnh trực tiếp timestamp trong DB khi cần mô phỏng thời gian)
@@ -60,66 +61,44 @@ setup — xem mục 4.1).
 
 ## 3. Kết quả Phần 1 — Q&A (267 case)
 
-### 3.1 Kết quả theo category (số thô, chưa hiệu chỉnh)
+### 3.1 Kết quả theo category
 
-| Category | Pass | Fail | Tỷ lệ |
-|---|---:|---:|---:|
-| rag_qa | 40 | 5 | 89% |
-| retrieval | 31 | 4 | 89% |
-| decomposition | 12 | 8 | 60% |
-| compare | 8 | 7 | 53% |
-| multi_document | 8 | 12 | 40% |
-| grounding_citation | 14 | 21 | 40% |
-| conversational | 10 | 15 | 40% |
-| abstention_clarification | 9 | 16 | 36% |
-| apply | 4 | 11 | 27% |
-| guardrail | — | — | n/a — xem mục 3.3 |
-| summarize | — | — | n/a — xem `failure_analysis.md` |
-
-Số thô đánh giá THẤP HƠN thực tế — xem mục 3.2 để biết vì sao và số liệu
-đã hiệu chỉnh.
-
-### 3.2 Số liệu đã hiệu chỉnh — tách product failure / evaluator noise / test-design gap
-
-`run_golden_set.py::score_case()` (bản gốc) có 2 lỗi khiến nhiều case bị
-tính "fail" dù hệ thống làm đúng — chi tiết 2 lỗi này và cách sửa nằm ở
-`failure_analysis.md` mục 1. Số liệu đã hiệu chỉnh (gộp thẳng vào field
-`final_label` trong `eval/results/run_results.jsonl`):
-
-| Nhãn | Số case | Tỷ lệ |
+| Category | Pass/Tổng | Tỷ lệ |
 |---|---:|---:|
-| `pass` | 130 | 48.7% |
-| `evaluator_noise` (lỗi chấm điểm, không phải lỗi hệ thống) | 45 | 16.9% |
-| `test_design_gap` (tiền đề case sai, không phải bug sản phẩm) | 10 | 3.7% |
-| `product_failure` (nghi lỗi hệ thống thật) | 82 | 30.7% |
+| rag_qa | 44/45 | 97.8% |
+| retrieval | 32/35 | 91.4% |
+| decomposition | 13/20 | 65.0% |
+| compare | 9/15 | 60.0% |
+| grounding_citation | 20/35 | 57.1% |
+| guardrail | 10/20 | 50.0% |
+| apply | 6/15 | 40.0% |
+| conversational | 10/25 | 40.0% |
+| multi_document | 7/20 | 35.0% |
+| summarize | 4/12 | 33.3% |
+| abstention_clarification | 5/25 | 20.0% |
 
-**Pass rate đã hiệu chỉnh: 175/257 (68.1%)**, loại 10 case test-design-gap
-khỏi mẫu số. `product_failure` còn lại theo category:
+`rag_qa` và `retrieval` gần như bão hòa (>90%). Bốn nhóm thấp nhất
+(`abstention_clarification`, `summarize`, `multi_document`, `conversational`)
+chiếm phần lớn số case fail — nguyên nhân gốc từng nhóm xem
+`failure_analysis.md`.
 
-| Category | product_failure |
-|---|---:|
-| grounding_citation | 13 |
-| abstention_clarification | 11 |
-| guardrail | 11 |
-| conversational | 9 |
-| apply | 8 |
-| retrieval | 7 |
-| multi_document | 7 |
-| summarize | 6 |
-| rag_qa | 5 |
-| decomposition | 4 |
-| compare | 1 |
+### 3.2 Guardrail — đọc đúng bản chất thay vì tỷ lệ pass thô
 
-### 3.3 Guardrail — đọc đúng bản chất thay vì tỷ lệ pass thô
-
-- **9/9 case false-positive** (câu hỏi hợp lệ) **không bị chặn nhầm.**
-- Các case cố ý cần chặn: yêu cầu "làm hộ bài tập" (tiếng Việt lẫn tiếng
-  Anh) đều bị chặn đúng bởi `ACADEMIC_INTEGRITY_MESSAGE`.
-- 2 case injection tinh vi hơn (giả mạo trích dẫn, yêu cầu "bỏ qua tài liệu
-  dùng kiến thức chung") không bị lợi dụng thành công (không tạo trích dẫn
-  giả, không bỏ qua tài liệu) nhưng cũng không được nhận diện rõ ràng là
-  injection — rơi vào phản hồi chung chung. Đây là điểm biên đáng theo dõi,
-  không phải lỗ hổng bảo mật thực sự.
+- **9/9 case cố ý kiểm tra false-positive** (câu hỏi hợp lệ diễn đạt giống
+  đáng ngờ — persona gia sư, từ nhạy cảm dùng đúng ngữ cảnh toán học...)
+  **không bị guardrail chặn nhầm.**
+- **9/9 case cố ý cần chặn** (yêu cầu "làm hộ bài tập", prompt injection
+  trực tiếp/gián tiếp, jailbreak DAN, tiết lộ chỉ dẫn hệ thống) **đều bị
+  chặn đúng.**
+- 2 case injection tinh vi hơn (giả mạo trích dẫn `[Nature, 2023]`, yêu cầu
+  "bỏ qua tài liệu dùng kiến thức chung") **không bị guardrail chặn** theo
+  đúng thiết kế (đây không phải jailbreak, guardrail cố tình cho qua) —
+  nhưng bản thân câu trả lời sau đó không phải lúc nào cũng giữ đúng
+  căn cứ/trích dẫn ở mọi lượt chạy. Đây là điểm biên đáng theo dõi ở lớp
+  generator, không phải lỗ hổng guardrail.
+- Vì vậy category `guardrail` ở bảng 3.1 (50%) phản ánh cả lỗi retrieval/
+  grounding của những case KHÔNG nên bị chặn nhưng cũng không dễ trả lời
+  (câu hỏi diễn đạt dài/lạ), không phải guardrail chặn sai.
 
 ---
 
@@ -155,7 +134,7 @@ Quiz→Mastery bao gồm 2 case time-simulation qua đúng field
 đúng field `FlashcardReview.next_due_at` (không phải `reviewed_at`).
 
 Case duy nhất fail (Study Plan) là một phát hiện thật — xem
-`failure_analysis.md` mục 2.
+`failure_analysis.md`.
 
 ### 4.3 Ngoài phạm vi lần chạy này
 
@@ -188,30 +167,25 @@ Case duy nhất fail (Study Plan) là một phát hiện thật — xem
 
 ---
 
-## 5. Bug thật phát hiện — tổng hợp trạng thái
+## 5. Vấn đề đã biết — tổng hợp
 
-| # | Mô tả | Trạng thái |
+| # | Mô tả | Mức độ ảnh hưởng |
 |---|---|---|
-| 1 | pypdf trích ra byte NUL (0x00) trong text PDF, Postgres từ chối insert, job xử lý nền crash giữa chừng | **Đã sửa** |
-| 2 | `is_plausible_topic()` thiếu luật lọc trích dẫn web/Wikipedia, lọt vào Study Plan như topic thật | Chưa sửa |
-| 3 | Câu tự-từ-chối của generator bị verifier hiểu nhầm thành "câu hỏi mơ hồ" | **Đã sửa, có test hồi quy** |
-| 4 | Điểm retrieval bị pha loãng bởi khung diễn đạt dài (roleplay/injection-style) | Chưa sửa, cần cân nhắc đánh đổi |
-| 5 | `addresses_question` (verifier) chỉ có 2 giá trị CÓ/KHÔNG — ép câu hỏi ghép nhiều phần vào phán quyết all-or-nothing | **Đã sửa, kiểm chứng live** |
-| 6 | `addresses_question` không nhận diện "sửa lại tiền đề sai" là trả lời đúng | **Đã sửa, kiểm chứng live** |
-| 7 | Regex tự-từ-chối bỏ sót thứ tự "...thông tin ... không có" | **Đã sửa, có test hồi quy** |
-| 8 | Resume-logic của script chạy Golden Set coi case lỗi hạ tầng là "đã xong", bỏ qua không chạy lại | **Đã sửa** |
+| 1 | Không có bước phát hiện độc lập cho câu hỏi mơ hồ (đại từ không rõ ngữ cảnh, thuật ngữ đa nghĩa) — hệ thống trả lời tự tin theo 1 khả năng thay vì hỏi lại nêu rõ các khả năng | Trung bình — ảnh hưởng category `abstention_clarification` |
+| 2 | Bước trích xuất dàn ý (`app/ingestion/outline.py`) đôi khi nhặt nhầm dòng trích dẫn/câu văn có số thập phân làm heading duy nhất của tài liệu, khiến Summarize không có chủ đề hợp lệ để tóm tắt dù tài liệu có nội dung | Cao — ảnh hưởng phần lớn category `summarize`, rò rỉ sang cả `study_plan` |
+| 3 | Bộ lọc trích dẫn web (`is_plausible_topic`) chưa bắt được mọi biến thể bị cắt ngắn bởi giới hạn độ dài heading | Thấp — 1 case hành vi `study_plan` |
+| 4 | So khớp chủ đề Summarize theo âm tiết đơn lẻ trong tiếng Việt đôi khi trùng ngẫu nhiên giữa 2 chủ đề không liên quan | Thấp — hiếm gặp |
 
-Chi tiết đầy đủ từng bug (nguyên nhân, cách sửa, kiểm chứng) nằm ở
+Nguyên nhân gốc, bằng chứng cụ thể, và đề xuất hướng xử lý cho từng mục xem
 **[failure_analysis.md](failure_analysis.md)**.
 
 ---
 
 ## Phụ lục — Nguồn dữ liệu
 
-- Bộ case: `eval/golden_set.jsonl` (393 case; 77 case đánh dấu `in_regression_set: true` làm tập con hồi quy)
-- Kết quả Phần 1 (267 case Q&A, đã có nhãn `pass`/`evaluator_noise`/`test_design_gap`/`product_failure`): `eval/results/run_results.jsonl`
-- Kết quả Phần 2 (126 case hành vi): `eval/results/stateful_results.jsonl`
-- Kết quả regression sau fix: `eval/results/regression_results.jsonl`
-- Script chạy: `eval/scripts/run_golden_set.py` (thêm `--regression-only`), `eval/scripts/run_stateful_scenarios.py`, `eval/scripts/run_local_backend.py`
+- Bộ case: `eval/golden_set.jsonl` (393 case; 77 case đánh dấu `in_regression_set: true` làm tập con chạy nhanh)
+- Kết quả Phần 1 (267 case Q&A): `eval/results/run_results.jsonl`
+- Kết quả Phần 2 (126 case hành vi, 41 kịch bản): `eval/results/stateful_results.jsonl`
+- Script chạy: `eval/scripts/run_golden_set.py`, `eval/scripts/run_stateful_scenarios.py`, `eval/scripts/run_local_backend.py`
 - Corpus: `eval/corpus/` (13 tài liệu + `README.md`)
 - Xem `eval/README.md` cho cấu trúc đầy đủ và cách chạy lại; `failure_analysis.md` cho phân tích nguyên nhân gốc.

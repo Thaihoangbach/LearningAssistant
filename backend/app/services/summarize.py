@@ -51,6 +51,10 @@ class TopicCandidate:
     topic_id: str
     document_id: str
     title: str
+    # Trích đoạn ngắn nội dung đầu chủ đề (rỗng nếu chưa lấy được) — mở rộng
+    # từ vựng khớp ngoài tiêu đề (xem resolve_topic). Optional/mặc định rỗng
+    # để không phá các nơi gọi/test cũ chỉ truyền title.
+    preview: str = ""
 
 
 def resolve_topic(question: str, candidates: List[TopicCandidate]) -> Optional[TopicCandidate]:
@@ -58,18 +62,39 @@ def resolve_topic(question: str, candidates: List[TopicCandidate]) -> Optional[T
     đúng cách xếp hạng theo trùng từ nội dung đã có ở
     app/routers/chat.py::_suggest_topics (không tốn lượt gọi LLM). Trả None
     nếu không có ứng viên nào trùng dù chỉ một từ nội dung — để phía gọi hỏi
-    lại thay vì đoán bừa một chủ đề không liên quan."""
+    lại thay vì đoán bừa một chủ đề không liên quan.
+
+    Khớp theo TIÊU ĐỀ + PREVIEW (đoạn trích ngắn đầu chủ đề, do phía gọi tự
+    lấy sẵn — xem app/routers/chat.py::_build_summarize_result), không chỉ
+    riêng tiêu đề. Lý do (Golden Set eval/reports/failure_analysis.md, Finding
+    #4): tiêu đề một DocumentTopic thường là một heading NGẮN, trong khi người
+    dùng hay mô tả chương/phần mình muốn tóm tắt theo NỘI DUNG bên trong thay
+    vì lặp lại đúng từ trong heading gốc (vd hỏi "nguyên lý và ứng dụng của
+    CNN" trong khi heading chỉ là "Kiến trúc").
+
+    Ngưỡng chấp nhận KHÁC NHAU giữa hai nguồn: khớp qua TIÊU ĐỀ (ngắn, chính
+    xác) vẫn chỉ cần >=1 từ trùng như thiết kế gốc. Khớp chỉ qua PREVIEW (một
+    đoạn văn dài hơn, từ vựng chung chung hơn) cần >=2 từ trùng — một từ đơn
+    lẻ trùng ngẫu nhiên (vd "liệu" trong "dữ liệu" trùng với "liệu" tách ra từ
+    "tài liệu" trong câu hỏi) đủ để khớp NHẦM sang một chủ đề hoàn toàn khác,
+    xác nhận qua regression live (case EDU-SUM-008 — tài liệu KHÔNG có chủ đề
+    nào để tóm tắt, nhưng bị khớp nhầm sang chủ đề "Overfitting" của tài liệu
+    khác chỉ vì trùng đúng 1 từ trong preview)."""
     if not candidates:
         return None
 
     question_words = _content_words(question)
-    scored = sorted(
-        candidates,
-        key=lambda c: len(_content_words(c.title) & question_words),
-        reverse=True,
-    )
+
+    def _score(candidate: TopicCandidate) -> int:
+        title_overlap = _content_words(candidate.title) & question_words
+        preview_overlap = _content_words(candidate.preview) & question_words
+        if not title_overlap and len(preview_overlap) < 2:
+            return 0
+        return len(title_overlap | preview_overlap)
+
+    scored = sorted(candidates, key=_score, reverse=True)
     best = scored[0]
-    if len(_content_words(best.title) & question_words) == 0:
+    if _score(best) == 0:
         return None
     return best
 

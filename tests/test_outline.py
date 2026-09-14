@@ -165,6 +165,22 @@ class TestIsPlausibleTopic(unittest.TestCase):
         # phẩy) — nhiều heading thật hợp lệ dùng nó, vd tiêu đề bài báo thật:
         self.assertTrue(is_plausible_topic("Deep Learning in Neural Networks: An Overview"))
 
+    def test_web_citation_is_rejected(self):
+        # eval/reports/failure_analysis.md muc 2: muc tham khao danh so kieu
+        # Wikipedia lot vao Study Plan vi khong co nam-trong-ngoac/ISBN/DOI/tr.
+        # nen _CITATION_LIKE_RE (hoc thuat) khong bat duoc.
+        self.assertFalse(
+            is_plausible_topic(
+                '15. "OpenNMT – Open-Source Neural Machine Translation". opennmt.net. Truy cập ngày 3 tháng 5 năm 2023.'
+            )
+        )
+        self.assertFalse(
+            is_plausible_topic('23. "Random forests". Machine Learning. Retrieved 12 March 2023.')
+        )
+        self.assertFalse(
+            is_plausible_topic("4. Archived from the original on 5 June 2021.")
+        )
+
     def test_numbered_sentence_fragment_with_internal_comma_is_rejected(self):
         # Retest QA (BUG-001): bước chứng minh hình học bị đánh số vẫn lọt
         # trước fix — dấu phẩy giữa câu là tín hiệu "đây là một câu văn, không

@@ -1,11 +1,11 @@
 {"id": "EDU-PROF-get_profile_field_scope", "category": "profile", "pass": true, "detail": "fields=['preferred_level', 'learning_goal', 'effective_level', 'effective_level_source', 'updated_at']"}
-{"id": "EDU-PROF-write_persist", "category": "profile", "pass": true, "detail": "status=200 body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'updated_at': '2026-09-13T05:22:46.990888'}"}
-{"id": "EDU-PROF-persistence_across_refresh", "category": "profile", "pass": true, "detail": "body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'effective_level': 'advanced', 'effective_level_source': 'declared', 'updated_at': '2026-09-13T05:22:46.990888'}"}
+{"id": "EDU-PROF-write_persist", "category": "profile", "pass": true, "detail": "status=200 body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'updated_at': '2026-09-14T14:32:44.078570'}"}
+{"id": "EDU-PROF-persistence_across_refresh", "category": "profile", "pass": true, "detail": "body={'preferred_level': 'advanced', 'learning_goal': 'Học sâu về CNN', 'effective_level': 'advanced', 'effective_level_source': 'declared', 'updated_at': '2026-09-14T14:32:44.078570'}"}
 {"id": "EDU-PROF-write_time_guardrail", "category": "profile", "pass": true, "detail": "status=400"}
 {"id": "EDU-PROF-reset_scope_boundary", "category": "profile", "pass": true, "detail": "after_reset={'preferred_level': None, 'learning_goal': None, 'effective_level': None, 'effective_level_source': None, 'updated_at': None}"}
 {"id": "EDU-PROF-reset_noop", "category": "profile", "pass": true, "detail": "status=200"}
 {"id": "EDU-DOC-unsupported_extension_txt", "category": "document_management", "pass": true, "detail": "status=400 body={\"detail\":\"Định dạng .txt không được hỗ trợ. Chỉ chấp nhận PDF/DOCX.\"}"}
-{"id": "EDU-DOC-corrupted_file_upload_accepted_then_marked_error", "category": "document_management", "pass": true, "detail": "status=200, doc_id=2d7cee2e-a8ad-4fa4-a2ea-704749a98096"}
+{"id": "EDU-DOC-corrupted_file_upload_accepted_then_marked_error", "category": "document_management", "pass": true, "detail": "status=200, doc_id=5e9f20c4-d39d-41cd-907a-faea2825a4e2"}
 {"id": "EDU-DOC-corrupted_file_categorized_error", "category": "error_handling", "pass": true, "detail": "final_status=lỗi"}
 {"id": "EDU-DOC-missing_filename", "category": "document_management", "pass": true, "detail": "status=422"}
 {"id": "EDU-DOC-list_default_vs_include_old_versions", "category": "document_management", "pass": true, "detail": "default_count=1 all_count=1"}
@@ -18,12 +18,12 @@
 {"id": "EDU-QUIZ-content_type_present", "category": "quiz", "pass": true, "detail": "items=5"}
 {"id": "EDU-QUIZ-submit_ownership_check", "category": "quiz", "pass": true, "detail": "status=404"}
 {"id": "EDU-QUIZ-submit_response_shape", "category": "quiz", "pass": true, "detail": "keys=['is_correct', 'correct_answer', 'explanation', 'updated_mastery_score', 'source_document', 'source_position']"}
-{"id": "EDU-QUIZ-mastery_update_full_history", "category": "quiz", "pass": true, "detail": "updated_mastery_score=0.5999999989966579"}
-{"id": "EDU-MAST-compute_mastery_reflected_in_api", "category": "mastery", "pass": true, "detail": "topic_row={'topic_id': '37ea22d5-2361-4653-a340-2434b1ff5b27', 'topic_name': '04_cay_quyet_dinh_vi.pdf', 'course_name': 'GoldenSetEval', 'score': 0.599999684992564, 'score_raw': 0.5999999989966579, 'days_since_practice': 0, 'level': 'trung bình', 'updated_at': '2026-09-13T05:22:59.142362'}"}
-{"id": "EDU-MAST-classify_mastery_thresholds", "category": "mastery", "pass": true, "detail": "score=0.599999684992564 level=trung bình"}
-{"id": "EDU-MAST-decay_unpractised_via_api_after_30d", "category": "mastery", "pass": true, "detail": "score_raw(unchanged)=0.5999999989966579 score(decayed)=0.29999998417873375 original=0.5999999989966579"}
+{"id": "EDU-QUIZ-mastery_update_full_history", "category": "quiz", "pass": true, "detail": "updated_mastery_score=0.7713726716413561"}
+{"id": "EDU-MAST-compute_mastery_reflected_in_api", "category": "mastery", "pass": true, "detail": "topic_row={'topic_id': '37ea22d5-2361-4653-a340-2434b1ff5b27', 'topic_name': '04_cay_quyet_dinh_vi.pdf', 'course_name': 'GoldenSetEval', 'score': 0.3735657596097026, 'score_raw': 0.7713726716413561, 'days_since_practice': 31, 'level': 'yếu', 'updated_at': '2026-08-14T05:23:01.129861'}"}
+{"id": "EDU-MAST-classify_mastery_thresholds", "category": "mastery", "pass": true, "detail": "score=0.3735657596097026 level=yếu"}
+{"id": "EDU-MAST-decay_unpractised_via_api_after_30d", "category": "mastery", "pass": true, "detail": "score_raw(unchanged)=0.7713726716413561 score(decayed)=0.3856863146468762 original=0.7713726716413561"}
 {"id": "EDU-PERSIST-decay_never_written_back", "category": "persistence", "pass": true, "detail": "score_raw stayed same after a decayed READ, confirming decay is not persisted"}
-{"id": "EDU-FLASH-partial_generation_invariant", "category": "flashcard", "pass": true, "detail": "requested=6 generated=6 partial=False"}
+{"id": "EDU-FLASH-partial_generation_invariant", "category": "flashcard", "pass": true, "detail": "requested=6 generated=5 partial=True"}
 {"id": "EDU-FLASH-srs_interval_formula_again", "category": "flashcard", "pass": true, "detail": "rating=again interval_days=0 ease=2.3"}
 {"id": "EDU-FLASH-srs_interval_formula_hard", "category": "flashcard", "pass": true, "detail": "rating=hard interval_days=1 ease=2.35"}
 {"id": "EDU-FLASH-srs_interval_formula_good", "category": "flashcard", "pass": true, "detail": "rating=good interval_days=1 ease=2.5"}
@@ -31,8 +31,8 @@
 {"id": "EDU-FLASH-invalid_rating", "category": "flashcard", "pass": true, "detail": "status=400"}
 {"id": "EDU-FLASH-save_from_answer_sentinel", "category": "flashcard", "pass": true, "detail": "status=200"}
 {"id": "EDU-FLASH-save_validation", "category": "flashcard", "pass": true, "detail": "status=400"}
-{"id": "EDU-FLASH-classify_status_due_via_next_due_at", "category": "flashcard", "pass": true, "detail": "item_id=56225668-6382-4dc7-ad2d-35684e2d4c79 found_in_due_bucket=True"}
-{"id": "EDU-FLASH-classify_status_three_buckets_present", "category": "flashcard", "pass": true, "detail": "buckets=['mastered', 'learning', 'due']"}
+{"id": "EDU-FLASH-classify_status_due_via_next_due_at", "category": "flashcard", "pass": true, "detail": "item_id=161dec52-803d-4740-ad57-56eabc98f2d6 found_in_due_bucket=True"}
+{"id": "EDU-FLASH-classify_status_three_buckets_present", "category": "flashcard", "pass": true, "detail": "buckets=['learning', 'mastered', 'due']"}
 {"id": "EDU-PLAN-exam_date_requirement", "category": "study_plan", "pass": true, "detail": "status=400"}
 {"id": "EDU-PLAN-set_exam_date", "category": "study_plan", "pass": true, "detail": "status=200"}
 {"id": "EDU-PLAN-generate_with_real_exam_date", "category": "study_plan", "pass": true, "detail": "status=200 days_count=10"}
