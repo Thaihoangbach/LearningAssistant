@@ -4,7 +4,7 @@
 + MinIO local — không đụng production)
 **Corpus:** 13 tài liệu độc lập (Wikipedia), tải lên dưới
 `user_id=golden-eval-user`, `course_name=GoldenSetEval`
-**Bộ case:** `eval/golden_set.jsonl` (393 case)
+**Bộ case:** `eval/golden_set/data/golden_set.jsonl` (393 case)
 
 Đây là báo cáo **số liệu và kết quả**. Phân tích nguyên nhân gốc cho các
 vấn đề còn tồn tại nằm ở **[failure_analysis.md](failure_analysis.md)**.
@@ -40,8 +40,8 @@ nhau về cách dựng state:
 
 | Phần | Case | Category | Script | Kết quả |
 |---|---:|---|---|---|
-| 1 — Q&A | 267 | rag_qa, retrieval, grounding_citation, abstention_clarification, conversational, decomposition, multi_document, compare, summarize, apply, guardrail | `eval/scripts/run_golden_set.py` | `eval/results/run_results.jsonl` |
-| 2 — Hành vi | 126 | document_management, persistence, error_handling, personalization, mastery, quiz, flashcard, study_plan, profile | `eval/scripts/run_stateful_scenarios.py` | `eval/results/stateful_results.jsonl` |
+| 1 — Q&A | 267 | rag_qa, retrieval, grounding_citation, abstention_clarification, conversational, decomposition, multi_document, compare, summarize, apply, guardrail | `eval/scripts/run_golden_set.py` | `eval/results/baseline/run_results.jsonl` |
+| 2 — Hành vi | 126 | document_management, persistence, error_handling, personalization, mastery, quiz, flashcard, study_plan, profile | `eval/scripts/run_stateful_scenarios.py` | `eval/results/baseline/stateful_results.jsonl` |
 
 Phần 1 gọi trực tiếp `POST /chat/ask` cho từng case và chấm điểm theo
 `expected_behavior`/`abstention_type`/`expected_citations`/`must_contain`/
@@ -184,9 +184,9 @@ Nguyên nhân gốc, bằng chứng cụ thể, và đề xuất hướng xử l
 
 ## Phụ lục — Nguồn dữ liệu
 
-- Bộ case: `eval/golden_set.jsonl` (393 case; 77 case đánh dấu `in_regression_set: true` làm tập con chạy nhanh)
-- Kết quả Phần 1 (267 case Q&A): `eval/results/run_results.jsonl`
-- Kết quả Phần 2 (126 case hành vi, 41 kịch bản): `eval/results/stateful_results.jsonl`
-- Script chạy: `eval/scripts/run_golden_set.py`, `eval/scripts/run_stateful_scenarios.py`, `eval/scripts/run_local_backend.py`
+- Bộ case: `eval/golden_set/data/golden_set.jsonl` (393 case; 77 case đánh dấu `in_regression_set: true` làm tập con chạy nhanh)
+- Kết quả Phần 1 (267 case Q&A): `eval/results/baseline/run_results.jsonl`
+- Kết quả Phần 2 (126 case hành vi, 41 kịch bản): `eval/results/baseline/stateful_results.jsonl`
+- Script chạy: `eval/scripts/run_golden_set.py`, `eval/scripts/run_stateful_scenarios.py`, `eval/scripts/run_local_backend.py`, `eval/scripts/validate_golden_set.py`, `eval/scripts/analyze_failures.py`
 - Corpus: `eval/corpus/` (13 tài liệu + `README.md`)
 - Xem `eval/README.md` cho cấu trúc đầy đủ và cách chạy lại; `failure_analysis.md` cho phân tích nguyên nhân gốc.

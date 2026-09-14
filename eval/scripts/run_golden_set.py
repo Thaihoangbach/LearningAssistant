@@ -14,13 +14,17 @@ attempt, flashcard review nhiều ngày...) mà bản thân mỗi case chỉ mô
 ngôn ngữ tự nhiên trong `context`, chưa đủ cấu trúc để dựng fixture tự động
 đáng tin cậy trong lần chạy này.
 
-Output: eval/results/run_results.jsonl (1 dòng/case, có actual response + điểm).
+Output: eval/results/run_results_<ngày>[_N].jsonl (1 dòng/case, có actual
+response + điểm) — KHÔNG dùng --out thì mỗi lần chạy tự đặt tên file MỚI
+theo ngày (thêm hậu tố _2, _3... nếu chạy nhiều lần cùng ngày), không bao
+giờ ghi đè kết quả của lần chạy trước — xem eval/results/baseline/ cho lần
+đo đầu tiên (mốc so sánh gốc). Muốn TIẾP TỤC một lần chạy bị dang dở (vd
+crash giữa chừng vì hết hạn mức API), truyền lại đúng `--out <filename>` đã
+dùng lần trước — script tự resume dựa trên case nào đã có request_ok=true.
 
 Cờ `--regression-only`: chỉ chạy tập con 77 case đánh dấu
 `in_regression_set: true` trong golden_set.jsonl (dùng để kiểm tra không
-hồi quy sau khi sửa code, nhanh hơn chạy lại toàn bộ 267 case) — ghi ra
-eval/results/regression_results.jsonl thay vì run_results.jsonl. Đổi tên
-file output bằng `--out <filename>` nếu cần (vẫn ghi trong eval/results/).
+hồi quy sau khi sửa code, nhanh hơn chạy lại toàn bộ 267 case).
 """
 import json
 import os
@@ -30,9 +34,12 @@ import time
 import requests
 
 # Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
-# chua golden_set.jsonl/run_doc_mapping.json va thu muc results/.
+# chua golden_set/ (data/schema/sources cho bo case) va thu muc results/.
 HERE = os.path.dirname(__file__)
 EVAL_ROOT = os.path.join(HERE, "..")
+GOLDEN_SET_DIR = os.path.join(EVAL_ROOT, "golden_set")
+GOLDEN_SET_PATH = os.path.join(GOLDEN_SET_DIR, "data", "golden_set.jsonl")
+DOC_MAPPING_PATH = os.path.join(GOLDEN_SET_DIR, "sources", "run_doc_mapping.json")
 RESULTS_DIR = os.path.join(EVAL_ROOT, "results")
 
 sys.path.insert(0, os.path.join(EVAL_ROOT, "..", "backend"))
@@ -47,7 +54,7 @@ CHAT_ASK_CATEGORIES = {
     "summarize", "apply", "guardrail",
 }
 
-with open(os.path.join(EVAL_ROOT, "run_doc_mapping.json"), encoding="utf-8") as f:
+with open(DOC_MAPPING_PATH, encoding="utf-8") as f:
     DOC_MAPPING = json.load(f)
 FILE_NAME_BY_DOC_ID = {v["file_name"]: k for k, v in DOC_MAPPING.items()}
 
@@ -228,20 +235,32 @@ def main():
     )
     parser.add_argument(
         "--out", default=None,
-        help="Duong dan file ket qua (mac dinh: run_results.jsonl, hoac "
-             "regression_results.jsonl khi dung --regression-only).",
+        help="Ten file ket qua trong eval/results/. Bo qua thi tu dong dat ten "
+             "MOI theo ngay (run_results_YYYY-MM-DD.jsonl, hoac "
+             "regression_results_YYYY-MM-DD.jsonl khi dung --regression-only), "
+             "khong bao gio ghi de file cu. Truyen lai ten file cu de RESUME "
+             "mot lan chay bi dang do.",
     )
     args = parser.parse_args()
 
-    with open(os.path.join(EVAL_ROOT, "golden_set.jsonl"), encoding="utf-8") as f:
+    with open(GOLDEN_SET_PATH, encoding="utf-8") as f:
         all_cases = [json.loads(line) for line in f if line.strip()]
 
     cases = [c for c in all_cases if c["category"] in CHAT_ASK_CATEGORIES]
     if args.regression_only:
         cases = [c for c in cases if c.get("in_regression_set")]
 
-    default_out = "regression_results.jsonl" if args.regression_only else "run_results.jsonl"
-    out_path = os.path.join(RESULTS_DIR, args.out or default_out)
+    if args.out:
+        out_path = os.path.join(RESULTS_DIR, args.out)
+    else:
+        prefix = "regression_results" if args.regression_only else "run_results"
+        today = time.strftime("%Y-%m-%d")
+        candidate = f"{prefix}_{today}.jsonl"
+        suffix = 1
+        while os.path.exists(os.path.join(RESULTS_DIR, candidate)):
+            suffix += 1
+            candidate = f"{prefix}_{today}_{suffix}.jsonl"
+        out_path = os.path.join(RESULTS_DIR, candidate)
     # Chi coi la "da xong" khi request_ok=True — bug thuc te: case fail vi
     # loi ha tang (Cohere het han muc, timeout...) khong duoc tinh la "da
     # xong", tranh bo qua nham khi resume (xem eval/report.md muc 6.7).

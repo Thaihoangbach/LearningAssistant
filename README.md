@@ -246,7 +246,7 @@ Sau khi có domain Vercel, quay lại Render, cập nhật `FRONTEND_URL` = doma
 
 ## Đánh giá chất lượng (Golden Set)
 
-[`eval/golden_set.jsonl`](eval/golden_set.jsonl) là bộ 54 case đánh giá trải trên 8 nhóm (RAG QA, Personalization, Safety, Assessment, Recommendation, Study Planner, Flashcard, Analytics), mỗi case gắn `assertion` và `watched_failure_mode` để chấm tự động. Xem [`eval/report.md`](eval/report.md) để biết kết quả đầy đủ trên cấu hình đang chạy thật (Hybrid + Reranker): điểm mạnh nhất là các nhóm rule-based (Safety, Recommendation, Planner — đều 100%), điểm yếu rõ nhất là Personalization (đo được ~13% ở thời điểm chạy báo cáo này — xem `app/services/learning_profile.py` và `_LEVEL_INSTRUCTIONS` trong `app/llm/rag.py` cho các cải tiến đã thêm sau đó, chưa có lượt đánh giá lại để xác nhận tác động), cùng phân tích lỗi chi tiết và so sánh với cấu hình dense-only.
+[`eval/golden_set/data/golden_set.jsonl`](eval/golden_set/data/golden_set.jsonl) là bộ 393 case (267 Q&A + 126 hành vi), chạy thật trên backend local để đánh giá EduTutor — xem [`eval/README.md`](eval/README.md) cho cấu trúc đầy đủ và cách chạy lại. Kết quả và phân tích nguyên nhân gốc nằm ở [`eval/reports/evaluation_report.md`](eval/reports/evaluation_report.md) và [`eval/reports/failure_analysis.md`](eval/reports/failure_analysis.md).
 
 ## Chưa làm / hướng phát triển tiếp
 
