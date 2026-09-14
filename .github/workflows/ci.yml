@@ -56,7 +56,7 @@ jobs:
         run: |
           docker run -d --name minio -p 9010:9000 \
             -e MINIO_ROOT_USER=testkey -e MINIO_ROOT_PASSWORD=testsecret \
-            minio/minio server /data
+            quay.io/minio/minio server /data
           until curl -sf http://localhost:9010/minio/health/live; do sleep 1; done
 
       - name: Create test bucket

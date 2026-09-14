@@ -53,6 +53,17 @@ _CITATION_LIKE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Trích dẫn kiểu web/Wikipedia ("15. \"OpenNMT...\". opennmt.net. Truy cập
+# ngày..." / bản tiếng Anh "... Retrieved 12 March 2023."/"Archived from the
+# original on ...") không có năm-trong-ngoặc/ISBN/DOI/tr. nên lọt qua
+# _CITATION_LIKE_RE — vẫn đánh số y hệt heading thật ("15. Tên bài." trông
+# giống "6.1 Machine Translation" về mặt cú pháp số+chấm+text). Đây là kiểu
+# trích dẫn phổ biến nhất trong corpus hiện tại (toàn bộ nguồn từ Wikipedia).
+_WEB_CITATION_RE = re.compile(
+    r"truy\s*cập\s*ngày|\bretrieved\s+(on\s+)?\d|\barchived\s+from\s+the\s+original\b",
+    re.IGNORECASE,
+)
+
 # Lưới an toàn cuối cùng — dù heuristic có sai ở vài mục lẻ, dàn ý một tài
 # liệu thật (kể cả sách/giáo trình dài) hiếm khi có quá chừng này đề mục thật.
 _MAX_OUTLINE_ENTRIES = 30
@@ -125,6 +136,8 @@ def is_plausible_topic(text: str) -> bool:
     if not (_MIN_TOPIC_CHARS <= len(stripped) <= _MAX_TOPIC_CHARS):
         return False
     if _CITATION_LIKE_RE.search(stripped):
+        return False
+    if _WEB_CITATION_RE.search(stripped):
         return False
     if _BYLINE_RE.match(stripped):
         return False

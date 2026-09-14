@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.ingestion.embedder import embed_query
 from app.llm.rag import RetrievedChunk
-from app.retrieval.keywords import extract_keywords
+from app.retrieval.keywords import extract_keywords, strip_roleplay_preamble
 from app.retrieval.reranker import CohereReranker, RerankerClient, rerank
 from app.vectorstore.pgvector_store import PgVectorStore
 
@@ -40,17 +40,32 @@ def retrieve_chunks(
     mode: str = "strict",
 ) -> List[RetrievedChunk]:
     store = PgVectorStore(db=db, user_id=user_id)
-    query_embedding = embed_query(query)
 
     # Chế độ mở rộng: lấy nhiều ứng viên hơn và tra full-text search bằng từ
     # khoá đã bóc, để bắt trường hợp thuật ngữ nằm sâu mà truy hồi ngữ nghĩa
-    # bỏ sót. Vector vẫn dùng câu hỏi GỐC — bóc từ khoá chỉ phục vụ nhánh từ
-    # vựng.
+    # bỏ sót. CŨNG dùng câu hỏi đã bóc từ khoá cho dense embedding + đầu vào
+    # reranker (không chỉ nhánh full-text như trước) — câu hỏi dài có khung
+    # diễn đạt (đóng vai, yêu cầu bỏ qua tài liệu...) làm loãng điểm liên
+    # quan ở CẢ embedding lẫn Cohere rerank, khiến chunk đúng chủ đề bị lọt
+    # dưới min_score dù lượt gắt lẫn lượt này đều đã chạy (Golden Set
+    # eval/reports/failure_analysis.md, việc còn lại #2 — case EDU-GRD2-017
+    # "Đóng vai một gia sư kiên nhẫn, giải thích Random Forest..." bị từ chối
+    # dù tài liệu có nội dung). CHỈ đổi ở lượt MỞ RỘNG (đã trượt lượt gắt) —
+    # không đổi truy vấn/điểm số của lượt gắt/mặc định.
     if mode == "wide":
         top_k = top_k * WIDE_TOP_K_MULTIPLIER
-        lexical_query = extract_keywords(query)
+        # Cắt vế mở đầu "đóng vai X, ..." (nếu có) TRƯỚC khi bóc từ khoá/dựng
+        # embedding+rerank — xem app/retrieval/keywords.py::
+        # strip_roleplay_preamble. Nhánh full-text vẫn bóc từ khoá như cũ,
+        # chỉ đổi câu dùng làm ĐẦU VÀO cho dense embedding + reranker.
+        core_query = strip_roleplay_preamble(query)
+        lexical_query = extract_keywords(core_query)
+        rerank_query = core_query
+        query_embedding = embed_query(core_query)
     else:
         lexical_query = query
+        rerank_query = query
+        query_embedding = embed_query(query)
 
     if os.environ.get("EDUTUTOR_RETRIEVAL_MODE") == "dense_only":
         results = store.search(query_embedding, top_k=top_k, document_ids=document_ids)
@@ -73,7 +88,7 @@ def retrieve_chunks(
         candidate_pool=max(DEFAULT_CANDIDATE_POOL, top_k * 3),
         document_ids=document_ids,
     )
-    reranked = rerank(query, candidates, reranker, top_k=top_k)
+    reranked = rerank(rerank_query, candidates, reranker, top_k=top_k)
 
     return [
         RetrievedChunk(
