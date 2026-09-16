@@ -17,9 +17,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import ensure_user, get_db
+from app.database import get_db
 from app.llm.guardrail import BLOCKED_MESSAGE, contains_hard_block_pattern
-from app.models import LearningProfile, MasteryScore
+from app.models import LearningProfile, MasteryScore, User
+from app.routers.auth import get_current_user
 from app.services.learning_profile import infer_level_from_mastery, resolve_effective_level
 from app.services.mastery import decay_unpractised
 
@@ -37,7 +38,8 @@ def _avg_mastery(db: Session, user_id: str) -> float | None:
 
 
 @router.get("")
-def get_profile(user_id: str, db: Session = Depends(get_db)):
+def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = current_user.id
     profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
     stored_level = profile.preferred_level if profile else None
 
@@ -63,13 +65,16 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
 
 
 class UpdateProfileRequest(BaseModel):
-    user_id: str
     preferred_level: str | None = None  # "beginner" | "advanced" | None
     learning_goal: str | None = None
 
 
 @router.put("")
-def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
+def update_profile(
+    req: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Cập nhật thủ công qua màn hình hồ sơ (nếu có). Cùng bảng này cũng được
     /chat/ask và /quiz/generate tự động cập nhật `preferred_level` khi người
     dùng truyền level/difficulty tường minh — xem app/services/learning_profile.py.
@@ -82,7 +87,7 @@ def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
     if req.learning_goal and contains_hard_block_pattern(req.learning_goal):
         raise HTTPException(400, BLOCKED_MESSAGE)
 
-    profile = db.query(LearningProfile).filter(LearningProfile.user_id == req.user_id).first()
+    profile = db.query(LearningProfile).filter(LearningProfile.user_id == current_user.id).first()
     if profile:
         if req.preferred_level is not None:
             profile.preferred_level = req.preferred_level
@@ -90,9 +95,8 @@ def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
             profile.learning_goal = req.learning_goal
         profile.updated_at = datetime.utcnow()
     else:
-        ensure_user(db, req.user_id)
         profile = LearningProfile(
-            user_id=req.user_id,
+            user_id=current_user.id,
             preferred_level=req.preferred_level,
             learning_goal=req.learning_goal,
         )
@@ -107,14 +111,14 @@ def update_profile(req: UpdateProfileRequest, db: Session = Depends(get_db)):
 
 
 @router.delete("")
-def reset_profile(user_id: str, db: Session = Depends(get_db)):
+def reset_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Đặt lại phần TỰ KHAI (preferred_level, learning_goal) về rỗng.
 
     Chỉ xoá hàng LearningProfile — KHÔNG đụng MasteryScore/Attempt/MemoryEvent.
     Ranh giới Profile (tự khai) vs Learning State (hệ thống quan sát/suy ra)
     phải giữ đúng kể cả ở hành vi reset này; xoá lịch sử học tập không phải
     việc của nút này."""
-    profile = db.query(LearningProfile).filter(LearningProfile.user_id == user_id).first()
+    profile = db.query(LearningProfile).filter(LearningProfile.user_id == current_user.id).first()
     if profile:
         db.delete(profile)
         db.commit()
