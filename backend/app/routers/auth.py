@@ -72,3 +72,19 @@ def register(req: RegisterRequest, response: Response, db: Session = Depends(get
     db.refresh(user)
     _set_auth_cookie(response, user.id)
     return user
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+@router.post("/login", response_model=UserOut)
+def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    email = normalize_email(req.email)
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(req.password, user.password_hash):
+        raise HTTPException(401, "Email hoặc mật khẩu không đúng")
+
+    _set_auth_cookie(response, user.id)
+    return user

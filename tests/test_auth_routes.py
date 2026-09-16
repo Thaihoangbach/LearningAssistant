@@ -58,5 +58,53 @@ class RegisterRouteTest(unittest.TestCase):
         self.assertEqual(res.status_code, 422)
 
 
+class LoginRouteTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+        self.client.post(
+            "/auth/register",
+            json={"email": "login@example.com", "password": "matkhau123", "display_name": "A"},
+        )
+        self.client.cookies.clear()
+
+    def test_login_with_correct_credentials_returns_200_and_sets_cookie(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "login@example.com", "password": "matkhau123"}
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("access_token", res.cookies)
+
+    def test_login_with_wrong_password_returns_401_generic_message(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "login@example.com", "password": "sai-mat-khau"}
+        )
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.json()["detail"], "Email hoặc mật khẩu không đúng")
+
+    def test_login_with_nonexistent_email_returns_same_401_message(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "khong-ton-tai@example.com", "password": "matkhau123"}
+        )
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.json()["detail"], "Email hoặc mật khẩu không đúng")
+
+
 if __name__ == "__main__":
     unittest.main()
