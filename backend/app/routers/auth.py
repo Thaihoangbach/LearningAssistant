@@ -16,6 +16,7 @@ from app.services.auth_service import (
     decode_access_token,
     get_cookie_settings,
     hash_password,
+    normalize_email,
     verify_password,
 )
 
@@ -57,7 +58,7 @@ class RegisterRequest(BaseModel):
 @router.post("/register", status_code=201, response_model=UserOut)
 def register(req: RegisterRequest, response: Response, db: Session = Depends(get_db)):
     user = User(
-        email=req.email.strip().lower(),
+        email=normalize_email(req.email),
         password_hash=hash_password(req.password),
         display_name=req.display_name.strip(),
     )
