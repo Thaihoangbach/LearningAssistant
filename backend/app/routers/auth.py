@@ -49,6 +49,21 @@ def _set_auth_cookie(response: Response, user_id: str) -> None:
     )
 
 
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        raise HTTPException(401, "Chưa đăng nhập")
+
+    user_id = decode_access_token(token)
+    if not user_id:
+        raise HTTPException(401, "Chưa đăng nhập")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(401, "Chưa đăng nhập")
+    return user
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=64)
@@ -88,3 +103,16 @@ def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
 
     _set_auth_cookie(response, user.id)
     return user
+
+
+@router.post("/logout", status_code=204)
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    settings = get_cookie_settings(FRONTEND_URL)
+    response.delete_cookie(
+        key=COOKIE_NAME, path="/", secure=settings["secure"], samesite=settings["samesite"]
+    )
+
+
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user

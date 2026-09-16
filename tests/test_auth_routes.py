@@ -106,5 +106,55 @@ class LoginRouteTest(unittest.TestCase):
         self.assertEqual(res.json()["detail"], "Email hoặc mật khẩu không đúng")
 
 
+class MeAndLogoutRouteTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+        # Email đơn nhất theo tên test: các test method trong class này dùng
+        # chung 1 DB (setUpClass không reset giữa các test), và unittest chạy
+        # các method theo thứ tự bảng chữ cái nên đăng ký cùng 1 email cố
+        # định ở mọi test sẽ bị 409 (duplicate) từ test thứ 2 trở đi, khiến
+        # cookie không được set. Dùng email riêng theo self._testMethodName
+        # để mỗi test luôn đăng ký thành công độc lập với thứ tự chạy.
+        self.email = f"me-{self._testMethodName}@example.com"
+        self.client.post(
+            "/auth/register",
+            json={"email": self.email, "password": "matkhau123", "display_name": "A"},
+        )
+
+    def test_me_without_cookie_returns_401(self):
+        self.client.cookies.clear()
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 401)
+
+    def test_me_with_valid_cookie_returns_current_user(self):
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["email"], self.email)
+
+    def test_logout_then_me_returns_401(self):
+        logout_res = self.client.post("/auth/logout")
+        self.assertEqual(logout_res.status_code, 204)
+
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 401)
+
+
 if __name__ == "__main__":
     unittest.main()
