@@ -662,6 +662,36 @@ class TestCitationIndexValidation(unittest.TestCase):
         for marker in markers:
             self.assertTrue(1 <= marker <= len(result.sources))
 
+    # --- Golden Set EDU-GRD-033/035: kich ban chi kich hoat duoc bang cach
+    # ep draft answer cua LLM tu 1 chuoi dung san (khong the tao ra qua API
+    # that, vi khong dieu khien duoc LLM that co bia chi so citation ngoai
+    # pham vi hay khong) — chuyen thanh unit test truc tiep o day thay vi
+    # case Golden Set chay live (xem eval/reports/failure_analysis.md).
+    def test_only_citation_out_of_range_with_1_chunk_falls_back_to_not_grounded(self):
+        # EDU-GRD-033: retrieval tra ve dung 1 chunk, draft cite [2] (khong
+        # ton tai chunk [2]) -> sau khi strip, khong con citation hop le nao.
+        llm = FakeLLMClient(scripted_responses=["Gradient descent là một thuật toán tối ưu hoá. [2]", "CÓ"])
+        result = answer_question(
+            question="Gradient descent là gì?",
+            retrieved_chunks=[self.make_chunk()],
+            llm_client=llm,
+            require_inline_citation=True,
+        )
+        self.assertFalse(result.is_grounded)
+        self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+
+    def test_only_citation_out_of_range_with_2_chunks_falls_back_to_not_grounded(self):
+        # EDU-GRD-035: retrieval tra ve dung 2 chunk, draft chi cite [3].
+        llm = FakeLLMClient(scripted_responses=["Recall là tỷ lệ true positive trên tổng dương thật. [3]", "CÓ"])
+        result = answer_question(
+            question="Recall được định nghĩa như thế nào?",
+            retrieved_chunks=[self.make_chunk(pos="Trang 1"), self.make_chunk(pos="Trang 2")],
+            llm_client=llm,
+            require_inline_citation=True,
+        )
+        self.assertFalse(result.is_grounded)
+        self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+
 
 class TestClarificationVsAbstentionCopy(unittest.TestCase):
     """BUG-008 — 'chưa đủ rõ để hỏi' (needs_clarification) và 'không có trong
@@ -760,6 +790,7 @@ class TestClaimLevelVerification(unittest.TestCase):
         self.assertTrue(result.is_grounded)
         self.assertIn("Câu một.", result.answer)
         self.assertIn("Câu hai.", result.answer)
+        self.assertFalse(result.partial)
 
     def test_unsupported_claim_is_removed_but_rest_kept(self):
         llm = FakeLLMClient(
@@ -771,6 +802,9 @@ class TestClaimLevelVerification(unittest.TestCase):
         self.assertTrue(result.is_grounded)
         self.assertIn("Câu đúng.", result.answer)
         self.assertNotIn("Câu bịa.", result.answer)
+        # AnswerResult.partial: chỉ giữ được 1/2 luận điểm ban đầu — người hỏi
+        # cần biết câu hỏi của họ chỉ được trả lời một phần.
+        self.assertTrue(result.partial)
 
     def test_all_claims_rejected_abstains(self):
         llm = FakeLLMClient(
@@ -781,6 +815,9 @@ class TestClaimLevelVerification(unittest.TestCase):
         )
         self.assertFalse(result.is_grounded)
         self.assertEqual(result.answer, NOT_GROUNDED_MESSAGE)
+        # Từ chối toàn bộ KHÔNG phải "partial" — không có gì để coi là một
+        # phần câu trả lời.
+        self.assertFalse(result.partial)
 
     def test_malformed_json_falls_back_to_whole_answer_verdict(self):
         # Không parse được JSON thì phải lùi về hành vi cũ, KHÔNG được từ chối

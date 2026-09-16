@@ -68,6 +68,30 @@ class TestAnswerWithFallback(unittest.TestCase):
         self.assertTrue(result.is_grounded)
         self.assertTrue(result.injection_flag)
 
+    def test_partial_flag_propagates_from_answer_question(self):
+        """QAResult.partial phai lay dung tu AnswerResult.partial (app/llm/
+        rag.py) khi answer_with_fallback tai dung QAResult tren nhanh
+        is_grounded=True — draft 2 luan diem, verifier chi giu 1."""
+        def retrieve(query, top_k, mode):
+            return [_chunk()]
+
+        llm = FakeLLMClient(["Câu đúng. [1] Câu bịa. [1]", '{"1": "CÓ", "2": "KHÔNG"}'])
+        result = answer_with_fallback(
+            question="Hỏi?", llm_client=llm, retrieve_fn=retrieve, searched_documents=DOCS
+        )
+        self.assertTrue(result.is_grounded)
+        self.assertTrue(result.partial)
+
+    def test_partial_flag_false_when_all_claims_survive(self):
+        def retrieve(query, top_k, mode):
+            return [_chunk()]
+
+        llm = FakeLLMClient(["Trả lời tốt. [1]", "CÓ"])
+        result = answer_with_fallback(
+            question="Hỏi?", llm_client=llm, retrieve_fn=retrieve, searched_documents=DOCS
+        )
+        self.assertFalse(result.partial)
+
     def test_second_pass_runs_when_first_pass_not_grounded(self):
         calls = []
 

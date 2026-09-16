@@ -21,16 +21,18 @@ Tính năng đã triển khai:
 
 | Tính năng | Mô tả |
 | --- | --- |
-| **Quản lý tài liệu** | Tải lên PDF/DOCX theo môn học, xử lý nền (parse → chunk → embed → lưu vector), theo dõi trạng thái "đang xử lý" / "sẵn sàng" / "lỗi", xoá tài liệu. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới (versioning) — hỏi đáp chỉ dùng bản mới nhất, bản cũ vẫn giữ lại. |
-| **Hỏi đáp RAG** | Đặt câu hỏi về nội dung tài liệu đã tải; câu trả lời đi kèm trích dẫn nguồn (tên tài liệu + vị trí), tổng hợp/nêu rõ khác biệt khi thông tin đến từ nhiều nguồn. Hiểu được câu hỏi tiếp nối dựa trên vài lượt hội thoại gần nhất (vd: "vậy tại sao *nó* không cần RNN?"), diễn đạt lại đơn giản hơn khi người dùng nói chưa hiểu, và điều chỉnh độ sâu câu trả lời theo trình độ (`level`) — khai báo tường minh hoặc lấy lại từ Learning Profile nếu không truyền. Có bước verifier để đảm bảo không "bịa" câu trả lời khi nội dung không có trong tài liệu, và bước guardrail để chặn prompt injection/jailbreak, yêu cầu làm bài hộ, cùng câu hỏi ngoài phạm vi học tập trước khi trả lời. Lưu lại lịch sử hội thoại, xem lại hoặc tạo cuộc hội thoại mới. |
-| **Gợi ý học tiếp theo** | Hỏi kiểu "tôi nên học gì tiếp theo?" sẽ được nhận diện và trả lời ngay từ dữ liệu mastery đã có (chủ đề điểm thấp nhất), không cần gọi LLM. |
-| **Quiz tự kiểm tra** | Sinh câu hỏi trắc nghiệm (có thể gắn theo chủ đề, chọn độ khó, gộp nhiều tài liệu thành 1 quiz tổng hợp) từ nội dung tài liệu, mỗi câu đã qua verifier để đảm bảo đáp án đúng và giải thích khớp với tài liệu nguồn. |
-| **Flashcard** | Sinh flashcard (mặt trước/mặt sau) từ tài liệu, cùng kỹ thuật generator + verifier với quiz. |
-| **Kế hoạch học tập** | Lập lịch ôn tập theo số ngày còn lại tới hạn, ưu tiên chủ đề điểm thấp/chưa học trước — tính lại từ dữ liệu mastery hiện có mỗi lần gọi, tự động phản ánh tiến độ mới nhất. |
-| **Mastery theo chủ đề** | Chấm điểm mức độ thành thạo (0–1) theo công thức rule-based có trọng số suy giảm theo thời gian (recency-weighted, half-life 14 ngày) mỗi khi nộp bài quiz. Dashboard tổng quan hiển thị điểm mastery, số tài liệu, số quiz, tỉ lệ đúng. |
-| **Hồ sơ học tập (Learning Profile)** | Lưu `preferred_level` (trình độ) dùng chung giữa hỏi đáp và sinh quiz — chỉ cần khai báo `level`/`difficulty` một lần, các lượt sau tự áp dụng lại nếu không truyền tham số mới; truyền tường minh lại thì ghi đè preference. Nếu chưa từng khai báo, hệ thống tự suy trình độ từ điểm mastery trung bình hiện có (mastery yếu → beginner, tốt → advanced). Có `learning_goal` (mục tiêu học tập, dạng text tự do) — được lọc injection ngay khi lưu (`contains_hard_block_pattern`), sau đó đưa vào prompt sinh câu trả lời như bối cảnh tham khảo (không phải chỉ dẫn). `GET /profile` trả cả `weak_topics`/`mastered_topics` suy từ mastery hiện có. |
+| **Quản lý tài liệu** | Tải lên PDF/DOCX theo môn học, xử lý nền (parse → chunk → trích outline chương/mục → embed qua Cohere → lưu vector), theo dõi trạng thái "đang xử lý" / "sẵn sàng" / "lỗi", xoá tài liệu, xem lại outline đã trích. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới (versioning) — hỏi đáp chỉ dùng bản mới nhất, bản cũ vẫn giữ lại. Phát hiện trùng nội dung qua `content_hash` (SHA-256), không chỉ dựa tên file. |
+| **Hỏi đáp RAG** | Đặt câu hỏi về nội dung tài liệu đã tải; câu trả lời đi kèm trích dẫn nguồn (tên tài liệu + vị trí), tổng hợp/nêu rõ khác biệt khi thông tin đến từ nhiều nguồn. Hiểu được câu hỏi tiếp nối dựa trên vài lượt hội thoại gần nhất, chủ động hỏi lại khi câu hỏi dùng đại từ không rõ đang nhắc tới gì, và điều chỉnh độ sâu câu trả lời theo trình độ hiệu lực (khai báo tường minh, hoặc lấy từ Learning Profile, hoặc suy từ mastery trung bình — xem mục Cá nhân hoá). Verifier xác minh **theo từng câu** (claim-level) thay vì cả câu trả lời một khối — nếu chỉ một phần câu trả lời có căn cứ, hệ thống trả đúng phần đó kèm cờ `partial: true` thay vì từ chối toàn bộ hoặc giữ nguyên phần chưa xác minh được. Guardrail chặn prompt injection/jailbreak, yêu cầu làm bài hộ, và câu hỏi ngoài phạm vi học tập trước khi trả lời. Lưu lại lịch sử hội thoại, xem lại hoặc tạo cuộc hội thoại mới. |
+| **Tóm tắt / So sánh / Áp dụng** | Ba dạng câu hỏi được nhận diện riêng và có cách xử lý khác quy trình hỏi đáp mặc định: **Tóm tắt** một chương/chủ đề lấy TRỌN chunk thuộc chủ đề đó theo đúng thứ tự trong tài liệu (không phải top-k liên quan nhất); **So sánh** 2 khái niệm truy hồi RIÊNG từng vế rồi gộp lại, tránh lệch về phía có nhiều nội dung hơn trong corpus; **Áp dụng** yêu cầu hệ thống tự đưa ví dụ/bài tập mới minh hoạ khái niệm đã học, kèm giải thích. Cả ba đều đi qua chung một bước verifier claim-level như hỏi đáp thường. |
+| **Gợi ý học tiếp theo** | Hỏi kiểu "tôi nên học gì tiếp theo?" được nhận diện bằng rule-based (không gọi LLM) và trả lời ngay từ dữ liệu đã có: chủ đề điểm mastery thấp nhất, kèm phát hiện **hiểu sai lặp lại** (misconception) — khi người học chọn sai CÙNG một đáp án ở CÙNG một chủ đề từ 2 lần trở lên, hệ thống nêu rõ cụ thể đang nhầm gì, không chỉ nói chung chung "hay sai". |
+| **Quiz tự kiểm tra** | Sinh câu hỏi trắc nghiệm (có thể gắn theo chủ đề, chọn độ khó — hoặc để hệ thống tự chọn theo trình độ hiệu lực, gộp nhiều tài liệu thành 1 quiz tổng hợp) từ nội dung tài liệu, mỗi câu đã qua verifier để đảm bảo đáp án đúng và giải thích khớp với tài liệu nguồn, được gắn nhãn loại nội dung (khái niệm/định nghĩa/công thức/sự kiện/quy trình). |
+| **Flashcard + ôn tập ngắt quãng (spaced repetition)** | Sinh flashcard (mặt trước/mặt sau) từ tài liệu hoặc lưu trực tiếp từ một câu trả lời hỏi đáp, cùng kỹ thuật generator + verifier với quiz. Mỗi thẻ có bảng "board" theo trạng thái đến hạn/đang học/đã thuộc; đánh giá theo 4 mức (again/hard/good/easy) sẽ tính lại ngày ôn tiếp theo bằng thuật toán SM-2 rút gọn (phỏng theo Anki), và điểm ghi nhớ (retention) được tính lại từ toàn bộ lịch sử đánh giá mỗi lần đọc. |
+| **Kế hoạch học tập** | Lập lịch ôn tập theo ngày thi đã khai báo cho từng môn học (`/courses`), ưu tiên chủ đề yếu trước — mỗi chủ đề trong kế hoạch kèm hành động đề xuất cụ thể (nên làm quiz, ôn flashcard, hay học lại từ đầu) và lý do, suy ra từ việc so sánh điểm hiểu bài (mastery) với điểm ghi nhớ (retention) của đúng chủ đề đó. Có thể đánh dấu thủ công một chủ đề "đã ôn hôm nay". |
+| **Mastery theo chủ đề** | Chấm điểm mức độ thành thạo (0–1) theo công thức rule-based có trọng số suy giảm theo thời gian (recency-weighted, half-life 14 ngày) và theo độ khó câu hỏi (đúng câu khó/sai câu dễ được tính là bằng chứng mạnh hơn) mỗi khi nộp bài quiz. Điểm còn tiếp tục suy giảm nhẹ theo thời gian không luyện tập mỗi khi đọc lại (half-life 30 ngày, không ghi ngược vào DB). Dashboard tổng quan hiển thị điểm mastery, số tài liệu, số quiz, tỉ lệ đúng, danh sách câu đã trả lời sai gần đây. |
+| **Cá nhân hoá (3 lớp) + Hồ sơ học tập** | `app/services/learner_context.py` gộp 3 lớp cá nhân hoá thành một lời gọi duy nhất trước khi đưa vào prompt hoặc chọn độ khó: (1) **Hồ sơ tĩnh tự khai** — `preferred_level`, `learning_goal` qua `PUT /profile`, được lọc injection ngay khi lưu; (2) **Điểm tổng hợp theo thời gian** — mastery trung bình đã decay; (3) **Ký ức theo sự kiện cụ thể** (`MemoryEvent`) — log các sự kiện học tập (hỏi bị từ chối, chọn sai quiz, quên flashcard...) có embedding riêng, truy hồi theo ngữ nghĩa xuyên suốt mọi cuộc hội thoại (khác với lịch sử chat thông thường, vốn chỉ có tác dụng trong 1 cuộc hội thoại). Trình độ hiệu lực ưu tiên: khai báo tường minh > đã lưu trong hồ sơ > suy từ mastery trung bình (yếu → beginner, tốt → advanced). `GET /profile` trả cả trình độ hiệu lực và nguồn suy ra nó ("declared"/"inferred"). |
+| **Môn học & ngày thi** | Gom các tên môn học đã dùng khi tải tài liệu để gợi ý lại lúc upload; đặt/xoá ngày thi cho từng môn (`/courses/{course_name}/exam-date`) làm đầu vào cho kế hoạch học tập. |
 
-Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế, đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton).
+Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế, đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton), tự động thay đổi hành vi sinh quiz/flashcard theo `generation_mode` (hiện mới lưu để truy vết, chưa đổi cách sinh).
 
 ## Kiến trúc & công nghệ
 
@@ -38,55 +40,85 @@ Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa x�
 
 **Frontend:** React 18 + Vite, React Router, Tailwind CSS, lucide-react.
 
-Pipeline RAG là generator + verifier hai bước cố định (không phải multi-agent tự quyết định hành động): generator sinh câu trả lời/câu hỏi dựa trên chunk truy hồi được, verifier kiểm tra lại tính đúng đắn/căn cứ trước khi trả về. Trước bước generator, câu hỏi hỏi đáp còn đi qua guardrail 2 tầng: rule-based chặn ngay các pattern injection/jailbreak rõ ràng (không tốn quota), câu mơ hồ hơn mới gọi thêm 1 lượt Gemini làm gatekeeper phân loại an toàn/không an toàn.
+Pipeline RAG là generator + verifier hai bước cố định (không phải multi-agent tự quyết định hành động): generator sinh câu trả lời/câu hỏi dựa trên chunk truy hồi được, verifier kiểm tra lại tính đúng đắn/căn cứ **theo từng câu** (claim-level) trước khi trả về — nếu chỉ một phần câu trả lời có căn cứ, hệ thống trả đúng phần đó kèm cờ `partial: true`. Trước bước generator, câu hỏi hỏi đáp còn đi qua guardrail 3 tầng: 2 tầng đầu rule-based chặn ngay yêu cầu làm bài hộ và các pattern injection/jailbreak rõ ràng (không tốn quota), câu mơ hồ hơn mới gọi thêm 1 lượt LLM làm gatekeeper phân loại an toàn/không an toàn.
+
+Lớp `app/services/` tập trung logic nghiệp vụ thuần Python (không phụ thuộc FastAPI, dùng lại được giữa nhiều router): phân loại ý định câu hỏi (rule-based `capability_detector.py` cho các yêu cầu không cần sinh nội dung; nhận diện Tóm tắt/So sánh/Áp dụng trong `chat.py`), gộp cá nhân hoá (`learner_context.py`), và các module điểm số/lịch ôn (`mastery.py`, `retention.py`, `spaced_repetition.py`, `misconception.py`, `learning_policy.py`). Xem sơ đồ 2 và 7 ở [`docs/architecture-diagrams.md`](docs/architecture-diagrams.md) để biết chi tiết luồng dữ liệu giữa các module này.
 
 ## Cấu trúc dự án
 
 ```
 backend/
-  alembic/                       # Migration schema (Postgres)
+  alembic/                       # Migration schema (Postgres) — 7 revision, chạy qua alembic upgrade head
   app/
-    models.py, database.py        # Postgres + pgvector qua SQLAlchemy
+    models.py, database.py        # Postgres + pgvector qua SQLAlchemy — 17 bảng, xem docs/architecture-diagrams.md 9a/9b
     storage.py                     # File gốc trên Backblaze B2 (S3-compatible)
     ingestion/
       parser.py                   # PDF/DOCX -> sections
-      chunker.py                  # sections -> chunks
-      embedder.py                 # chunks -> vector (Cohere Embed API)
+      chunker.py                  # sections -> chunks (theo câu, có bridge chunk nối 2 mục liền kề)
+      embedder.py                 # chunks -> vector (Cohere Embed API, embed-multilingual-v3.0)
+      outline.py                  # trích outline chương/mục lúc nạp tài liệu (heading style DOCX, heuristic số mục cho PDF)
       pipeline.py                 # nối parser -> chunker -> embedder -> vector store
     vectorstore/
-      pgvector_store.py           # Hybrid search (pgvector + Postgres full-text) theo user
+      pgvector_store.py           # Hybrid search (pgvector cosine + Postgres full-text) theo user
+      hybrid.py                   # Reciprocal Rank Fusion gộp 2 nhánh dense/keyword
     retrieval/
+      pipeline.py                 # retrieve_chunks — 2 pha strict/wide, gọi reranker
       reranker.py                 # Rerank kết quả hybrid (Cohere Rerank API)
+      query_context.py            # bổ sung từ khoá ngữ cảnh hội thoại + phát hiện đại từ không rõ tiền ngữ
+      keywords.py                 # trích từ khoá nội dung, cắt phần "đóng vai .../act as..." khỏi query truy hồi
     llm/
-      guardrail.py                # chặn prompt injection/jailbreak + câu hỏi ngoài phạm vi (trước generator)
-      rag.py                      # hỏi đáp — generator + verifier
+      guardrail.py                # chặn prompt injection/jailbreak + yêu cầu làm bài hộ + câu hỏi ngoài phạm vi
+      rag.py                      # hỏi đáp — generator + verifier theo claim, output_style, cờ partial
       quiz_generator.py           # sinh quiz — generator + verifier từng câu
       flashcard_generator.py      # sinh flashcard — generator + verifier từng thẻ (tái dùng pattern quiz)
-      recommendation.py           # gợi ý học tiếp theo — rule-based, đọc lại MasteryScore
+      recommendation.py           # gợi ý học tiếp theo — rule-based, đọc lại MasteryScore + misconception
       client_factory.py           # chọn LLM client thật — OpenAI (mặc định) hoặc Gemini theo key/LLM_PROVIDER
       openai_client.py            # client gọi OpenAI API thật
       gemini_client.py            # client gọi Gemini API thật (fallback)
-    mastery.py                    # công thức tính mastery rule-based
-    study_planner.py              # lập kế hoạch học tập — rule-based, tính lại mỗi lần gọi
-    learning_profile.py           # logic thuần: level nào áp dụng, có nên ghi đè preference không
+    services/                     # logic nghiệp vụ thuần Python, dùng lại giữa nhiều router
+      qa_pipeline.py               # 2 pha strict/wide + near-miss + gợi ý chủ đề khi từ chối
+      capability_detector.py       # rule-based: study_plan / recommendation / flashcard_due (không cần sinh nội dung)
+      summarize.py, compare.py, apply.py   # 3 dạng câu hỏi có contract output riêng
+      structural_retrieval.py      # lấy trọn 1 chủ đề theo section_index (dùng cho Tóm tắt)
+      context_assembly.py          # lọc document_ids theo quyền + trạng thái + course_name
+      citation.py                  # câu hỗ trợ trích dẫn, resolve_topic theo overlap từ khoá
+      learner_context.py           # gộp 3 lớp cá nhân hoá (hồ sơ tĩnh, mastery, ký ức sự kiện) thành 1 lời gọi
+      learning_profile.py          # logic thuần: level nào áp dụng, có nên ghi đè preference không
+      learning_state.py, learning_policy.py   # gộp comprehension+retention theo topic → đề xuất quiz/flashcard/learn
+      mastery.py                   # công thức tính mastery rule-based (recency + difficulty weighted)
+      retention.py                 # điểm ghi nhớ từ lịch sử flashcard, recency-weighted
+      spaced_repetition.py         # lịch ôn tiếp theo — SM-2 rút gọn (4 mức, giống Anki)
+      misconception.py             # phát hiện đáp án sai lặp lại theo (topic, đáp án đã chọn)
+      study_planner.py             # lập kế hoạch học tập theo ngày thi từng môn + learning_policy
+      flashcard.py                 # board due/learning/mastered
+      document_cleanup.py          # dọn dữ liệu liên quan khi xoá tài liệu
+      generation_mode.py           # nhãn lineage learn/review/exam/weak_topics cho Quiz/FlashcardSet
+    memory/                        # ký ức dài hạn theo sự kiện (Lớp 3 cá nhân hoá, KHÁC lịch sử hội thoại)
+      service.py                   # record_event / recall_events (pgvector cosine trên MemoryEvent)
+      scoring.py                   # điểm chọn sự kiện = 0.35 recency + 0.45 relevance + 0.20 importance
     routers/
-      documents.py                 # upload (có versioning), list, xoá tài liệu
-      chat.py                      # hỏi đáp RAG + gợi ý học tiếp theo + lịch sử hội thoại
+      documents.py                 # upload (có versioning + dedup content_hash), list, xoá tài liệu
+      chat.py                      # hỏi đáp RAG + Tóm tắt/So sánh/Áp dụng + gợi ý học tiếp theo + lịch sử hội thoại
+      courses.py                   # liệt kê tên môn học đã dùng, đặt/xoá ngày thi theo môn
       quiz.py                      # sinh quiz (đa tài liệu, theo độ khó), nộp bài, cập nhật mastery
-      flashcard.py                 # sinh flashcard từ tài liệu
-      mastery.py                   # đọc dữ liệu mastery cho dashboard
-      study_plan.py                 # trả kế hoạch học tập theo số ngày còn lại
-      profile.py                   # xem/cập nhật Learning Profile (preferred_level, learning_goal)
+      flashcard.py                 # sinh flashcard, lưu từ câu trả lời, board, lịch sử, review SM-2 rút gọn
+      mastery.py                   # đọc dữ liệu mastery + danh sách câu sai cho dashboard
+      study_plan.py                 # trả kế hoạch học tập theo ngày thi từng môn, đánh dấu đã ôn
+      profile.py                   # xem/cập nhật/xoá Learning Profile (preferred_level, learning_goal)
     main.py
 tests/                            # unittest, TÁCH KHỎI backend/ — xem mục Chạy test
 frontend/
   src/
     api.js                        # gọi API backend
+    App.jsx                       # định tuyến React Router — 7 trang dưới đây
     pages/
       DashboardPage.jsx           # tổng quan mastery + tài liệu gần đây
-      UploadPage.jsx               # quản lý tài liệu
-      ChatPage.jsx                 # hỏi đáp + sidebar lịch sử hội thoại
-      QuizPage.jsx                 # làm quiz
+      UploadPage.jsx               # quản lý tài liệu + xem outline đã trích
+      ChatPage.jsx                 # hỏi đáp + sidebar lịch sử hội thoại + lưu câu trả lời thành flashcard
+      QuizPage.jsx                 # sinh quiz, làm bài, xem đáp án/giải thích
+      FlashcardsPage.jsx           # board due/learning/mastered, đánh giá SM-2 rút gọn
+      StudyPlanPage.jsx            # lịch ôn tập theo lưới ngày, quản lý ngày thi theo môn
+      ProfilePage.jsx              # trình độ khai báo vs suy ra, mục tiêu học tập
     components/                   # UI dùng chung (Button, Card, ...)
 ```
 
@@ -160,19 +192,32 @@ npm run dev
 
 | Method & Path | Mô tả |
 | --- | --- |
-| `POST /documents` | Tải lên tài liệu (multipart), xử lý nền. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới. |
+| `POST /documents` | Tải lên tài liệu (multipart), xử lý nền. Upload lại cùng tên file + môn học sẽ tạo phiên bản mới; trùng nội dung được phát hiện qua `content_hash`. |
 | `GET /documents` | Liệt kê tài liệu theo `user_id` (kèm `version`, `is_latest`) |
-| `DELETE /documents/{id}` | Xoá tài liệu + dữ liệu vector liên quan |
-| `POST /chat/ask` | Đặt câu hỏi RAG (tuỳ chọn `level`: beginner/advanced — không truyền thì lấy lại `preferred_level` đã lưu trong Learning Profile), tự tạo hội thoại mới nếu chưa có `conversation_id`. Câu hỏi kiểu "nên học gì tiếp theo?" được trả lời trực tiếp từ dữ liệu mastery, không qua RAG. |
+| `DELETE /documents/{id}` | Xoá tài liệu + toàn bộ chunk/outline liên quan, cùng 1 transaction |
+| `GET /documents/{id}/outline` | Xem outline chương/mục đã trích ở lúc nạp tài liệu |
+| `POST /chat/ask` | Đặt câu hỏi RAG, hoặc câu hỏi Tóm tắt/So sánh/Áp dụng (tự nhận diện theo nội dung câu hỏi), hoặc câu hỏi kiểu "nên học gì tiếp theo?"/kế hoạch ôn tập/thẻ nào đến hạn (trả lời trực tiếp từ dữ liệu đã có, không qua RAG). Tuỳ chọn `level` (beginner/advanced — không truyền thì lấy trình độ hiệu lực từ Learning Profile/mastery), tự tạo hội thoại mới nếu chưa có `conversation_id`. Response gồm `is_grounded`, `partial` (chỉ đúng một phần câu trả lời có căn cứ), `sources`, `search_report` khi từ chối. |
 | `GET /chat/conversations` | Liệt kê hội thoại theo `user_id`, kèm preview câu hỏi đầu tiên |
 | `GET /chat/conversations/{id}` | Lấy toàn bộ tin nhắn của một hội thoại |
-| `POST /quiz/generate` | Sinh quiz trắc nghiệm từ 1 tài liệu (`document_id`) hoặc nhiều tài liệu (`document_ids`), tuỳ chọn `difficulty` (cùng cơ chế fallback về Learning Profile như `/chat/ask`) |
-| `POST /quiz/submit` | Nộp đáp án 1 câu, trả kết quả + cập nhật mastery |
-| `POST /flashcard/generate` | Sinh flashcard (front/back) từ một tài liệu |
+| `GET /courses` | Liệt kê tên môn học đã dùng khi tải tài liệu, kèm ngày thi nếu đã đặt |
+| `PUT /courses/{course_name}/exam-date` | Đặt/cập nhật ngày thi cho một môn học |
+| `DELETE /courses/{course_name}/exam-date` | Xoá ngày thi đã đặt cho một môn học |
+| `POST /quiz/generate` | Sinh quiz trắc nghiệm từ 1 tài liệu (`document_id`) hoặc nhiều tài liệu (`document_ids`), tuỳ chọn `difficulty`/`generation_mode` (cùng cơ chế fallback trình độ hiệu lực như `/chat/ask`) |
+| `POST /quiz/submit` | Nộp đáp án 1 câu (`selected_answer`), trả kết quả + cập nhật mastery |
+| `POST /flashcard/generate` | Sinh flashcard (front/back) từ một tài liệu, tuỳ chọn `topic_name`/`generation_mode` |
+| `POST /flashcard/save` | Lưu trực tiếp một câu trả lời hỏi đáp thành flashcard (không cần tài liệu) |
+| `GET /flashcard/due` | Danh sách thẻ đến hạn ôn |
+| `GET /flashcard/board` | Bảng thẻ theo trạng thái đến hạn/đang học/đã thuộc |
+| `GET /flashcard/mistakes` | Danh sách thẻ lần đánh giá gần nhất là "again" |
+| `GET /flashcard/{id}/history` | Lịch sử đánh giá của một thẻ |
+| `POST /flashcard/review` | Đánh giá một thẻ (again/hard/good/easy), tính lại lịch ôn tiếp theo (SM-2 rút gọn) |
 | `GET /mastery` | Tổng quan mastery theo chủ đề + số liệu thống kê |
-| `GET /study-plan` | Kế hoạch ôn tập theo `days` còn lại, ưu tiên chủ đề yếu/chưa học |
-| `GET /profile` | Xem Learning Profile: `preferred_level`, `learning_goal`, và `weak_topics` suy ra từ mastery hiện có |
+| `GET /mastery/mistakes` | Danh sách câu quiz đã trả lời sai gần đây |
+| `GET /study-plan` | Kế hoạch ôn tập theo ngày thi đã đặt cho các môn (`course_names`), mỗi chủ đề kèm hành động đề xuất (quiz/flashcard/learn) và lý do |
+| `POST /study-plan/review` | Đánh dấu thủ công một chủ đề "đã ôn hôm nay" |
+| `GET /profile` | Xem Learning Profile: `preferred_level`, `learning_goal`, `effective_level` và nguồn suy ra nó |
 | `PUT /profile` | Cập nhật thủ công `preferred_level` và/hoặc `learning_goal` |
+| `DELETE /profile` | Xoá Learning Profile (không ảnh hưởng mastery/lịch sử) |
 
 Xem chi tiết request/response tại `http://localhost:8001/docs` (Swagger UI tự sinh) khi backend đang chạy.
 
@@ -246,14 +291,17 @@ Sau khi có domain Vercel, quay lại Render, cập nhật `FRONTEND_URL` = doma
 
 ## Đánh giá chất lượng (Golden Set)
 
-[`eval/golden_set/data/golden_set.jsonl`](eval/golden_set/data/golden_set.jsonl) là bộ 393 case (267 Q&A + 126 hành vi), chạy thật trên backend local để đánh giá EduTutor — xem [`eval/README.md`](eval/README.md) cho cấu trúc đầy đủ và cách chạy lại. Kết quả và phân tích nguyên nhân gốc nằm ở [`eval/reports/evaluation_report.md`](eval/reports/evaluation_report.md) và [`eval/reports/failure_analysis.md`](eval/reports/failure_analysis.md).
+[`eval/golden_set/data/golden_set.jsonl`](eval/golden_set/data/golden_set.jsonl) là bộ case Q&A + hành vi, chạy thật trên backend local để đánh giá EduTutor — xem [`eval/README.md`](eval/README.md) cho cấu trúc đầy đủ và cách chạy lại. Kết quả, số liệu, và phân tích nguyên nhân gốc luôn thay đổi theo lần chạy gần nhất — xem trực tiếp [`eval/reports/`](eval/reports/) và [`eval/golden_set/changelog/CHANGELOG.md`](eval/golden_set/changelog/CHANGELOG.md) thay vì con số trong tài liệu này.
 
 ## Chưa làm / hướng phát triển tiếp
 
-- **Cá nhân hoá theo mục tiêu học tập dài hạn** (vd: "ôn thi trong 2 tuần" tự sinh kế hoạch theo goal) — `GET /study-plan` mới hỗ trợ theo số ngày, chưa gắn với goal/deadline lưu trữ lâu dài.
+- **`generation_mode` (learn/review/exam/weak_topics) hiện chỉ để truy vết** — lưu trên `Quiz`/`FlashcardSet` nhưng chưa thực sự đổi cách sinh câu hỏi/thẻ theo từng mode.
+- **`MemoryEvent.last_accessed_at`/`access_count` hiện chỉ quan sát** — được cập nhật mỗi lần một sự kiện được truy hồi, nhưng chưa đưa vào công thức chọn sự kiện (`memory/scoring.py`).
+- **Cá nhân hoá theo mục tiêu học tập dài hạn kết hợp deadline** — `learning_goal` (Learning Profile) và ngày thi theo môn (`/courses`) hiện là 2 nguồn tách biệt, chưa gộp thành một kế hoạch tự sinh theo goal cụ thể kiểu "ôn thi trong 2 tuần, ưu tiên phần X".
 - **Gợi ý theo prerequisite** (vd: học Transformer thì gợi ý học Attention trước) — cần một đồ thị/quan hệ phụ thuộc giữa các chủ đề, hiện chưa có nguồn dữ liệu này.
 - **Theo dõi thời gian học thực tế** cho Learning Analytics — cần instrument sự kiện ở frontend, chưa thu thập.
 - **Đăng nhập/đa người dùng thật** — hiện `user_id` cố định `demo-user` ở frontend (`frontend/src/api.js`), và backend tin thẳng `user_id` do client gửi lên mà không xác minh session/token nào (rủi ro bảo mật thật nếu deploy công khai, không chỉ giới hạn kỹ thuật của walking skeleton).
 - **Xoá/đổi tên cuộc hội thoại** trong lịch sử hỏi đáp.
 - **Việc suy trình độ từ mastery trung bình còn thô** — chỉ một ngưỡng cố định (yếu → beginner, tốt → advanced, còn lại không đoán), chưa tính đến xu hướng tiến bộ theo thời gian hay khác biệt giữa các môn học.
-- **Chưa re-run Golden Set để đo tác động thật của các cải tiến cá nhân hóa** (siết prompt, tăng `top_k`, Learning Profile) — điểm Personalization ~13% ở `eval/report.md` là số đo TRƯỚC các thay đổi này, chưa có số liệu thật sau khi cải tiến.
+
+Số liệu đánh giá chất lượng (pass rate, độ chính xác trích dẫn, các nhóm case còn fail...) đổi theo từng lần chạy Golden Set — xem [`eval/reports/`](eval/reports/) và [`eval/golden_set/changelog/CHANGELOG.md`](eval/golden_set/changelog/CHANGELOG.md) để có số liệu mới nhất, không lấy số liệu từ tài liệu này.

@@ -49,3 +49,19 @@ Nếu một case hành vi không thể dựng state fixture đáng tin cậy ch�
 `eval/scripts/run_stateful_scenarios.py`) — viết `context` đủ cụ thể (số
 liệu, thời điểm, trạng thái trước đó) ngay từ đầu để tránh case bị bỏ sót
 âm thầm.
+
+## 6. Đừng viết case giả định trạng thái NỘI BỘ không ép được qua API thật
+
+`EDU-GRD-033/035` (đã xoá, xem `changelog/CHANGELOG.md` v2) viết theo kiểu
+"Assume retrieval returns exactly N chunks... draft cites [chỉ số không hợp
+lệ]..." — mô tả một trạng thái NỘI BỘ (draft answer của LLM, số chunk truy
+hồi) mà người viết case tự giả định, không phải điều có thể ép xảy ra qua
+`POST /chat/ask` thật (không điều khiển được LLM thật có tự bịa citation
+ngoài phạm vi hay không). Case dạng này chạy live sẽ luôn fail vô nghĩa (vì
+điều kiện giả định không bao giờ xảy ra), bất kể sản phẩm đúng hay sai.
+
+Nếu điều muốn kiểm chứng là một hàm/logic NỘI BỘ cụ thể (như
+`_strip_invalid_citations` trong `app/llm/rag.py`), viết unit test trực
+tiếp gọi hàm đó (hoặc `answer_question()` với `FakeLLMClient` dựng sẵn draft
+answer) trong `tests/`, không đưa vào Golden Set — Golden Set chỉ nên chứa
+case kiểm chứng được qua hành vi THẬT của API với input THẬT.

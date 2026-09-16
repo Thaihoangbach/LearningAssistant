@@ -35,6 +35,13 @@ from datetime import datetime, timedelta
 
 import requests
 
+# Console Windows mac dinh dung codepage cp1252 khi stdout bi redirect (vd
+# chay nen/ghi log ra file) — print() chua tieng Viet (vd "ọ") se crash
+# voi UnicodeEncodeError. Ep UTF-8 truoc khi print bat ky dong nao.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
 # chua golden_set/sources/run_doc_mapping.json va thu muc results/.
 HERE = os.path.dirname(__file__)
@@ -422,7 +429,14 @@ def run_study_plan_scenarios():
 
     if plan_ok:
         all_topics_in_plan = [t for day in r_plan.json()["days"] for t in day.get("topics", [])]
-        record("EDU-PLAN-decision_tree_topic_appears_in_plan", "study_plan", DECISION_TREE_DOC_NAME in all_topics_in_plan, f"topics_sample={all_topics_in_plan[:5]}")
+        # Bug that: so sanh nham string ten file voi list dict topic (luon
+        # False) — phai lay ra truong "name" cua tung topic roi so sanh.
+        topic_names_in_plan = [t.get("name") for t in all_topics_in_plan]
+        record(
+            "EDU-PLAN-decision_tree_topic_appears_in_plan", "study_plan",
+            DECISION_TREE_DOC_NAME in topic_names_in_plan,
+            f"topics_sample={all_topics_in_plan[:5]}",
+        )
 
     far_exam_date = (datetime.utcnow().date() + timedelta(days=9999)).isoformat()
     course2 = f"EvalDaysLeftClampCourse-{uuid.uuid4().hex[:6]}"

@@ -60,9 +60,23 @@ _CITATION_LIKE_RE = re.compile(
 # giống "6.1 Machine Translation" về mặt cú pháp số+chấm+text). Đây là kiểu
 # trích dẫn phổ biến nhất trong corpus hiện tại (toàn bộ nguồn từ Wikipedia).
 _WEB_CITATION_RE = re.compile(
-    r"truy\s*cập\s*ngày|\bretrieved\s+(on\s+)?\d|\barchived\s+from\s+the\s+original\b",
+    r"truy\s*cập\s*ngày|truy\s*cập\s*$|\bretrieved\s+(on\s+)?\d|"
+    r"\barchived\s+from\s+the\s+original\b",
     re.IGNORECASE,
 )
+
+# Trích dẫn kiểu "1. Definition of "overfitting" (https://en.oxforddictio
+# naries.com/...)." — dòng định nghĩa kèm URL nguồn — không có năm-trong-
+# ngoặc/ISBN/DOI/tr. và tỉ lệ chữ cái vẫn cao (domain/URL toàn chữ) nên lọt
+# qua mọi tín hiệu khác. Một heading/tên chủ đề thật không bao giờ chứa URL.
+_URL_RE = re.compile(r"https?://|www\.\S+\.\w{2,}", re.IGNORECASE)
+
+# "6.1 Machine Translation"/"3.2.1 Scaled Dot-Product Attention" — heading
+# đánh số thật luôn bắt đầu nội dung bằng chữ hoa. Một câu văn bị đánh số
+# nhầm vì mở đầu bằng số thập phân ("1.0 for a class C means that every
+# item...") thì mở đầu bằng chữ thường — không có năm-trong-ngoặc/ISBN/DOI/
+# tr. nên _CITATION_LIKE_RE không bắt được (xem failure_analysis.md muc 3).
+_NUMBERED_LOWERCASE_BODY_RE = re.compile(r"^\d{1,2}(\.\d{1,2}){0,3}\.?\s+[a-z]")
 
 # Lưới an toàn cuối cùng — dù heuristic có sai ở vài mục lẻ, dàn ý một tài
 # liệu thật (kể cả sách/giáo trình dài) hiếm khi có quá chừng này đề mục thật.
@@ -138,6 +152,10 @@ def is_plausible_topic(text: str) -> bool:
     if _CITATION_LIKE_RE.search(stripped):
         return False
     if _WEB_CITATION_RE.search(stripped):
+        return False
+    if _URL_RE.search(stripped):
+        return False
+    if _NUMBERED_LOWERCASE_BODY_RE.match(stripped):
         return False
     if _BYLINE_RE.match(stripped):
         return False
@@ -317,6 +335,10 @@ def _looks_like_heading(line: str, following: str) -> bool:
     # chứng minh ("3. Từ đỉnh A, vẽ một đường thẳng...") vẫn lọt qua y hệt một
     # heading đánh số thật ("6.1 Machine Translation").
     if _SENTENCE_END_RE.search(stripped):
+        return False
+    if _URL_RE.search(stripped):
+        return False
+    if _NUMBERED_LOWERCASE_BODY_RE.match(stripped):
         return False
     # CHỈ nhận mục đánh số kiểu học thuật ("6.1 Machine Translation") làm
     # heading — đã BỎ HẲN nhánh Title-Case/ALL-CAPS trước đây (từng đo được

@@ -192,6 +192,41 @@ class TestIsPlausibleTopic(unittest.TestCase):
             is_plausible_topic("7. Vì AB bằng FB và BD bằng BC, do đó hai tam giác bằng nhau.")
         )
 
+    def test_truncated_web_citation_ending_in_truy_cap_is_rejected(self):
+        # failure_analysis.md Phat hien #4: heading bi cat boi _MAX_HEADING_CHARS
+        # dung truoc tu "ngay", chi con lai "...Truy cap" — regex cu doi hoi
+        # "truy cap ngay" lien nhau nen khong khop duoc, dong nay lot qua loc.
+        self.assertFalse(
+            is_plausible_topic(
+                '15. "OpenNMT – Open-Source Neural Machine Translation". opennmt.net. Truy cập'
+            )
+        )
+
+    def test_numbered_decimal_followed_by_lowercase_sentence_is_rejected(self):
+        # failure_analysis.md Phat hien #2: cau van "1.0 for a class C means
+        # that every item..." bi _NUMBERED_SECTION_RE nhan nham la heading
+        # danh so kieu "6.1 Machine Translation" vi cung dang so+cham+text —
+        # khac biet la heading that luon bat dau chu hoa ngay sau so.
+        self.assertFalse(
+            is_plausible_topic("1.0 for a class C means that every item")
+        )
+        # Heading danh so that (chu hoa ngay sau) khong bi anh huong.
+        self.assertTrue(is_plausible_topic("6.1 Machine Translation"))
+
+    def test_definition_citation_with_embedded_url_is_rejected(self):
+        # Case that lam fail 1 scenario hanh vi study_plan (EDU-PLAN-
+        # decision_tree_topic_appears_in_plan): dong dinh nghia kem URL
+        # nguon "1. Definition of "overfitting (https://en.oxforddicti"
+        # (bi cat ngan) khong co nam-trong-ngoac/ISBN/DOI/tr. va ti le chu
+        # cai van cao (domain toan chu) nen lot qua moi tin hieu khac —
+        # heading/ten chu de that khong bao gio chua URL.
+        self.assertFalse(
+            is_plausible_topic('1. Definition of "overfitting (https://en.oxforddicti')
+        )
+        self.assertFalse(
+            is_plausible_topic("Xem thêm tại www.example.com/bai-viet")
+        )
+
 
 class TestFilterTopicTitles(unittest.TestCase):
     """BUG-001 retest — QA quan sát được filter theo TỪNG dòng không đủ, vì
