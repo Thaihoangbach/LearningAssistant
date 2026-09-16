@@ -29,6 +29,7 @@ from app.models import (
     Topic,
     User,
 )
+from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -53,10 +54,6 @@ class MarkTopicReviewedTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         embed_patcher = patch("app.ingestion.embedder.embed_query", side_effect=_fake_embed_query)
         embed_patcher.start()
         self.addCleanup(embed_patcher.stop)
@@ -67,7 +64,7 @@ class MarkTopicReviewedTest(unittest.TestCase):
 
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Dana"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Dana"))
             db.flush()
             db.add(Topic(id=self.topic_id, user_id=self.user_id, name="Chuẩn hoá dữ liệu", course_name="CSDL"))
             # Cùng TÊN, khác MÔN — Topic khoá theo (user_id, course_name, name)
@@ -84,10 +81,18 @@ class MarkTopicReviewedTest(unittest.TestCase):
         finally:
             db.close()
 
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Dana"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def test_marking_known_topic_reviewed_returns_200(self):
         res = self.client.post(
             "/study-plan/review",
-            json={"user_id": self.user_id, "topic_name": "Chuẩn hoá dữ liệu", "course_name": "CSDL"},
+            json={"topic_name": "Chuẩn hoá dữ liệu", "course_name": "CSDL"},
         )
         self.assertEqual(res.status_code, 200)
 
@@ -106,7 +111,7 @@ class MarkTopicReviewedTest(unittest.TestCase):
     def test_marking_unknown_topic_is_rejected(self):
         res = self.client.post(
             "/study-plan/review",
-            json={"user_id": self.user_id, "topic_name": "Chủ đề không tồn tại", "course_name": "CSDL"},
+            json={"topic_name": "Chủ đề không tồn tại", "course_name": "CSDL"},
         )
         self.assertEqual(res.status_code, 404)
 
@@ -117,7 +122,6 @@ class MarkTopicReviewedTest(unittest.TestCase):
         res = self.client.post(
             "/study-plan/review",
             json={
-                "user_id": self.user_id,
                 "topic_name": "Chuẩn hoá dữ liệu",
                 "course_name": "Mạng máy tính",
             },
@@ -140,7 +144,6 @@ class MarkTopicReviewedTest(unittest.TestCase):
         res = self.client.post(
             "/study-plan/review",
             json={
-                "user_id": self.user_id,
                 "topic_name": "Chuẩn hoá dữ liệu",
                 "course_name": "Môn không tồn tại",
             },
@@ -165,10 +168,6 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         embed_patcher = patch("app.ingestion.embedder.embed_query", side_effect=_fake_embed_query)
         embed_patcher.start()
         self.addCleanup(embed_patcher.stop)
@@ -176,13 +175,21 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Erin"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Erin"))
             db.flush()
             db.add(Topic(user_id=self.user_id, name="CSDL yếu", course_name="CSDL"))
             db.add(Topic(user_id=self.user_id, name="MMT yếu", course_name="Mạng máy tính"))
             db.commit()
         finally:
             db.close()
+
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Erin"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
 
     def _set_exam_date(self, course_name: str, days_from_now: int):
         db = self.SessionLocal()
@@ -200,7 +207,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
 
     def test_missing_exam_date_for_a_selected_course_is_rejected(self):
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res.status_code, 400)
         self.assertIn("CSDL", res.json()["detail"])
@@ -208,7 +215,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
     def test_plan_only_includes_selected_courses(self):
         self._set_exam_date("CSDL", 3)
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res.status_code, 200)
         all_courses = {t["course_name"] for d in res.json()["days"] for t in d["topics"]}
@@ -219,7 +226,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
         self._set_exam_date("Mạng máy tính", 3)
         res = self.client.get(
             "/study-plan",
-            params={"user_id": self.user_id, "course_names": ["CSDL", "Mạng máy tính"]},
+            params={"course_names": ["CSDL", "Mạng máy tính"]},
         )
         self.assertEqual(res.status_code, 200)
         day1_courses = {t["course_name"] for t in res.json()["days"][0]["topics"]}
@@ -228,7 +235,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
     def test_course_past_exam_date_is_dropped_silently(self):
         self._set_exam_date("CSDL", -1)  # thi hôm qua
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["days"], [])
@@ -240,12 +247,12 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
         self._set_exam_date("CSDL", 3)
         mark_res = self.client.post(
             "/study-plan/review",
-            json={"user_id": self.user_id, "topic_name": "CSDL yếu", "course_name": "CSDL"},
+            json={"topic_name": "CSDL yếu", "course_name": "CSDL"},
         )
         self.assertEqual(mark_res.status_code, 200)
 
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         days = res.json()["days"]
         self.assertGreaterEqual(len(days), 1)
@@ -257,7 +264,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
     def test_reviewed_today_flag_is_false_when_not_marked(self):
         self._set_exam_date("CSDL", 3)
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         day1_by_name = {t["name"]: t for t in res.json()["days"][0]["topics"]}
         self.assertFalse(day1_by_name["CSDL yếu"]["reviewed_today"])
@@ -293,12 +300,12 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
 
         mark_res = self.client.post(
             "/study-plan/review",
-            json={"user_id": self.user_id, "topic_name": "CSDL yếu", "course_name": "CSDL"},
+            json={"topic_name": "CSDL yếu", "course_name": "CSDL"},
         )
         self.assertEqual(mark_res.status_code, 200)
 
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         days = res.json()["days"]
         self.assertEqual(len(days), 2)
@@ -317,7 +324,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
     def test_far_future_exam_date_is_clamped_to_max_days_left(self):
         self._set_exam_date("CSDL", 365 * 10)  # thi 10 năm nữa
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res.status_code, 200)
         days = res.json()["days"]
@@ -341,7 +348,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
             db.close()
 
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         day1_by_name = {t["name"]: t for t in res.json()["days"][0]["topics"]}
         self.assertEqual(day1_by_name["CSDL yếu"]["document_id"], doc_id)
@@ -349,7 +356,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
     def test_document_id_is_none_without_a_matching_document_topic(self):
         self._set_exam_date("CSDL", 3)
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         day1_by_name = {t["name"]: t for t in res.json()["days"][0]["topics"]}
         self.assertIsNone(day1_by_name["CSDL yếu"]["document_id"])
@@ -372,7 +379,7 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
             db.close()
 
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         day1_by_name = {t["name"]: t for t in res.json()["days"][0]["topics"]}
         self.assertIsNone(day1_by_name["CSDL yếu"]["document_id"])
@@ -381,10 +388,10 @@ class MultiCourseStudyPlanRouteTest(unittest.TestCase):
         self._set_exam_date("CSDL", 3)
         res_dup = self.client.get(
             "/study-plan",
-            params={"user_id": self.user_id, "course_names": ["CSDL", "CSDL"]},
+            params={"course_names": ["CSDL", "CSDL"]},
         )
         res_single = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res_dup.status_code, 200)
         self.assertEqual(res_dup.json(), res_single.json())
@@ -416,10 +423,6 @@ class StudyPlanReasonFieldTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         embed_patcher = patch("app.ingestion.embedder.embed_query", side_effect=_fake_embed_query)
         embed_patcher.start()
         self.addCleanup(embed_patcher.stop)
@@ -427,7 +430,7 @@ class StudyPlanReasonFieldTest(unittest.TestCase):
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Fiona"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Fiona"))
             db.flush()
             db.add(
                 CourseDeadline(
@@ -442,9 +445,17 @@ class StudyPlanReasonFieldTest(unittest.TestCase):
         finally:
             db.close()
 
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Fiona"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def _get_plan(self):
         res = self.client.get(
-            "/study-plan", params={"user_id": self.user_id, "course_names": ["CSDL"]}
+            "/study-plan", params={"course_names": ["CSDL"]}
         )
         self.assertEqual(res.status_code, 200)
         by_name = {t["name"]: t for d in res.json()["days"] for t in d["topics"]}

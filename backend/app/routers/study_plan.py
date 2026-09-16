@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.ingestion.outline import filter_topic_titles
 from app.memory.service import record_event
-from app.models import CourseDeadline, Document, DocumentTopic, MasteryScore, MemoryEvent, Topic
+from app.models import CourseDeadline, Document, DocumentTopic, MasteryScore, MemoryEvent, Topic, User
+from app.routers.auth import get_current_user
 from app.services.learning_policy import recommend_action
 from app.services.learning_state import get_learning_states
 from app.services.mastery import decay_unpractised
@@ -34,10 +35,11 @@ MAX_DAYS_LEFT = 60
 
 @router.get("")
 def get_study_plan(
-    user_id: str,
     course_names: list[str] = Query(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
     # Bỏ trùng, giữ thứ tự — tránh đếm gấp đôi chủ đề của một môn nếu query
     # param bị lặp (?course_names=CSDL&course_names=CSDL).
     course_names = list(dict.fromkeys(course_names))
@@ -204,17 +206,20 @@ def _topics_reviewed_today(db: Session, user_id: str) -> set[str]:
 
 
 class MarkReviewedRequest(BaseModel):
-    user_id: str
     topic_name: str
     course_name: str | None = None
 
 
 @router.post("/review")
-def mark_topic_reviewed(req: MarkReviewedRequest, db: Session = Depends(get_db)):
+def mark_topic_reviewed(
+    req: MarkReviewedRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     topic = (
         db.query(Topic)
         .filter(
-            Topic.user_id == req.user_id,
+            Topic.user_id == current_user.id,
             Topic.course_name == req.course_name,
             Topic.name == req.topic_name,
         )
@@ -225,7 +230,7 @@ def mark_topic_reviewed(req: MarkReviewedRequest, db: Session = Depends(get_db))
 
     record_event(
         db,
-        user_id=req.user_id,
+        user_id=current_user.id,
         event_type=TOPIC_REVIEWED_EVENT_TYPE,
         content=f"Đã tự đánh dấu ôn xong chủ đề \"{topic.name}\"",
         topic_id=topic.id,
