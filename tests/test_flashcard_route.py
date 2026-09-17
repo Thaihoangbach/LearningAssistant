@@ -334,7 +334,11 @@ class FlashcardBoardMistakesHistoryTest(unittest.TestCase):
 
         self.user_id = str(uuid.uuid4())
         self.other_user_id = str(uuid.uuid4())
-        self.now = datetime(2026, 9, 10, 12, 0, 0)
+        # Giờ THẬT tại lúc test chạy, không phải mốc cố định — route
+        # /flashcard/board gọi board(now=None), tự dùng datetime.now() thật,
+        # nên mốc cố định trong quá khứ làm các thẻ "còn vài ngày nữa" hoá
+        # thành "đã quá hạn" một khi đồng hồ thật vượt qua mốc đó.
+        self.now = datetime.utcnow()
 
         db = self.SessionLocal()
         try:
