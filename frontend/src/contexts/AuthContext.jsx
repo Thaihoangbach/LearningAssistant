@@ -36,14 +36,28 @@ export function AuthProvider({ children }) {
     return u;
   }, []);
 
-  const logout = useCallback(async () => {
-    await api.logout();
+  // Xoá state cục bộ để báo "server nói tôi chưa đăng nhập nữa" — dùng khi
+  // logout() thất bại (session đã chết từ trước, xem handleLogout ở
+  // Topbar.jsx) hoặc bất kỳ nơi nào khác phát hiện phiên đã hết hạn.
+  const handleAuthFailure = useCallback(() => {
     setUser(null);
     setStatus("unauthenticated");
   }, []);
 
+  const logout = useCallback(async () => {
+    // POST /auth/logout tự nó cần auth — nếu cookie đã hết hạn, gọi này ném
+    // lỗi. Vẫn phải dọn state cục bộ trong mọi trường hợp (finally), vì ý
+    // định của người dùng ("đăng xuất") coi như đã đạt được ngay khi phiên
+    // không còn hợp lệ nữa (final review Fix 4/5).
+    try {
+      await api.logout();
+    } finally {
+      handleAuthFailure();
+    }
+  }, [handleAuthFailure]);
+
   return (
-    <AuthContext.Provider value={{ user, status, login, register, logout }}>
+    <AuthContext.Provider value={{ user, status, login, register, logout, handleAuthFailure }}>
       {children}
     </AuthContext.Provider>
   );

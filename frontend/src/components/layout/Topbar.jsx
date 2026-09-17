@@ -10,8 +10,14 @@ export default function Topbar({ title, onMenuClick }) {
   const navigate = useNavigate();
 
   async function handleLogout() {
-    await logout();
-    navigate("/login");
+    // logout() ném lỗi nếu phiên đã hết hạn (POST /auth/logout cũng cần
+    // auth) — vẫn phải điều hướng về /login, vì ý định người dùng ("đăng
+    // xuất") đã đạt được ngay khi phiên không còn hợp lệ (final review Fix 5).
+    try {
+      await logout();
+    } finally {
+      navigate("/login");
+    }
   }
 
   return (
