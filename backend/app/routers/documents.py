@@ -19,11 +19,12 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app import storage
-from app.database import SessionLocal, ensure_user, get_db
+from app.database import SessionLocal, get_db
 from app.ingestion.outline import extract_outline
 from app.ingestion.parser import UnsupportedFileType
 from app.ingestion.pipeline import process_document
-from app.models import Document, DocumentTopic, Topic
+from app.models import Document, DocumentTopic, Topic, User
+from app.routers.auth import get_current_user
 from app.services.document_cleanup import cleanup_document_topics
 from app.vectorstore.pgvector_store import PgVectorStore
 
@@ -169,12 +170,13 @@ def _run_processing_job(document_id: str, storage_key: str, ext: str, document_n
 @router.post("")
 async def upload_document(
     file: UploadFile,
-    user_id: str,
     course_name: str | None = None,
     display_name: str | None = None,
     background_tasks: BackgroundTasks = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    user_id = current_user.id
     if not file.filename:
         raise HTTPException(400, "Thiếu tên file.")
 
@@ -230,7 +232,6 @@ async def upload_document(
         # gỡ đi, tránh chủ đề trùng lặp giữa các phiên bản.
         cleanup_document_topics(db, document_id=previous_latest.id, user_id=user_id)
 
-    ensure_user(db, user_id)
     doc = Document(
         id=document_id,
         user_id=user_id,
@@ -258,13 +259,17 @@ async def upload_document(
 
 
 @router.get("")
-def list_documents(user_id: str, include_old_versions: bool = False, db: Session = Depends(get_db)):
+def list_documents(
+    include_old_versions: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """BUG-005: mặc định chỉ trả bản MỚI NHẤT của mỗi tài liệu — trước đây trả
     NGUYÊN mọi Document (kể cả bản cũ đã bị versioning thay thế), nên upload
     lại cùng một file nhiều lần hiện ra thành nhiều dòng rời rạc trông như
     trùng lặp không kiểm soát, dù backend đã có version/is_latest. `version`
     vẫn trả kèm mỗi dòng để UI hiển thị "phiên bản N" khi > 1."""
-    query = db.query(Document).filter(Document.user_id == user_id)
+    query = db.query(Document).filter(Document.user_id == current_user.id)
     if not include_old_versions:
         query = query.filter(Document.is_latest == True)  # noqa: E712
     docs = query.all()
@@ -291,9 +296,12 @@ MEDIA_TYPES = {
 
 
 @router.get("/{document_id}/outline")
-def get_document_outline(document_id: str, user_id: str, db: Session = Depends(get_db)):
+def get_document_outline(
+    document_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     """Dàn ý chủ đề của tài liệu — để người dùng biết tài liệu gồm những gì
     trước khi phải tự nghĩ ra câu hỏi."""
+    user_id = current_user.id
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(404, "Không tìm thấy tài liệu.")
@@ -315,12 +323,15 @@ def get_document_outline(document_id: str, user_id: str, db: Session = Depends(g
 
 
 @router.get("/{document_id}/file")
-def get_document_file(document_id: str, user_id: str, db: Session = Depends(get_db)):
+def get_document_file(
+    document_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     """Trả file gốc để người dùng mở đúng trang từ một citation (spec mục 4.3,
     lớp 3). Với PDF, frontend gắn thêm '#page=N' bóc từ position_ref.
 
     Kiểm tra quyền sở hữu bằng user_id trước khi trả file — nếu không, bất kỳ
     ai biết document_id đều tải được tài liệu của người khác."""
+    user_id = current_user.id
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(404, "Không tìm thấy tài liệu.")
@@ -339,7 +350,10 @@ def get_document_file(document_id: str, user_id: str, db: Session = Depends(get_
 
 
 @router.delete("/{document_id}")
-def delete_document(document_id: str, user_id: str, db: Session = Depends(get_db)):
+def delete_document(
+    document_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    user_id = current_user.id
     doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(404, "Không tìm thấy tài liệu.")
