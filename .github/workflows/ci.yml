@@ -82,6 +82,7 @@ jobs:
           STORAGE_ACCESS_KEY_ID: testkey
           STORAGE_SECRET_ACCESS_KEY: testsecret
           STORAGE_BUCKET_NAME: edututor-uploads
+          JWT_SECRET_KEY: test-secret-key-do-not-use-in-prod
         run: python -m unittest discover -s tests -v
 
   frontend:
