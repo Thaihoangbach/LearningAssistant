@@ -14,7 +14,8 @@ from app.llm.client_factory import get_llm_client
 from app.llm.flashcard_generator import generate_flashcards
 from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
-from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic
+from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic, User
+from app.routers.auth import get_current_user
 from app.services.flashcard import board, due_items, latest_review_by_item
 from app.services.generation_mode import VALID_GENERATION_MODES
 from app.services.spaced_repetition import DEFAULT_EASE, VALID_RATINGS, schedule_next_review
@@ -32,7 +33,6 @@ def _prioritize_core_content(chunks: List[RetrievedChunk]) -> List[RetrievedChun
 
 
 class GenerateFlashcardRequest(BaseModel):
-    user_id: str
     document_id: str
     topic_name: str | None = None
     num_cards: int = 10
@@ -42,20 +42,25 @@ class GenerateFlashcardRequest(BaseModel):
 
 
 @router.post("/generate")
-def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
+def generate(
+    req: GenerateFlashcardRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.id
     if req.generation_mode is not None and req.generation_mode not in VALID_GENERATION_MODES:
         raise HTTPException(400, f"Chế độ sinh không hợp lệ. Chỉ nhận: {', '.join(VALID_GENERATION_MODES)}.")
 
     doc = (
         db.query(Document)
-        .filter(Document.id == req.document_id, Document.user_id == req.user_id, Document.status == "sẵn sàng")
+        .filter(Document.id == req.document_id, Document.user_id == user_id, Document.status == "sẵn sàng")
         .first()
     )
     if not doc:
         raise HTTPException(400, "Tài liệu không tồn tại hoặc chưa sẵn sàng.")
 
     query_vector = embed_query(doc.file_name)
-    store = PgVectorStore(db=db, user_id=req.user_id)
+    store = PgVectorStore(db=db, user_id=user_id)
     # BUG-007: top_k nới rộng hơn app/routers/quiz.py (10 -> 15) để sau khi đẩy
     # các đoạn giống mục tham khảo xuống cuối, vẫn còn đủ đoạn nội dung cốt
     # lõi cho generator chọn — quiz không đổi vì QA không quan sát thấy vấn đề
@@ -90,18 +95,18 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
     topic = (
         db.query(Topic)
         .filter(
-            Topic.user_id == req.user_id,
+            Topic.user_id == user_id,
             Topic.course_name == doc.course_name,
             Topic.name == topic_name,
         )
         .first()
     )
     if not topic:
-        topic = Topic(user_id=req.user_id, name=topic_name, course_name=doc.course_name)
+        topic = Topic(user_id=user_id, name=topic_name, course_name=doc.course_name)
         db.add(topic)
         db.commit()
 
-    fset = FlashcardSet(user_id=req.user_id, document_id=doc.id, generation_mode=req.generation_mode)
+    fset = FlashcardSet(user_id=user_id, document_id=doc.id, generation_mode=req.generation_mode)
     db.add(fset)
     db.commit()
 
@@ -143,7 +148,6 @@ def generate(req: GenerateFlashcardRequest, db: Session = Depends(get_db)):
 
 
 class SaveFlashcardRequest(BaseModel):
-    user_id: str
     front: str
     back: str
     source_document: str | None = None
@@ -152,12 +156,17 @@ class SaveFlashcardRequest(BaseModel):
 
 
 @router.post("/save")
-def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
+def save_from_answer(
+    req: SaveFlashcardRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Biến một câu trả lời hỏi đáp thành thẻ ôn tập.
 
     Đây là mắt nối giữa hỏi đáp và vòng ôn tập: trước đây một câu trả lời hay
     chỉ trôi vào lịch sử chat rồi mất, dù nó chính là thứ người học muốn nhớ.
     Thẻ lưu theo đường này vào thẳng hàng đợi ôn tập vì chưa có lượt ôn nào."""
+    user_id = current_user.id
     if not req.front.strip() or not req.back.strip():
         raise HTTPException(400, "Thẻ phải có cả mặt trước và mặt sau.")
 
@@ -166,22 +175,22 @@ def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
     fset = (
         db.query(FlashcardSet)
         .filter(
-            FlashcardSet.user_id == req.user_id,
+            FlashcardSet.user_id == user_id,
             FlashcardSet.document_id.is_(None),
         )
         .first()
     )
     if not fset:
-        fset = FlashcardSet(user_id=req.user_id, document_id=None)
+        fset = FlashcardSet(user_id=user_id, document_id=None)
         db.add(fset)
         db.commit()
 
     topic_id = None
     if req.topic_name and req.topic_name.strip():
         name = req.topic_name.strip()
-        topic = db.query(Topic).filter(Topic.user_id == req.user_id, Topic.name == name).first()
+        topic = db.query(Topic).filter(Topic.user_id == user_id, Topic.name == name).first()
         if not topic:
-            topic = Topic(user_id=req.user_id, name=name)
+            topic = Topic(user_id=user_id, name=name)
             db.add(topic)
             db.commit()
         topic_id = topic.id
@@ -207,9 +216,9 @@ def save_from_answer(req: SaveFlashcardRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/due")
-def list_due(user_id: str, limit: int = 20, db: Session = Depends(get_db)):
+def list_due(limit: int = 20, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Thẻ cần ôn hôm nay — chưa từng ôn hoặc đã tới hạn."""
-    items = due_items(db, user_id, limit=limit)
+    items = due_items(db, current_user.id, limit=limit)
     return {"items": [_serialize_item(item, review) for item, review in items]}
 
 
@@ -230,10 +239,10 @@ MAX_MISTAKES_RETURNED = 20
 
 
 @router.get("/board")
-def get_board(user_id: str, db: Session = Depends(get_db)):
+def get_board(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Toàn bộ thẻ chia vào due/learning/mastered — màn tổng quan tiến độ ôn
     tập, khác /due (chỉ trả thẻ CẦN ôn ngay)."""
-    buckets = board(db, user_id)
+    buckets = board(db, current_user.id)
     return {
         status: {"count": len(pairs), "items": [_serialize_item(item, review) for item, review in pairs]}
         for status, pairs in buckets.items()
@@ -241,11 +250,16 @@ def get_board(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/mistakes")
-def get_mistakes(user_id: str, limit: int = MAX_MISTAKES_RETURNED, db: Session = Depends(get_db)):
+def get_mistakes(
+    limit: int = MAX_MISTAKES_RETURNED,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Thẻ mà lượt ôn GẦN NHẤT là "Quên rồi" (again) — mirror
     app/routers/mastery.py::get_mistakes cho phía quiz, cùng ý tưởng: đây là
     tín hiệu rõ nhất về chỗ người học đang hổng, không nên chỉ trôi qua màn
     ôn rồi mất."""
+    user_id = current_user.id
     latest = latest_review_by_item(db, user_id)
     again_ids = [item_id for item_id, review in latest.items() if review.rating == "again"]
     if not again_ids:
@@ -279,11 +293,12 @@ def get_mistakes(user_id: str, limit: int = MAX_MISTAKES_RETURNED, db: Session =
 
 
 @router.get("/{item_id}/history")
-def get_history(item_id: str, user_id: str, db: Session = Depends(get_db)):
+def get_history(item_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Toàn bộ lượt ôn ĐÃ QUA của một thẻ, mới nhất trước — cho người học thấy
     vì sao một thẻ cứ bị "Quên rồi" lặp lại thay vì chỉ thấy trạng thái hiện
     tại. Join qua FlashcardSet để xác nhận thẻ thuộc về user_id gửi request
     (cùng lý do MED-5 đã vá ở app/routers/quiz.py::submit_attempt)."""
+    user_id = current_user.id
     item = (
         db.query(FlashcardItem)
         .join(FlashcardSet, FlashcardItem.flashcard_set_id == FlashcardSet.id)
@@ -316,7 +331,6 @@ def get_history(item_id: str, user_id: str, db: Session = Depends(get_db)):
 
 
 class ReviewFlashcardRequest(BaseModel):
-    user_id: str
     flashcard_item_id: str
     rating: str  # again | hard | good | easy
 
@@ -328,14 +342,19 @@ _MEMORY_EVENT_BY_RATING = {"again": "flashcard_again", "easy": "flashcard_easy"}
 
 
 @router.post("/review")
-def review(req: ReviewFlashcardRequest, db: Session = Depends(get_db)):
+def review(
+    req: ReviewFlashcardRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.id
     if req.rating not in VALID_RATINGS:
         raise HTTPException(400, f"Mức đánh giá không hợp lệ. Chỉ nhận: {', '.join(VALID_RATINGS)}.")
 
     item = (
         db.query(FlashcardItem)
         .join(FlashcardSet, FlashcardItem.flashcard_set_id == FlashcardSet.id)
-        .filter(FlashcardItem.id == req.flashcard_item_id, FlashcardSet.user_id == req.user_id)
+        .filter(FlashcardItem.id == req.flashcard_item_id, FlashcardSet.user_id == user_id)
         .first()
     )
     if not item:
@@ -344,7 +363,7 @@ def review(req: ReviewFlashcardRequest, db: Session = Depends(get_db)):
     previous = (
         db.query(FlashcardReview)
         .filter(
-            FlashcardReview.user_id == req.user_id,
+            FlashcardReview.user_id == user_id,
             FlashcardReview.flashcard_item_id == item.id,
         )
         .order_by(FlashcardReview.reviewed_at.desc())
@@ -359,7 +378,7 @@ def review(req: ReviewFlashcardRequest, db: Session = Depends(get_db)):
 
     db.add(
         FlashcardReview(
-            user_id=req.user_id,
+            user_id=user_id,
             flashcard_item_id=item.id,
             rating=req.rating,
             interval_days=schedule.interval_days,
@@ -374,7 +393,7 @@ def review(req: ReviewFlashcardRequest, db: Session = Depends(get_db)):
         verb = "quên" if req.rating == "again" else "thấy quá dễ"
         record_event(
             db,
-            user_id=req.user_id,
+            user_id=user_id,
             event_type=event_type,
             content=f"Khi ôn flashcard đã {verb} thẻ: \"{item.front}\"",
             topic_id=item.topic_id,

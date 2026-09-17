@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 from app.database import get_db
 from app.main import app
 from app.models import Document, FlashcardItem, FlashcardReview, FlashcardSet, Topic, User
+from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -49,14 +50,10 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Heidi"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Heidi"))
             db.flush()
             self.doc_csdl = Document(user_id=self.user_id, file_name="a.pdf", course_name="CSDL", status="sẵn sàng")
             self.doc_mmt = Document(user_id=self.user_id, file_name="b.pdf", course_name="Mạng máy tính", status="sẵn sàng")
@@ -76,6 +73,14 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             db.commit()
         finally:
             db.close()
+
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Heidi"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
 
     def test_same_topic_name_in_different_course_does_not_reuse_other_courses_topic(self):
         # generate() (app/routers/flashcard.py) gọi TRỰC TIẾP các tên đã
@@ -110,7 +115,6 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/flashcard/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "topic_name": "Bài tập",
                     "num_cards": 1,
@@ -152,7 +156,7 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             ]
             res = self.client.post(
                 "/flashcard/generate",
-                json={"user_id": self.user_id, "document_id": self.doc_mmt_id, "num_cards": 3},
+                json={"document_id": self.doc_mmt_id, "num_cards": 3},
             )
 
         self.assertEqual(res.status_code, 200)
@@ -187,7 +191,6 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/flashcard/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "num_cards": 1,
                     "generation_mode": "exam",
@@ -228,7 +231,6 @@ class FlashcardTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/flashcard/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "num_cards": 1,
                     "generation_mode": "not-a-real-mode",
@@ -263,22 +265,26 @@ class SaveFromAnswerRouteTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Ivan"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Ivan"))
             db.commit()
         finally:
             db.close()
 
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Ivan"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def test_save_from_answer_does_not_violate_document_fk(self):
         res = self.client.post(
             "/flashcard/save",
-            json={"user_id": self.user_id, "front": "Câu hỏi?", "back": "Câu trả lời."},
+            json={"front": "Câu hỏi?", "back": "Câu trả lời."},
         )
 
         self.assertEqual(res.status_code, 200)
@@ -291,11 +297,11 @@ class SaveFromAnswerRouteTest(unittest.TestCase):
 
         self.client.post(
             "/flashcard/save",
-            json={"user_id": self.user_id, "front": "Q1?", "back": "A1."},
+            json={"front": "Q1?", "back": "A1."},
         )
         self.client.post(
             "/flashcard/save",
-            json={"user_id": self.user_id, "front": "Q2?", "back": "A2."},
+            json={"front": "Q2?", "back": "A2."},
         )
 
         db = self.SessionLocal()
@@ -326,18 +332,14 @@ class FlashcardBoardMistakesHistoryTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         self.user_id = str(uuid.uuid4())
         self.other_user_id = str(uuid.uuid4())
         self.now = datetime(2026, 9, 10, 12, 0, 0)
 
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Judy"))
-            db.add(User(id=self.other_user_id, email=f"{self.other_user_id}@test.local", display_name="Kevin"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Judy"))
+            db.add(User(id=self.other_user_id, email=f"{self.other_user_id}@test.local", password_hash="x", display_name="Kevin"))
             db.flush()
             topic_id = str(uuid.uuid4())
             db.add(Topic(id=topic_id, user_id=self.user_id, name="Chủ đề A"))
@@ -379,8 +381,19 @@ class FlashcardBoardMistakesHistoryTest(unittest.TestCase):
         finally:
             db.close()
 
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Judy"
+        )
+        self.other_current_user = User(
+            id=self.other_user_id, email=f"{self.other_user_id}@test.local", password_hash="x", display_name="Kevin"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def test_board_partitions_cards_into_three_buckets(self):
-        res = self.client.get(f"/flashcard/board?user_id={self.user_id}")
+        res = self.client.get("/flashcard/board")
 
         self.assertEqual(res.status_code, 200)
         body = res.json()
@@ -391,7 +404,7 @@ class FlashcardBoardMistakesHistoryTest(unittest.TestCase):
         self.assertEqual(body["due"]["count"], 2)
 
     def test_mistakes_returns_only_cards_last_rated_again(self):
-        res = self.client.get(f"/flashcard/mistakes?user_id={self.user_id}")
+        res = self.client.get("/flashcard/mistakes")
 
         self.assertEqual(res.status_code, 200)
         mistakes = res.json()["mistakes"]
@@ -410,14 +423,16 @@ class FlashcardBoardMistakesHistoryTest(unittest.TestCase):
         finally:
             db.close()
 
-        res = self.client.get(f"/flashcard/{self.due_item_id}/history?user_id={self.user_id}")
+        res = self.client.get(f"/flashcard/{self.due_item_id}/history")
 
         self.assertEqual(res.status_code, 200)
         ratings = [h["rating"] for h in res.json()["history"]]
         self.assertEqual(ratings, ["hard", "again"])
 
     def test_history_of_someone_elses_card_is_rejected(self):
-        res = self.client.get(f"/flashcard/{self.due_item_id}/history?user_id={self.other_user_id}")
+        app.dependency_overrides[get_current_user] = lambda: self.other_current_user
+
+        res = self.client.get(f"/flashcard/{self.due_item_id}/history")
 
         self.assertEqual(res.status_code, 404)
 
