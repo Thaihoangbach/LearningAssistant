@@ -57,8 +57,8 @@ class MemoryServiceTestCase(unittest.TestCase):
         self.db.query(MemoryEvent).delete()
         self.db.query(User).delete()
         self.db.commit()
-        self.db.add(User(id="u1", email="u1@test.local", display_name="U1"))
-        self.db.add(User(id="nguoi_khac", email="nguoi-khac@test.local", display_name="Người khác"))
+        self.db.add(User(id="u1", email="u1@test.local", password_hash="x", display_name="U1"))
+        self.db.add(User(id="nguoi_khac", email="nguoi-khac@test.local", password_hash="x", display_name="Người khác"))
         self.db.commit()
 
 
