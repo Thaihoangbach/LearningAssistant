@@ -30,7 +30,7 @@ Tính năng đã triển khai:
 | **Mastery theo chủ đề** | Chấm điểm mức độ thành thạo (0–1) theo công thức rule-based có trọng số suy giảm theo thời gian (recency-weighted, half-life 14 ngày) mỗi khi nộp bài quiz. Dashboard tổng quan hiển thị điểm mastery, số tài liệu, số quiz, tỉ lệ đúng. |
 | **Hồ sơ học tập (Learning Profile)** | Lưu `preferred_level` (trình độ) dùng chung giữa hỏi đáp và sinh quiz — chỉ cần khai báo `level`/`difficulty` một lần, các lượt sau tự áp dụng lại nếu không truyền tham số mới; truyền tường minh lại thì ghi đè preference. Nếu chưa từng khai báo, hệ thống tự suy trình độ từ điểm mastery trung bình hiện có (mastery yếu → beginner, tốt → advanced). Có `learning_goal` (mục tiêu học tập, dạng text tự do) — được lọc injection ngay khi lưu (`contains_hard_block_pattern`), sau đó đưa vào prompt sinh câu trả lời như bối cảnh tham khảo (không phải chỉ dẫn). `GET /profile` trả cả `weak_topics`/`mastered_topics` suy từ mastery hiện có. |
 
-Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế, đăng nhập/đa người dùng thật (hiện dùng `user_id` cố định `demo-user` cho walking skeleton).
+Chưa làm: gợi ý theo prerequisite (cần đồ thị kiến thức chưa xây dựng), theo dõi thời gian học thực tế.
 
 ## Kiến trúc & công nghệ
 
@@ -118,6 +118,7 @@ pip install -r ../requirements.txt
 cp ../.env.example ../.env
 # Điền DATABASE_URL (trỏ vào Postgres vừa dựng ở bước 0), OPENAI_API_KEY hoặc
 # GEMINI_API_KEY, COHERE_API_KEY, và 4 biến STORAGE_* trong .env ở thư mục gốc.
+# JWT_SECRET_KEY cũng bắt buộc (ký JWT đăng nhập) — xem .env.example.
 
 alembic upgrade head
 # Tạo schema — BẮT BUỘC chạy lần đầu và sau mỗi lần models.py có cột/bảng mới.
@@ -189,6 +190,7 @@ docker run -d -p 9010:9000 -e MINIO_ROOT_USER=testkey -e MINIO_ROOT_PASSWORD=tes
 # Tạo bucket (một lần):
 python -c "import boto3; boto3.client('s3', endpoint_url='http://localhost:9010', aws_access_key_id='testkey', aws_secret_access_key='testsecret', region_name='auto').create_bucket(Bucket='edututor-uploads')"
 
+JWT_SECRET_KEY=test-secret-key-do-not-use-in-prod \
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/edututor_test \
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/edututor_test \
 STORAGE_ENDPOINT_URL=http://localhost:9010 STORAGE_ACCESS_KEY_ID=testkey STORAGE_SECRET_ACCESS_KEY=testsecret STORAGE_BUCKET_NAME=edututor-uploads \
@@ -223,7 +225,7 @@ Tạo tài khoản tại https://dashboard.cohere.com, lấy API key ở **API K
 
 1. Push code lên GitHub (repo này đã có `render.yaml` + `Dockerfile`).
 2. Trên Render: **New +** → **Blueprint**, chọn repo → Render đọc `render.yaml` và tạo sẵn service `edututor-backend`.
-3. Điền các biến môi trường được đánh dấu secret khi được hỏi (`DATABASE_URL`, `OPENAI_API_KEY` hoặc `GEMINI_API_KEY`, `COHERE_API_KEY`, `STORAGE_ENDPOINT_URL`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET_NAME`; `FRONTEND_URL` điền sau khi có domain Vercel ở bước 5).
+3. Điền các biến môi trường được đánh dấu secret khi được hỏi (`DATABASE_URL`, `OPENAI_API_KEY` hoặc `GEMINI_API_KEY`, `COHERE_API_KEY`, `STORAGE_ENDPOINT_URL`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET_NAME`, `JWT_SECRET_KEY`; `FRONTEND_URL` điền sau khi có domain Vercel ở bước 5).
 4. Deploy — `docker-entrypoint.sh` tự chạy `alembic upgrade head` rồi mới khởi động server; theo dõi ở tab **Logs** để xác nhận migration chạy thành công. Không có **Blueprint**? Tạo thủ công: **New +** → **Web Service** → **Docker** → trỏ vào repo, `Dockerfile Path` = `./Dockerfile`, rồi tự thêm các biến môi trường ở trên.
 5. Ghi lại URL Render cấp (dạng `https://edututor-backend-xxxx.onrender.com`) — dùng ở bước 5 (frontend) và điền ngược lại `FRONTEND_URL` sau khi có domain Vercel.
 
@@ -253,7 +255,6 @@ Sau khi có domain Vercel, quay lại Render, cập nhật `FRONTEND_URL` = doma
 - **Cá nhân hoá theo mục tiêu học tập dài hạn** (vd: "ôn thi trong 2 tuần" tự sinh kế hoạch theo goal) — `GET /study-plan` mới hỗ trợ theo số ngày, chưa gắn với goal/deadline lưu trữ lâu dài.
 - **Gợi ý theo prerequisite** (vd: học Transformer thì gợi ý học Attention trước) — cần một đồ thị/quan hệ phụ thuộc giữa các chủ đề, hiện chưa có nguồn dữ liệu này.
 - **Theo dõi thời gian học thực tế** cho Learning Analytics — cần instrument sự kiện ở frontend, chưa thu thập.
-- **Đăng nhập/đa người dùng thật** — hiện `user_id` cố định `demo-user` ở frontend (`frontend/src/api.js`), và backend tin thẳng `user_id` do client gửi lên mà không xác minh session/token nào (rủi ro bảo mật thật nếu deploy công khai, không chỉ giới hạn kỹ thuật của walking skeleton).
 - **Xoá/đổi tên cuộc hội thoại** trong lịch sử hỏi đáp.
 - **Việc suy trình độ từ mastery trung bình còn thô** — chỉ một ngưỡng cố định (yếu → beginner, tốt → advanced, còn lại không đoán), chưa tính đến xu hướng tiến bộ theo thời gian hay khác biệt giữa các môn học.
 - **Chưa re-run Golden Set để đo tác động thật của các cải tiến cá nhân hóa** (siết prompt, tăng `top_k`, Learning Profile) — điểm Personalization ~13% ở `eval/report.md` là số đo TRƯỚC các thay đổi này, chưa có số liệu thật sau khi cải tiến.
