@@ -31,6 +31,12 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
+# Dùng khi user không tồn tại, để login() vẫn trả bcrypt cost như ca có user —
+# tránh timing side-channel lộ email nào đã đăng ký qua thời gian phản hồi
+# (xem docs/auth-spec.md mục 8, final review Fix 3). Tính một lần lúc import.
+_DUMMY_PASSWORD_HASH = hash_password("dummy-password-for-timing-safety")
+
+
 def create_access_token(user_id: str) -> str:
     now = datetime.now(timezone.utc)
     payload = {"sub": user_id, "iat": now, "exp": now + timedelta(minutes=JWT_EXPIRE_MINUTES)}
