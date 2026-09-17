@@ -16,7 +16,6 @@ from typing import List, Optional, Set
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import ensure_user
 from app.llm.rag import ConversationTurn
 from app.models import Conversation, Document, Message
 
@@ -56,14 +55,19 @@ def _load_conversation_history(db: Session, conversation_id: str) -> List[Conver
     return turns[-MAX_HISTORY_TURNS:]
 
 
-def assemble_context(db: Session, req, needs_document_scope: bool) -> QAContext:
+def assemble_context(db: Session, req, needs_document_scope: bool, user_id: str) -> QAContext:
     """Lắp context cho một lượt /chat/ask: phạm vi tài liệu (nếu cần), hội
     thoại (tạo mới nếu chưa có), và lịch sử hội thoại.
 
     `needs_document_scope=False` cho các capability chỉ đọc dữ liệu tính sẵn
     (study_plan/flashcard_due/recommendation) — không cần và không nên chặn
     bằng HTTPException 400 "chưa có tài liệu sẵn sàng" vì các năng lực đó
-    không đọc tài liệu."""
+    không đọc tài liệu.
+
+    `user_id` lấy từ `current_user.id` ở router — KHÔNG đọc `req.user_id` nữa
+    vì `AskRequest` không còn field đó sau khi /chat chuyển sang
+    `Depends(get_current_user)`. Người dùng chắc chắn đã tồn tại (token đã qua
+    `get_current_user`) nên cũng không cần `ensure_user` nữa."""
     ready_docs: List[Document] = []
     document_ids: Optional[Set[str]] = None
 
@@ -72,7 +76,7 @@ def assemble_context(db: Session, req, needs_document_scope: bool) -> QAContext:
         # user_id — thực thi AC F2/F5 + ưu tiên bản mới khi tài liệu có version.
         ready_docs = (
             db.query(Document)
-            .filter(Document.user_id == req.user_id, Document.status == "sẵn sàng", Document.is_latest == True)
+            .filter(Document.user_id == user_id, Document.status == "sẵn sàng", Document.is_latest == True)
             .all()
         )
         if req.course_name:
@@ -85,8 +89,7 @@ def assemble_context(db: Session, req, needs_document_scope: bool) -> QAContext:
 
     conversation_id = req.conversation_id
     if not conversation_id:
-        ensure_user(db, req.user_id)
-        convo = Conversation(user_id=req.user_id, course_name=req.course_name)
+        convo = Conversation(user_id=user_id, course_name=req.course_name)
         db.add(convo)
         db.commit()
         conversation_id = convo.id

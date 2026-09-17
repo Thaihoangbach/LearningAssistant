@@ -22,7 +22,9 @@ from app.models import (
     Message,
     QuizItem,
     Topic,
+    User,
 )
+from app.routers.auth import get_current_user
 from app.retrieval.pipeline import retrieve_chunks
 from app.retrieval.query_context import build_retrieval_query
 from app.ingestion.outline import filter_topic_titles
@@ -151,7 +153,6 @@ def _build_recommendation_result(db: Session, user_id: str, course_name: str | N
 
 
 class AskRequest(BaseModel):
-    user_id: str
     question: str
     course_name: str | None = None
     conversation_id: str | None = None
@@ -357,7 +358,13 @@ def _build_compare_result(
 
 
 @router.post("/ask")
-def ask(req: AskRequest, db: Session = Depends(get_db)):
+def ask(
+    req: AskRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.id
+
     # Câu hỏi rỗng/toàn khoảng trắng vẫn qua được validation kiểu `str` của
     # Pydantic, nhưng Cohere embed API từ chối text rỗng (BadRequestError,
     # không bắt được ở embedder.py) — chặn ở đây thay vì để crash 500 lúc
@@ -372,7 +379,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
     guardrail_result = None
     qa_result = None
 
-    context = assemble_context(db, req, needs_document_scope=capability is None)
+    context = assemble_context(db, req, needs_document_scope=capability is None, user_id=user_id)
     ready_docs = context.ready_docs
     document_ids = context.document_ids
     conversation_id = context.conversation_id
@@ -384,16 +391,16 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
         if capability.name == "study_plan":
             result = _build_study_plan_result(
                 db,
-                req.user_id,
+                user_id,
                 req.course_name,
                 capability.params["days"],
                 req.question,
                 capability.params["multiple_days_mentioned"],
             )
         elif capability.name == "flashcard_due":
-            result = _build_flashcard_due_result(db, req.user_id)
+            result = _build_flashcard_due_result(db, user_id)
         else:
-            result = _build_recommendation_result(db, req.user_id, req.course_name)
+            result = _build_recommendation_result(db, user_id, req.course_name)
     else:
         llm_client = get_llm_client()
 
@@ -407,18 +414,18 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             # Intent riêng có output contract khác (bullet, structural
             # retrieval) — xem app/services/summarize.py. Vẫn qua guardrail ở
             # trên trước, cùng lý do an toàn với đường hỏi đáp chung bên dưới.
-            result = _build_summarize_result(db, req.user_id, req.question, ready_docs, llm_client)
+            result = _build_summarize_result(db, user_id, req.question, ready_docs, llm_client)
         elif is_compare_request(req.question):
             # Intent riêng có output contract khác (retrieval riêng từng vế) —
             # xem app/services/compare.py.
-            result = _build_compare_result(db, req.user_id, req.question, document_ids, llm_client)
+            result = _build_compare_result(db, user_id, req.question, document_ids, llm_client)
         elif is_apply_request(req.question):
             # Intent riêng có output contract khác (3 phần: khái niệm/ví dụ/
             # giải thích) — xem app/services/apply.py.
-            result = build_apply_result(db, req.user_id, document_ids, req.question, llm_client)
+            result = build_apply_result(db, user_id, document_ids, req.question, llm_client)
         else:
             learner = build_learner_context(
-                db, req.user_id, requested_level=req.level, query=req.question
+                db, user_id, requested_level=req.level, query=req.question
             )
 
             effective_top_k = req.top_k + LEVEL_TOP_K_BOOST if learner.effective_level else req.top_k
@@ -426,7 +433,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
             def _retrieve(query: str, top_k: int, mode: str):
                 return retrieve_chunks(
                     db=db,
-                    user_id=req.user_id,
+                    user_id=user_id,
                     query=query,
                     top_k=top_k,
                     document_ids=document_ids,
@@ -444,7 +451,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
                 rows = (
                     db.query(DocumentTopic)
                     .filter(
-                        DocumentTopic.user_id == req.user_id,
+                        DocumentTopic.user_id == user_id,
                         DocumentTopic.document_id.in_(document_ids),
                     )
                     .all()
@@ -519,7 +526,7 @@ def ask(req: AskRequest, db: Session = Depends(get_db)):
     # câu bị guardrail chặn (không phản ánh điều gì về trình độ người học).
     if capability is None and guardrail_result is not None and not guardrail_result.blocked:
         event_type, content = _classify_question_event(req.question, result)
-        record_event(db, user_id=req.user_id, event_type=event_type, content=content)
+        record_event(db, user_id=user_id, event_type=event_type, content=content)
 
     db.commit()
 
@@ -581,10 +588,10 @@ PREVIEW_MAX_LENGTH = 80
 
 
 @router.get("/conversations")
-def list_conversations(user_id: str, db: Session = Depends(get_db)):
+def list_conversations(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     conversations = (
         db.query(Conversation)
-        .filter(Conversation.user_id == user_id)
+        .filter(Conversation.user_id == current_user.id)
         .order_by(Conversation.created_at.desc())
         .all()
     )
@@ -613,10 +620,14 @@ def list_conversations(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/conversations/{conversation_id}")
-def get_conversation(conversation_id: str, user_id: str, db: Session = Depends(get_db)):
+def get_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     convo = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id, Conversation.user_id == user_id)
+        .filter(Conversation.id == conversation_id, Conversation.user_id == current_user.id)
         .first()
     )
     if not convo:
