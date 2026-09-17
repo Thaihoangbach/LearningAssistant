@@ -88,7 +88,18 @@ def assemble_context(db: Session, req, needs_document_scope: bool, user_id: str)
         document_ids = {d.id for d in ready_docs}
 
     conversation_id = req.conversation_id
-    if not conversation_id:
+    if conversation_id:
+        # IDOR fix: req.conversation_id đến thẳng từ client — không có bước
+        # này, một user đã đăng nhập vẫn đọc/ghi được vào hội thoại của user
+        # khác chỉ bằng cách đoán/biết ID (xem final review, Fix 1).
+        owned = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id, Conversation.user_id == user_id)
+            .first()
+        )
+        if not owned:
+            raise HTTPException(404, "Không tìm thấy cuộc hội thoại.")
+    else:
         convo = Conversation(user_id=user_id, course_name=req.course_name)
         db.add(convo)
         db.commit()

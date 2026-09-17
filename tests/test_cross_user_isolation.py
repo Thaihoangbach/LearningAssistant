@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.database import get_db
 from app.main import app
-from app.models import Document, User
+from app.models import Conversation, Document, User
 from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
@@ -43,6 +43,8 @@ class CrossUserIsolationTest(unittest.TestCase):
             db.flush()
             self.doc_id = str(uuid.uuid4())
             db.add(Document(id=self.doc_id, user_id=self.owner_id, file_name="bimat.pdf", status="sẵn sàng"))
+            self.convo_id = str(uuid.uuid4())
+            db.add(Conversation(id=self.convo_id, user_id=self.owner_id, course_name=None))
             db.commit()
         finally:
             db.close()
@@ -71,6 +73,29 @@ class CrossUserIsolationTest(unittest.TestCase):
         db = self.SessionLocal()
         try:
             self.assertIsNotNone(db.query(Document).filter(Document.id == self.doc_id).first())
+        finally:
+            db.close()
+
+    def test_attacker_cannot_reuse_owners_conversation_via_chat_ask(self):
+        """Final review Fix 1 (Critical IDOR) — trước fix, assemble_context()
+        tin thẳng req.conversation_id không kiểm chủ sở hữu, cho phép attacker
+        đọc/ghi vào hội thoại của owner chỉ bằng cách biết ID. Dùng câu hỏi
+        khớp năng lực "flashcard_due" (needs_document_scope=False) để chắc
+        chắn đi thẳng tới bước kiểm chủ sở hữu hội thoại trong
+        assemble_context() mà không rơi vào nhánh 400 "chưa có tài liệu" (vì
+        attacker không có tài liệu nào) và không cần gọi LLM thật."""
+        res = self.client.post(
+            "/chat/ask",
+            json={"question": "Tôi còn thẻ nào đến hạn ôn không?", "conversation_id": self.convo_id},
+        )
+        self.assertEqual(res.status_code, 404)
+
+        # Hội thoại của owner không bị attacker ghi thêm message nào vào.
+        db = self.SessionLocal()
+        try:
+            convo = db.query(Conversation).filter(Conversation.id == self.convo_id).first()
+            self.assertIsNotNone(convo)
+            self.assertEqual(convo.user_id, self.owner_id)
         finally:
             db.close()
 
