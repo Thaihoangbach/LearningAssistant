@@ -18,7 +18,15 @@ from typing import List
 _STOPWORDS = {
     "là", "và", "của", "có", "được", "một", "các", "những", "cho", "trong",
     "với", "để", "khi", "này", "đó", "không", "thì", "mà", "ở", "về", "như",
-    "đây", "việc", "phần", "câu", "dùng", "the", "a", "an", "is", "are", "of",
+    "đây", "việc", "phần", "câu", "dùng",
+    # "sự"/"chính" là tiểu từ/hư từ cực kỳ phổ biến trong tiếng Việt (danh hoá
+    # trừu tượng, nhấn mạnh) — không mang nội dung riêng, xác nhận qua Golden
+    # Set live (EDU-SUM-002): 2 từ này trùng ngẫu nhiên giữa câu hỏi và preview
+    # của một chủ đề HOÀN TOÀN không liên quan, đủ đạt ngưỡng khớp ≥2 từ của
+    # resolve_topic() (app/services/summarize.py), khiến Summarize trả lời
+    # nhầm sang tài liệu khác.
+    "sự", "chính",
+    "the", "a", "an", "is", "are", "of",
     "and", "to", "in", "for", "on", "that", "this", "it", "with", "as", "be",
 }
 

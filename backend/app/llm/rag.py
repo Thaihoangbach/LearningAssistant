@@ -83,6 +83,14 @@ class AnswerResult:
     # người dùng cần hai phản hồi khác nhau: một cái nói kho tài liệu thiếu
     # nội dung, một cái nói câu hỏi chưa đủ rõ để tìm đúng chỗ.
     needs_clarification: bool = False
+    # True khi verifier theo-từng-luận-điểm (xem answer_question) giữ lại MỘT
+    # PHẦN luận điểm của draft, không phải toàn bộ — câu trả lời cuối chỉ nói
+    # phần có căn cứ, phần còn lại bị âm thầm bỏ (đúng, không bịa) nhưng
+    # người hỏi không biết câu hỏi của họ chỉ được trả lời một phần (vd "so
+    # sánh CNN và SVM" mà kho chỉ có CNN — câu trả lời chỉ nói CNN, không báo
+    # SVM thiếu căn cứ). Tín hiệu này đã được TÍNH SẴN (so sánh số luận điểm
+    # trước/sau verifier) — trước đây không lộ ra ngoài AnswerResult.
+    partial: bool = False
 
 
 NO_CONTEXT_MESSAGE = "Nội dung này chưa có trong tài liệu bạn đã tải lên."
@@ -699,6 +707,10 @@ def answer_question(
     if not surviving_claims:
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
+    # Giữ được MỘT PHẦN (không phải toàn bộ) luận điểm ban đầu — xem docstring
+    # AnswerResult.partial.
+    is_partial = len(surviving_claims) < len(claims)
+
     # Nối bằng xuống dòng ở chế độ bullets để mỗi ý chính giữ nguyên một dòng
     # riêng (frontend render bằng whitespace-pre-wrap, xem AnswerWithCitations.jsx)
     # — nối bằng khoảng trắng như mặc định sẽ dồn mọi gạch đầu dòng thành một
@@ -710,7 +722,9 @@ def answer_question(
         REQUIRE_INLINE_CITATION if require_inline_citation is None else require_inline_citation
     )
     if not require_citation:
-        return AnswerResult(answer=verified_answer, is_grounded=True, sources=_dedupe_sources(relevant))
+        return AnswerResult(
+            answer=verified_answer, is_grounded=True, sources=_dedupe_sources(relevant), partial=is_partial
+        )
 
     cleaned_answer, cited_indices = _strip_invalid_citations(verified_answer, len(relevant))
     if not cited_indices:
@@ -720,4 +734,4 @@ def answer_question(
         return AnswerResult(answer=NOT_GROUNDED_MESSAGE, is_grounded=False, sources=[])
 
     final_answer, sources = _renumber_citations_to_final_sources(cleaned_answer, cited_indices, relevant)
-    return AnswerResult(answer=final_answer, is_grounded=True, sources=sources)
+    return AnswerResult(answer=final_answer, is_grounded=True, sources=sources, partial=is_partial)

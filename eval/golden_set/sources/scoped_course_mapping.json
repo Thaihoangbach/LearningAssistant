@@ -1,0 +1,32 @@
+{
+  "13_offtopic_am_thuc_vi": {
+    "document_id": "da730fa9-9e6d-4ea5-a2ad-7016da72773e",
+    "course_name": "GoldenSetEval_scope_13_offtopic_am_thuc_vi",
+    "file_name": "13_offtopic_am_thuc_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "01_hoc_sau_vi": {
+    "document_id": "24277a11-0532-4b25-b5c3-b16fbf3593e9",
+    "course_name": "GoldenSetEval_scope_01_hoc_sau_vi",
+    "file_name": "01_hoc_sau_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "04_cay_quyet_dinh_vi": {
+    "document_id": "a250e1b7-265c-4bbe-b516-8ee946b10432",
+    "course_name": "GoldenSetEval_scope_04_cay_quyet_dinh_vi",
+    "file_name": "04_cay_quyet_dinh_vi.pdf",
+    "status": "sẵn sàng"
+  },
+  "09_random_forest_en": {
+    "document_id": "7010af89-6901-4af5-885f-320916501706",
+    "course_name": "GoldenSetEval_scope_09_random_forest_en",
+    "file_name": "09_random_forest_en.pdf",
+    "status": "sẵn sàng"
+  },
+  "11_precision_and_recall_en": {
+    "document_id": "855aac95-a1a9-497e-810e-8e7551988ada",
+    "course_name": "GoldenSetEval_scope_11_precision_and_recall_en",
+    "file_name": "11_precision_and_recall_en.pdf",
+    "status": "sẵn sàng"
+  }
+}

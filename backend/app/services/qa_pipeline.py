@@ -57,6 +57,10 @@ class QAResult:
     # THEO chỉ dẫn độc hại — có thể chỉ đang trích dẫn/mô tả lại đúng câu chữ
     # đó từ tài liệu nguồn để cảnh báo người dùng.
     injection_flag: bool = False
+    # Xem AnswerResult.partial (app/llm/rag.py) — chỉ có ý nghĩa khi
+    # is_grounded=True, mặc định False cho mọi nhánh khác (needs_clarification,
+    # abstained).
+    partial: bool = False
 
 
 def _abstention_message(passes_run: int, num_documents: int) -> str:
@@ -164,6 +168,7 @@ def answer_with_fallback(
                     passes_run=passes_run, searched_documents=searched_documents
                 ),
                 injection_flag=contains_hard_block_pattern(result.answer),
+                partial=result.partial,
             )
 
     # Chỉ gợi ý chủ đề khi đã chắc chắn từ chối — tra cứu này chạm DB nên

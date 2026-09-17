@@ -24,7 +24,7 @@ Ba việc bị lặp lại mỗi lần tự học mà chưa có công cụ nào 
 
 ### Pain point nằm ngoài phạm vi và lý do
 
-Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu, tập trung ra sao) và cá nhân hoá theo mục tiêu học dài hạn (ví dụ tự sinh lộ trình theo goal "ôn thi trong 2 tuần") là những bài toán cần thu thập dữ liệu hành vi lâu dài hoặc lưu hồ sơ người học (Learning Profile) - vượt quá thời gian làm đồ án, nên để ngoài phạm vi MVP, ghi rõ ở mục 5 để không lẫn với việc "quên làm".
+Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu, tập trung ra sao - cần instrument sự kiện ở giao diện, chưa thu thập) vẫn để ngoài phạm vi, vì đây là bài toán Learning Analytics riêng, không phải điều kiện để giải 3 pain point ưu tiên ở trên. Cá nhân hoá theo hồ sơ tự khai và mục tiêu học tập (Learning Profile, ngày thi từng môn) đã được đưa vào phạm vi Must (F7, F8) vì đây chính là phần giải quyết trực tiếp pain point "lập lịch ôn trước deadline" - ghi rõ ở mục 4 để không lẫn với việc "quên làm".
 
 ## 2. Persona
 
@@ -32,7 +32,7 @@ Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu,
 
 **Câu định vị:** *"Tôi vừa đọc xong một chương giáo trình dài, tôi muốn hỏi lại một chỗ chưa chắc và nhận được câu trả lời kèm đúng đoạn trong tài liệu - thay vì hỏi một chatbot chung chung không biết gì về tài liệu của tôi."*
 
-**Phạm vi người dùng của MVP:** chỉ phục vụ một người dùng cho mỗi lần chạy (không có đăng nhập/phân quyền nhiều người trong MVP - xem mục 5, Won't). Nếu mở rộng sau này cho nhiều người dùng chung, cần thêm vai trò kiểu "quản trị" để duyệt nội dung trước khi dùng chung - nhưng việc đó ngoài phạm vi đồ án hiện tại vì mục tiêu là một app tự học cá nhân, không phải kho tri thức dùng chung.
+**Phạm vi người dùng của MVP:** chỉ phục vụ một người dùng cho mỗi lần chạy (không có đăng nhập/phân quyền nhiều người trong MVP - xem F11 ở mục 4). Nếu mở rộng sau này cho nhiều người dùng chung, cần thêm vai trò kiểu "quản trị" để duyệt nội dung trước khi dùng chung - nhưng việc đó ngoài phạm vi đồ án hiện tại vì mục tiêu là một app tự học cá nhân, không phải kho tri thức dùng chung.
 
 ## 3. Input
 
@@ -42,26 +42,28 @@ Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu,
 | Kích thước | dự kiến giới hạn khoảng 30 MB/file - cần thử với vài file thật để biết ngưỡng hợp lý trước khi chốt cứng |
 | Ngôn ngữ | tài liệu chủ yếu tiếng Việt và tiếng Anh (giáo trình kỹ thuật hay có thuật ngữ Anh xen tiếng Việt); câu trả lời nên theo đúng ngôn ngữ của câu hỏi |
 | Cách trích xuất | PDF theo trang, DOCX theo nhóm đoạn văn (DOCX không có khái niệm trang cố định) - cần giữ lại vị trí nguồn để trích dẫn kiểm tra lại được |
-| Chất lượng | chỉ nhận tài liệu có lớp text trích được; OCR cho file scan để ở nhóm Could (F9), không làm ngay vì tốn thời gian mà chưa chắc cần thiết cho phần lớn tài liệu học tập |
-| Phiên bản | có thể upload lại tài liệu đã có (ví dụ giáo trình bản chỉnh sửa) - cần quyết định giữ bản cũ hay ghi đè, xem mục 9 |
+| Chất lượng | chỉ nhận tài liệu có lớp text trích được; OCR cho file scan để ở nhóm Could (F10), không làm ngay vì tốn thời gian mà chưa chắc cần thiết cho phần lớn tài liệu học tập |
+| Phiên bản | có thể upload lại tài liệu đã có (ví dụ giáo trình bản chỉnh sửa) - giữ cả bản cũ lẫn bản mới, hỏi đáp chỉ dùng bản mới nhất, xem F1 ở mục 5 |
 | Người dùng | một người dùng/phiên làm việc trong MVP, chưa có đăng nhập thật |
 
 ## 4. Scope & priority
 
+So với bản đầu, một số hạng mục từng ở nhóm Could (cá nhân hoá sâu, ôn tập có lịch) đã được quyết định đưa vào Must vì đây chính là phần giải quyết trực tiếp pain point "lập lịch ôn trước deadline" và "biết chủ đề nào đang yếu" ở mục 1 — không đạt được 2 pain point đó thì sản phẩm chỉ còn là một chatbot hỏi đáp tài liệu, không phải trợ lý học tập cá nhân hoá như tên gọi.
+
 | Priority | Feature | Giá trị |
 | --- | --- | --- |
-| **Must** | F1 - Quản lý tài liệu học tập (upload, xử lý nền, xoá) | có nguồn tài liệu đáng tin, biết đang xử lý hay lỗi |
-| **Must** | F2 - Hỏi đáp RAG có trích dẫn nguồn | trả lời có căn cứ, mở được đúng đoạn trong tài liệu |
+| **Must** | F1 - Quản lý tài liệu học tập (upload, xử lý nền, xoá, versioning, gộp theo môn học) | có nguồn tài liệu đáng tin, biết đang xử lý hay lỗi, không nạp trùng tài liệu đổi tên |
+| **Must** | F2 - Hỏi đáp RAG có trích dẫn nguồn, gồm 3 dạng câu hỏi sinh nội dung riêng (tóm tắt 1 chủ đề, so sánh 2 khái niệm, áp dụng khái niệm vào ví dụ mới) | trả lời có căn cứ, mở được đúng đoạn trong tài liệu, phục vụ được cả câu hỏi lấy thông tin lẫn câu hỏi cần tổng hợp/vận dụng |
 | **Must** | F3 - Guardrail an toàn cho câu hỏi | chặn injection/jailbreak và yêu cầu làm bài hộ trước khi trả lời |
 | **Must** | F4 - Sinh quiz trắc nghiệm để tự kiểm tra + chấm bài | có đề ôn tập từ đúng tài liệu, biết đúng/sai ngay |
-| **Must** | F5 - Theo dõi mastery theo chủ đề | biết mình đang mạnh/yếu chủ đề nào |
-| **Should** | F6 - Sinh flashcard để ôn nhanh | ôn thuật ngữ/khái niệm nhanh hơn đọc lại tài liệu |
-| **Should** | F7 - Gợi ý học tiếp theo + lập kế hoạch ôn tập theo deadline | biết ưu tiên ôn gì và chia thời gian thế nào |
-| **Could** | F8 - Cá nhân hoá sâu hơn theo trình độ (Learning Profile lưu lâu dài) | không phải khai báo trình độ mỗi lần hỏi |
-| **Could** | F9 - OCR cho tài liệu scan | nhận thêm được tài liệu dạng ảnh/scan |
-| **Could** | F10 - Nhớ ngữ cảnh xuyên phiên làm việc | hỏi tiếp không phải nhắc lại bối cảnh |
+| **Must** | F5 - Theo dõi mastery theo chủ đề + phát hiện hiểu sai lặp lại | biết mình đang mạnh/yếu chủ đề nào, và đang nhầm lẫn cụ thể điều gì chứ không chỉ "hay sai" |
+| **Must** | F6 - Sinh flashcard để ôn nhanh + lịch ôn tập ngắt quãng (spaced repetition) | ôn thuật ngữ/khái niệm nhanh hơn đọc lại tài liệu, và được nhắc đúng lúc trước khi quên thay vì tự nhớ lịch ôn |
+| **Must** | F7 - Gợi ý học tiếp theo + kế hoạch ôn tập theo ngày thi từng môn học | biết ưu tiên ôn gì và chia thời gian thế nào khi học song song nhiều môn có deadline khác nhau |
+| **Must** | F8 - Cá nhân hoá theo trình độ, gộp từ hồ sơ tự khai, mức thành thạo hiện có, và các sự kiện học tập gần đây | không phải khai báo trình độ mỗi lần hỏi, và hệ thống nhắc lại đúng chỗ mình hay nhầm thay vì hỏi chung chung |
+| **Should** | F9 - Nhớ ngữ cảnh học tập đầy đủ hơn xuyên nhiều phiên làm việc (vượt quá các sự kiện rời rạc F8 đang ghi lại) | hỏi tiếp sau nhiều ngày không phải nhắc lại toàn bộ bối cảnh đang học |
+| **Could** | F10 - OCR cho tài liệu scan | nhận thêm được tài liệu dạng ảnh/scan |
 | **Could** | F11 - Đăng nhập/đa người dùng thật | dùng được cho nhiều người, không chỉ một người/phiên |
-| **Won't** | Chấm điểm chính thức thay giáo viên, kết nối LMS, tìm Internet trực tiếp, gợi ý theo prerequisite (cần đồ thị phụ thuộc giữa chủ đề, chưa có nguồn dữ liệu này) | giữ phạm vi trong một app tự học cá nhân dựa trên tài liệu tự tải lên, làm được trong thời gian đồ án |
+| **Won't** | Chấm điểm chính thức thay giáo viên, kết nối LMS, tìm Internet trực tiếp, gợi ý theo prerequisite (cần đồ thị phụ thuộc giữa chủ đề, chưa có nguồn dữ liệu này) | giữ phạm vi trong một app tự học cá nhân dựa trên tài liệu tự tải lên |
 
 ## 5. Features & acceptance criteria
 
@@ -97,9 +99,12 @@ Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu,
 - Câu trả lời chỉ dựa trên tài liệu đã xử lý xong ("sẵn sàng"), không dùng kiến thức ngoài tài liệu để kết luận.
 - Mọi kết luận kèm tên tài liệu và vị trí nguồn (trang hoặc mục); người dùng mở được đúng đoạn.
 - Khi không tìm được đoạn nào đủ liên quan, hệ thống báo rõ "chưa có trong tài liệu đã tải lên" thay vì cố trả lời.
-- Có một bước xác minh lại câu trả lời trước khi trả về người dùng (không trả thẳng câu trả lời nháp của bước sinh nội dung) - nếu xác minh không qua thì báo "chưa đủ căn cứ để trả lời chắc chắn" thay vì bịa.
-- Hiểu được câu hỏi tiếp nối trong cùng phiên hỏi đáp (ví dụ dùng đại từ nhắc lại ý trước) mà không cần người dùng lặp lại ngữ cảnh.
-- Có tham số chọn trình độ (beginner/advanced) để đổi độ sâu câu trả lời - biết trước đây là rủi ro chưa chắc đạt mục tiêu ở mục 2, cần thử sớm.
+- Có một bước xác minh lại câu trả lời trước khi trả về người dùng, xác minh THEO TỪNG PHẦN của câu trả lời chứ không phải cả khối - nếu chỉ một phần qua được xác minh, trả đúng phần đó kèm dấu hiệu rõ ràng là câu trả lời chưa đầy đủ, thay vì từ chối toàn bộ hoặc giữ nguyên phần chưa xác minh được.
+- Hiểu được câu hỏi tiếp nối trong cùng phiên hỏi đáp (ví dụ dùng đại từ nhắc lại ý trước) mà không cần người dùng lặp lại ngữ cảnh; khi đại từ không xác định được đang nhắc tới gì (không có lượt hỏi trước liên quan), hệ thống hỏi lại thay vì tự đoán một đối tượng bất kỳ rồi trả lời tự tin sai chủ đề.
+- Có tham số chọn trình độ (beginner/advanced) để đổi độ sâu câu trả lời, ưu tiên theo thứ tự: người dùng chọn tường minh ở lượt hỏi này > trình độ đã lưu trong hồ sơ > suy ra từ mức thành thạo trung bình hiện có nếu chưa từng khai báo.
+- Người dùng hỏi tóm tắt một chương/chủ đề thì nhận được nội dung phủ TRỌN chủ đề đó (không chỉ vài đoạn liên quan nhất) kèm trích dẫn, xác định đúng chủ đề đang hỏi kể cả khi gọi tên khác với tiêu đề gốc trong tài liệu.
+- Người dùng hỏi so sánh 2 khái niệm thì cả 2 vế đều được tìm kiếm đầy đủ trong tài liệu, không để vế có ít nội dung hơn trong corpus bị lép vế so với vế còn lại.
+- Người dùng hỏi kiểu "cho tôi một ví dụ áp dụng khái niệm X" thì nhận được một ví dụ/tình huống cụ thể minh hoạ khái niệm, không chỉ nhắc lại định nghĩa.
 
 ### F3 - Guardrail an toàn cho câu hỏi (Must)
 
@@ -134,56 +139,85 @@ Việc theo dõi thời gian học thực tế (đo mình ngồi học bao lâu,
 - Không lộ đáp án đúng ở bước tạo quiz - chỉ trả sau khi người dùng đã nộp câu trả lời.
 - Sau khi nộp, hệ thống trả đúng/sai kèm giải thích ngắn.
 
-### F5 - Theo dõi mastery theo chủ đề (Must)
+### F5 - Theo dõi mastery theo chủ đề + phát hiện hiểu sai lặp lại (Must)
 
-**Pain point giải quyết:** không nhớ nổi chủ đề nào mình đang yếu nếu không ghi chép lại kết quả tự kiểm tra.
+**Pain point giải quyết:** không nhớ nổi chủ đề nào mình đang yếu nếu không ghi chép lại kết quả tự kiểm tra; biết mình "hay sai" một chủ đề nhưng không biết cụ thể đang nhầm điều gì.
 
 **User stories**
 
 1. Là người học, tôi muốn thấy điểm mastery theo từng chủ đề để biết nên ôn gì.
 2. Là người học, tôi muốn điểm này phản ánh đúng tình trạng gần đây, không bị kéo lệch bởi những lần làm bài rất lâu trước.
+3. Là người học, khi được gợi ý học tiếp theo, tôi muốn biết cụ thể mình đang nhầm lẫn điều gì ở chủ đề yếu, không chỉ một con số.
 
 **AC**
 
-- Mỗi lần làm xong một câu quiz, điểm mastery của chủ đề liên quan được cập nhật ngay.
-- Công thức tính có tính đến thời gian - lượt làm bài gần đây ảnh hưởng nhiều hơn lượt cũ, để điểm phản ánh đúng trạng thái hiện tại.
-- Có màn hình tổng quan xem điểm mastery theo từng chủ đề, cùng vài số liệu cơ bản (số tài liệu, số quiz đã làm, tỉ lệ đúng).
+- Mỗi lần làm xong một câu quiz, điểm mastery của chủ đề liên quan được cập nhật ngay; công thức có tính đến thời gian (lượt làm bài gần đây ảnh hưởng nhiều hơn lượt cũ) và độ khó câu hỏi (đúng câu khó/sai câu dễ là bằng chứng mạnh hơn đúng câu dễ/sai câu khó).
+- Điểm mastery tiếp tục giảm nhẹ theo thời gian không luyện tập một chủ đề, để phản ánh đúng "có thể đã quên" chứ không giữ nguyên vô thời hạn.
+- Khi người học lặp lại cùng một lựa chọn sai ở cùng một chủ đề từ 2 lần trở lên, hệ thống nêu rõ cụ thể đang nhầm lẫn gì (không chỉ nói "hay sai chủ đề X") ở màn hình gợi ý học tiếp theo.
+- Có màn hình tổng quan xem điểm mastery theo từng chủ đề, cùng vài số liệu cơ bản (số tài liệu, số quiz đã làm, tỉ lệ đúng, câu đã trả lời sai gần đây).
 
-### F6 - Sinh flashcard (Should)
+### F6 - Sinh flashcard + ôn tập ngắt quãng (Must)
+
+**Pain point giải quyết:** ôn xong một lần rồi quên vì không có lịch nhắc ôn lại đúng lúc trước khi quên.
+
+**User stories**
+
+1. Là người học, tôi muốn tạo flashcard từ tài liệu để ôn nhanh khái niệm/thuật ngữ.
+2. Là người học, tôi muốn hệ thống tự tính khi nào nên ôn lại một thẻ, dựa trên việc tôi thấy thẻ đó dễ hay khó ở lần ôn trước, thay vì tự nhớ lịch.
 
 **AC**
 
-- Sinh được flashcard (mặt trước/mặt sau) từ nội dung tài liệu đã chọn, dùng lại kỹ thuật xác minh nội dung giống F4.
+- Sinh được flashcard (mặt trước/mặt sau) từ nội dung tài liệu đã chọn, dùng lại kỹ thuật xác minh nội dung giống F4; cũng lưu được trực tiếp một câu trả lời hỏi đáp thành flashcard.
 - Mỗi thẻ gắn nguồn (tài liệu + vị trí) để kiểm chứng lại được.
+- Sau mỗi lần đánh giá một thẻ (theo 4 mức, kiểu Anki), hệ thống tính lại ngày nên ôn thẻ đó tiếp theo - đánh giá "khó/quên" thì được nhắc ôn sớm hơn, "dễ" thì giãn ra xa hơn.
+- Có màn hình xem thẻ nào đang đến hạn, đang học, hay đã thuộc.
 
-### F7 - Gợi ý học tiếp theo và lập kế hoạch ôn tập (Should)
+### F7 - Gợi ý học tiếp theo và lập kế hoạch ôn tập theo ngày thi từng môn (Must)
 
 **AC**
 
 - Hỏi kiểu "tôi nên học gì tiếp theo" được nhận diện và trả lời dựa trên dữ liệu mastery đã có, ưu tiên chủ đề điểm thấp nhất - không cần tốn một lượt gọi LLM cho việc này vì chỉ là đọc lại dữ liệu đã tính.
-- Nhập số ngày còn lại tới hạn, hệ thống chia lịch ôn tập ưu tiên chủ đề yếu/chưa học lên trước.
-- Kế hoạch tự cập nhật theo tiến độ mới nhất mỗi lần hỏi lại, không cần đồng bộ trạng thái kế hoạch cũ.
+- Người học khai báo ngày thi cho từng môn học; hệ thống chia lịch ôn tập ưu tiên chủ đề yếu/chưa học lên trước, tính theo TỪNG môn khi học song song nhiều môn có deadline khác nhau.
+- Mỗi chủ đề trong kế hoạch kèm một hành động đề xuất cụ thể (nên làm quiz để kiểm tra lại hiểu bài, nên ôn flashcard vì có nguy cơ quên, hay nên học lại từ đầu) và lý do ngắn gọn, không chỉ liệt kê tên chủ đề.
+- Kế hoạch tự cập nhật theo tiến độ mới nhất mỗi lần hỏi lại, không cần đồng bộ trạng thái kế hoạch cũ; người học có thể đánh dấu thủ công một chủ đề "đã ôn hôm nay".
 
-### F8-F11 - Các hạng mục Could còn lại
+### F8 - Cá nhân hoá theo trình độ (Must)
 
-- **F8 Cá nhân hoá sâu hơn:** lưu trình độ/sở thích lâu dài (Learning Profile) thay vì phải khai báo `level` mỗi lần hỏi.
-- **F9 OCR:** nhận thêm tài liệu dạng scan, mỗi đoạn trích từ OCR cần đánh dấu độ tin cậy vì kém chính xác hơn text gốc.
-- **F10 Nhớ ngữ cảnh phiên làm việc:** hỏi tiếp trong cùng phiên không phải nhắc lại tài liệu/chủ đề đang bàn.
-- **F11 Đăng nhập/đa người dùng:** mở app dùng được cho nhiều người, mỗi người có dữ liệu và tài liệu riêng.
+**Pain point giải quyết:** phải khai báo lại trình độ/bối cảnh mỗi lần hỏi; hệ thống không nhớ những gì vừa xảy ra trong phiên học gần đây để đưa vào câu trả lời tiếp theo.
+
+**AC**
+
+- Trình độ hiệu lực dùng chung giữa hỏi đáp và sinh quiz/flashcard, ưu tiên: người học chọn tường minh ở lượt này > đã lưu trong hồ sơ > suy ra từ mức thành thạo trung bình hiện có (yếu → sơ cấp, tốt → nâng cao) nếu chưa từng khai báo.
+- Người học khai báo được một mục tiêu học tập dạng tự do (ví dụ "chuẩn bị phỏng vấn ML"); nội dung này được lọc chống chèn lệnh (prompt injection) ngay khi lưu, vì sẽ được đưa lại vào ngữ cảnh trả lời ở các lượt sau.
+- Các sự kiện học tập đáng chú ý gần đây (bị từ chối trả lời vì thiếu căn cứ, trả lời sai quiz, quên một flashcard...) được ghi lại và có thể được nhắc lại đúng lúc liên quan đến câu hỏi hiện tại, xuyên suốt mọi cuộc hội thoại chứ không chỉ trong đúng 1 phiên hỏi đáp.
+- Việc cá nhân hoá không được làm giảm độ chính xác của câu trả lời - nội dung cá nhân hoá chỉ đóng vai trò bối cảnh tham khảo, không được dùng thay cho căn cứ trích dẫn từ tài liệu.
+
+### F9 - Nhớ ngữ cảnh học tập xuyên phiên đầy đủ hơn (Should)
+
+**AC**
+
+- Ngoài các sự kiện rời rạc ở F8, hệ thống cần nhớ được bối cảnh liên tục hơn của một chủ đề đang học qua nhiều ngày (ví dụ: đang ở giai đoạn nào của một chương, đã hỏi những khía cạnh nào rồi) để không phải mở lại toàn bộ lịch sử hội thoại cũ mỗi lần quay lại.
+- Chưa cần đạt mức "trợ lý nhớ mọi chi tiết" - ưu tiên đúng những gì ảnh hưởng trực tiếp tới câu trả lời/gợi ý tiếp theo.
+
+### F10-F11 - Các hạng mục Could
+
+- **F10 OCR:** nhận thêm tài liệu dạng scan, mỗi đoạn trích từ OCR cần đánh dấu độ tin cậy vì kém chính xác hơn text gốc.
+- **F11 Đăng nhập/đa người dùng:** mở app dùng được cho nhiều người, mỗi người có dữ liệu và tài liệu riêng; cần thêm xác thực session/token thay vì tin thẳng định danh do client tự gửi.
 
 ## 6. Non-functional requirements
 
-- **An toàn nội dung:** guardrail (F3) là lớp chặn trước khi vào bước sinh câu trả lời; bước xác minh (F2) là lớp chặn thứ hai chống bịa. Không có bước nào để lộ câu trả lời chưa qua xác minh.
-- **Ranh giới dữ liệu:** nếu về sau có nhiều người dùng (F11), dữ liệu và tài liệu của người này không được lẫn sang người khác ở bất kỳ bước truy hồi nào - cần thiết kế ngay từ đầu để không phải sửa lại kiến trúc truy hồi sau này.
-- **Hiệu năng:** chưa cam kết p95 cụ thể (xem mục 2) - sẽ đo baseline thật sớm rồi mới chốt ngưỡng.
-- **Chi phí:** ưu tiên chạy các bước không cần khả năng ngôn ngữ (tách văn bản, tạo vector tìm kiếm) bằng mô hình chạy local miễn phí, chỉ gọi LLM ở đúng bước cần sinh/xác minh nội dung ngôn ngữ - tránh phí quota free tier cho việc không cần thiết.
-- **Truy hồi:** cân nhắc kết hợp tìm theo ngữ nghĩa và tìm theo từ khoá thay vì chỉ dùng một loại, vì tài liệu học thuật có nhiều thuật ngữ/ký hiệu chính xác mà tìm ngữ nghĩa một mình dễ bỏ sót - cần thử nghiệm so sánh trước khi chốt.
-- **Đánh giá:** dùng bộ câu hỏi chuẩn tự soạn (mục 2) để đo trước khi coi một tính năng là "xong", không chỉ test bằng cảm tính vài câu hỏi ngẫu nhiên.
+- **An toàn nội dung:** guardrail (F3) là lớp chặn trước khi vào bước sinh câu trả lời; bước xác minh theo từng câu (F2) là lớp chặn thứ hai chống bịa, và trả về đúng phần đã xác minh được thay vì cả câu trả lời một khối. Không có bước nào để lộ câu trả lời chưa qua xác minh.
+- **Ranh giới dữ liệu:** mọi bước truy hồi và mọi bước đọc/ghi dữ liệu cá nhân hoá (mastery, hồ sơ, sự kiện học tập) đều lọc theo đúng người dùng ngay trong câu truy vấn, không phải lọc kết quả sau khi đã lấy hết - đây là điều kiện tiên quyết trước khi có thể mở rộng sang nhiều người dùng thật (F11).
+- **Hiệu năng:** chưa cam kết p95 cụ thể - đo baseline thật trước khi chốt ngưỡng cho từng loại thao tác (hỏi đáp gọi LLM khác hẳn về độ trễ so với đọc dashboard mastery).
+- **Chi phí:** ưu tiên xử lý rule-based/đọc dữ liệu đã tính sẵn (guardrail 2 tầng đầu, capability detection, đọc mastery) trước khi chạm tới bước gọi mô hình trả phí (LLM, embedding, rerank) - chỉ gọi mô hình đúng lúc thật sự cần sinh/xác minh/biểu diễn nội dung ngôn ngữ.
+- **Khả năng triển khai (stateless):** container backend không được giữ trạng thái nào trên đĩa cục bộ (không SQLite/FAISS/file tạm) - toàn bộ dữ liệu bền vững phải nằm ở dịch vụ ngoài container, để deploy được lên host free tier không có persistent disk và container có thể khởi động lại bất cứ lúc nào mà không mất dữ liệu người dùng.
+- **Truy hồi:** kết hợp tìm theo ngữ nghĩa và tìm theo từ khoá thay vì chỉ dùng một loại, vì tài liệu học thuật có nhiều thuật ngữ/ký hiệu chính xác mà tìm ngữ nghĩa một mình dễ bỏ sót.
+- **Đánh giá:** dùng bộ câu hỏi chuẩn tự soạn (Golden Set, `eval/`) để đo trước khi coi một tính năng là "xong", không chỉ test bằng cảm tính vài câu hỏi ngẫu nhiên; số liệu đo được cập nhật trong `eval/`, không lưu cố định trong PRD vì thay đổi theo mỗi lần chạy lại.
 - **Khả dụng:** lỗi upload/xử lý tài liệu luôn có trạng thái và lý do rõ ràng hiển thị được, không để người dùng đoán mò tại sao không chạy.
 
 ## 7. Definition of Done
 
-MVP coi là xong khi hoàn thành được hành trình: tải tài liệu lên -> đợi trạng thái sẵn sàng -> hỏi đáp và mở được nguồn trích dẫn -> làm một quiz và thấy điểm mastery cập nhật -> xem được gợi ý/kế hoạch ôn tập (nếu kịp làm F7). Toàn bộ Must (F1-F5) đạt AC ở mục 6, và đạt các chỉ số ở mục 2 trên bộ câu hỏi chuẩn.
+MVP coi là xong khi hoàn thành được hành trình: tải tài liệu lên -> đợi trạng thái sẵn sàng -> hỏi đáp (kể cả tóm tắt/so sánh/áp dụng) và mở được nguồn trích dẫn -> làm một quiz và thấy điểm mastery cập nhật -> ôn một flashcard và thấy lịch ôn tiếp theo được tính lại -> khai báo ngày thi một môn và xem được kế hoạch ôn tập kèm hành động đề xuất theo từng chủ đề. Toàn bộ Must (F1-F8) đạt AC ở mục 5, và được đo bằng bộ câu hỏi chuẩn (Golden Set) trước khi coi là hoàn thành - không chỉ dựa vào cảm tính.
 
 Ba điều kiện chặn riêng, không đánh đổi kể cả khi áp dụng kịch bản hạ cấp:
 

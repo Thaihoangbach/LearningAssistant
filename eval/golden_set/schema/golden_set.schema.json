@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "EduTutor Golden Set Case",
-  "description": "One evaluation case in eval/golden_set.jsonl / eval/golden_set_regression.jsonl. One JSON object per line (JSONL).",
+  "description": "One evaluation case in eval/golden_set/data/golden_set.jsonl. One JSON object per line (JSONL). Cases with in_regression_set=true form the fast regression subset (no separate file).",
   "type": "object",
   "required": [
     "id", "category", "subcategory", "feature", "difficulty", "input",
@@ -34,7 +34,7 @@
     },
     "context": {"type": "object", "description": "Setup/precondition state needed for the case (e.g. prior attempts, course scope, conversation history)."},
     "required_documents": {"type": "array", "items": {"type": "string"}, "description": "document_id values from eval/corpus/ that must be in scope for this case."},
-    "required_facts": {"type": "array", "items": {"type": "string"}, "description": "fact_id values from eval/fact_inventory.json that ground this case's expected content. Empty for purely behavioral (non-document) cases."},
+    "required_facts": {"type": "array", "items": {"type": "string"}, "description": "Free-form fact identifiers (informal, not backed by a separate fact-inventory file) that ground this case's expected content, traceable to eval/corpus/. Empty for purely behavioral (non-document) cases."},
     "expected_behavior": {"type": "array", "items": {"type": "string"}, "description": "Specific, testable assertions the system must satisfy."},
     "expected_answer": {"type": ["string", "null"], "description": "Reference answer for positive grounded cases; null for abstention/behavioral cases."},
     "acceptable_answers": {"type": "array", "items": {"type": "string"}, "description": "Alternate phrasings that would also count as correct (semantic assertions, not brittle exact-match)."},
@@ -46,11 +46,11 @@
       "type": ["string", "null"],
       "description": "Canonical values for the 4 core RAG failure modes: insufficient_evidence, unsupported_claim, needs_clarification, out_of_scope. Feature-specific rejection reasons use their own descriptive value (e.g. needs_entities for Compare, needs_topic for Summarize, blocked_academic_integrity / blocked_injection for Guardrail) — these are intentionally distinct from the 4 core RAG values, not a violation of the 4-value contract."
     },
-    "subquestions": {"type": "array", "items": {"type": "string"}, "description": "Only populated for category=decomposition — the individual sub-questions a compound query breaks into."},
+    "subquestions": {"type": "array", "items": {"type": "string"}, "description": "For category=decomposition, the individual sub-questions a compound query breaks into. Reused with a category-specific meaning elsewhere too, e.g. the entities being compared for category=compare — not exclusive to decomposition."},
     "expected_coverage": {"type": ["number", "null"], "description": "For decomposition cases: fraction of subquestions that must be addressed for the case to pass (1.0 = all)."},
     "failure_mode": {"type": "string", "description": "What real regression/bug this case is designed to catch."},
     "source_trace": {
-      "description": "Traceability to ground truth: real fact_id(s) from fact_inventory.json for factual cases, or the exact feature_inventory.md row for behavioral cases.",
+      "description": "Traceability to ground truth: chunk id(s) from eval/corpus/ for factual cases, or a description of the tested backend behavior for behavioral cases.",
       "oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]
     }
   }

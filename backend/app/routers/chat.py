@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.llm.client_factory import get_llm_client
 from app.llm.guardrail import check_question
-from app.llm.rag import _SIMPLIFY_REQUEST_RE, AnswerResult, ConversationTurn
+from app.llm.rag import (
+    _SIMPLIFY_REQUEST_RE,
+    NEEDS_CLARIFICATION_MESSAGE,
+    AnswerResult,
+    ConversationTurn,
+)
 from app.llm.recommendation import TopicMastery, build_recommendation
 from app.memory.service import record_event
 from app.models import (
@@ -26,7 +31,7 @@ from app.models import (
 )
 from app.routers.auth import get_current_user
 from app.retrieval.pipeline import retrieve_chunks
-from app.retrieval.query_context import build_retrieval_query
+from app.retrieval.query_context import build_retrieval_query, has_unresolved_reference
 from app.ingestion.outline import filter_topic_titles
 from app.services.apply import build_apply_result, is_apply_request
 from app.services.capability_detector import detect_capability
@@ -444,55 +449,70 @@ def ask(
             # để truy hồi; bổ sung từ khoá của các lượt trước vào truy vấn.
             retrieval_query = build_retrieval_query(req.question, history)
 
-            def _suggest_topics(question: str) -> list[str]:
-                """Chủ đề tài liệu THỰC SỰ có, gần câu hỏi nhất — để lời từ chối
-                không phải ngõ cụt. Xếp hạng bằng độ trùng từ nội dung nên
-                không tốn lượt gọi mô hình nào."""
-                rows = (
-                    db.query(DocumentTopic)
-                    .filter(
-                        DocumentTopic.user_id == user_id,
-                        DocumentTopic.document_id.in_(document_ids),
+            # Đại từ/chỉ định từ ("nó", "cái đó"...) không có antecedent nào
+            # để giải (không có lượt trước, hoặc lượt trước không có từ nội
+            # dung liên quan) — chặn TRƯỚC khi gọi retrieval, không để
+            # retrieval tự "chọn" một đối tượng gần đúng rồi generator trả
+            # lời tự tin sai đối tượng (eval/reports/failure_analysis.md
+            # Phát hiện #1, case EDU-ABS-008/009/012/013 — xem
+            # app/retrieval/query_context.py::has_unresolved_reference).
+            if has_unresolved_reference(req.question, history):
+                result = AnswerResult(
+                    answer=NEEDS_CLARIFICATION_MESSAGE,
+                    is_grounded=False,
+                    sources=[],
+                    needs_clarification=True,
+                )
+            else:
+                def _suggest_topics(question: str) -> list[str]:
+                    """Chủ đề tài liệu THỰC SỰ có, gần câu hỏi nhất — để lời từ chối
+                    không phải ngõ cụt. Xếp hạng bằng độ trùng từ nội dung nên
+                    không tốn lượt gọi mô hình nào."""
+                    rows = (
+                        db.query(DocumentTopic)
+                        .filter(
+                            DocumentTopic.user_id == user_id,
+                            DocumentTopic.document_id.in_(document_ids),
+                        )
+                        .all()
                     )
-                    .all()
-                )
-                # Cùng lớp lọc chất lượng với kế hoạch ôn tập
-                # (_build_study_plan_result ở trên, BUG-006) — DocumentTopic
-                # cũng có thể còn dòng nhiễu rút từ trước khi heuristic outline
-                # được siết chặt (vd OCR vỡ "BY A. M. TUBING", hoặc header/
-                # footer scan lặp lại theo trang).
-                plausible_titles = set(filter_topic_titles([r.title for r in rows]))
-                rows = [r for r in rows if r.title in plausible_titles]
-                if not rows:
-                    return []
+                    # Cùng lớp lọc chất lượng với kế hoạch ôn tập
+                    # (_build_study_plan_result ở trên, BUG-006) — DocumentTopic
+                    # cũng có thể còn dòng nhiễu rút từ trước khi heuristic outline
+                    # được siết chặt (vd OCR vỡ "BY A. M. TUBING", hoặc header/
+                    # footer scan lặp lại theo trang).
+                    plausible_titles = set(filter_topic_titles([r.title for r in rows]))
+                    rows = [r for r in rows if r.title in plausible_titles]
+                    if not rows:
+                        return []
 
-                question_words = _content_words(question)
-                scored = sorted(
-                    rows,
-                    key=lambda r: len(_content_words(r.title) & question_words),
-                    reverse=True,
-                )
-                return [r.title for r in scored[:MAX_SUGGESTED_TOPICS]]
+                    question_words = _content_words(question)
+                    scored = sorted(
+                        rows,
+                        key=lambda r: len(_content_words(r.title) & question_words),
+                        reverse=True,
+                    )
+                    return [r.title for r in scored[:MAX_SUGGESTED_TOPICS]]
 
-            qa_result = answer_with_fallback(
-                question=req.question,
-                retrieval_query=retrieval_query,
-                llm_client=llm_client,
-                retrieve_fn=_retrieve,
-                suggest_topics_fn=_suggest_topics,
-                searched_documents=[{"id": d.id, "file_name": d.file_name} for d in ready_docs],
-                top_k=effective_top_k,
-                min_score=req.min_score,
-                conversation_history=history,
-                level=learner.effective_level,
-                learning_goal=learner.learning_goal,
-                recalled_events=learner.recalled_events,
-            )
-            result = AnswerResult(
-                answer=qa_result.answer,
-                is_grounded=qa_result.is_grounded,
-                sources=qa_result.sources,
-            )
+                qa_result = answer_with_fallback(
+                    question=req.question,
+                    retrieval_query=retrieval_query,
+                    llm_client=llm_client,
+                    retrieve_fn=_retrieve,
+                    suggest_topics_fn=_suggest_topics,
+                    searched_documents=[{"id": d.id, "file_name": d.file_name} for d in ready_docs],
+                    top_k=effective_top_k,
+                    min_score=req.min_score,
+                    conversation_history=history,
+                    level=learner.effective_level,
+                    learning_goal=learner.learning_goal,
+                    recalled_events=learner.recalled_events,
+                )
+                result = AnswerResult(
+                    answer=qa_result.answer,
+                    is_grounded=qa_result.is_grounded,
+                    sources=qa_result.sources,
+                )
 
     db.add(Message(conversation_id=conversation_id, role="user", content=req.question))
     db.add(
@@ -547,6 +567,10 @@ def ask(
         # — phát hiện, không tự chặn. `False` mặc định cho các nhánh không sinh
         # bằng LLM (capability rule-based, guardrail chặn từ đầu vào).
         "injection_flag": qa_result.injection_flag if qa_result else False,
+        # Xem AnswerResult.partial (app/llm/rag.py) — câu trả lời chỉ giữ được
+        # MỘT PHẦN luận điểm ban đầu (vd so sánh 2 vế nhưng chỉ 1 vế có căn
+        # cứ). `False` mặc định cho các đường không qua qa_result (Summarize).
+        "partial": qa_result.partial if qa_result else False,
         "sources": [
             {
                 "document_name": s.document_name,

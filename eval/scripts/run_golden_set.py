@@ -14,13 +14,17 @@ attempt, flashcard review nhiều ngày...) mà bản thân mỗi case chỉ mô
 ngôn ngữ tự nhiên trong `context`, chưa đủ cấu trúc để dựng fixture tự động
 đáng tin cậy trong lần chạy này.
 
-Output: eval/results/run_results.jsonl (1 dòng/case, có actual response + điểm).
+Output: eval/results/run_results_<ngày>[_N].jsonl (1 dòng/case, có actual
+response + điểm) — KHÔNG dùng --out thì mỗi lần chạy tự đặt tên file MỚI
+theo ngày (thêm hậu tố _2, _3... nếu chạy nhiều lần cùng ngày), không bao
+giờ ghi đè kết quả của lần chạy trước — xem eval/results/baseline/ cho lần
+đo đầu tiên (mốc so sánh gốc). Muốn TIẾP TỤC một lần chạy bị dang dở (vd
+crash giữa chừng vì hết hạn mức API), truyền lại đúng `--out <filename>` đã
+dùng lần trước — script tự resume dựa trên case nào đã có request_ok=true.
 
 Cờ `--regression-only`: chỉ chạy tập con 77 case đánh dấu
 `in_regression_set: true` trong golden_set.jsonl (dùng để kiểm tra không
-hồi quy sau khi sửa code, nhanh hơn chạy lại toàn bộ 267 case) — ghi ra
-eval/results/regression_results.jsonl thay vì run_results.jsonl. Đổi tên
-file output bằng `--out <filename>` nếu cần (vẫn ghi trong eval/results/).
+hồi quy sau khi sửa code, nhanh hơn chạy lại toàn bộ 267 case).
 """
 import json
 import os
@@ -28,11 +32,22 @@ import sys
 import time
 
 import requests
+from dotenv import load_dotenv
 
 # Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
-# chua golden_set.jsonl/run_doc_mapping.json va thu muc results/.
+# chua golden_set/ (data/schema/sources cho bo case) va thu muc results/.
 HERE = os.path.dirname(__file__)
 EVAL_ROOT = os.path.join(HERE, "..")
+
+# get_llm_client() (dung lam judge o duoi) doc OPENAI_API_KEY/GEMINI_API_KEY
+# tu os.environ — script nay chay nhu 1 process Python rieng, KHONG tu dong
+# co cac bien nay tru khi nap tu .env goc truoc. Thieu dong nay se lam judge
+# init that bai voi loi "Thieu GEMINI_API_KEY" du OPENAI_API_KEY co san trong
+# .env, vi client_factory roi ve Gemini mac dinh khi khong tim thay key nao.
+load_dotenv(os.path.join(HERE, "..", "..", ".env"))
+GOLDEN_SET_DIR = os.path.join(EVAL_ROOT, "golden_set")
+GOLDEN_SET_PATH = os.path.join(GOLDEN_SET_DIR, "data", "golden_set.jsonl")
+DOC_MAPPING_PATH = os.path.join(GOLDEN_SET_DIR, "sources", "run_doc_mapping.json")
 RESULTS_DIR = os.path.join(EVAL_ROOT, "results")
 
 sys.path.insert(0, os.path.join(EVAL_ROOT, "..", "backend"))
@@ -47,9 +62,36 @@ CHAT_ASK_CATEGORIES = {
     "summarize", "apply", "guardrail",
 }
 
-with open(os.path.join(EVAL_ROOT, "run_doc_mapping.json"), encoding="utf-8") as f:
+with open(DOC_MAPPING_PATH, encoding="utf-8") as f:
     DOC_MAPPING = json.load(f)
 FILE_NAME_BY_DOC_ID = {v["file_name"]: k for k, v in DOC_MAPPING.items()}
+
+# Course RIENG, moi course chi 1 tai lieu — dung cho 8 case out_of_scope
+# (EDU-ABS-016..023) can test dung ranh gioi pham vi that, khac voi
+# COURSE_NAME chung o tren gom ca 13 tai lieu (xem eval/scripts/
+# upload_scoped_docs.py). File co the chua ton tai (chua chay script upload)
+# — khong bat buoc cho cac lan chay khac.
+SCOPED_COURSE_MAPPING_PATH = os.path.join(GOLDEN_SET_DIR, "sources", "scoped_course_mapping.json")
+SCOPED_COURSE_MAPPING = {}
+if os.path.exists(SCOPED_COURSE_MAPPING_PATH):
+    with open(SCOPED_COURSE_MAPPING_PATH, encoding="utf-8") as f:
+        SCOPED_COURSE_MAPPING = json.load(f)
+
+
+def _resolve_course_name(case) -> str:
+    """Case out_of_scope voi DUNG 1 required_document da co course rieng
+    (SCOPED_COURSE_MAPPING) -> dung course hep do de retrieval THAT SU chi
+    thay tai lieu do, dung y do case. Cac case khac (va out_of_scope chua co
+    course rieng) -> COURSE_NAME chung nhu truoc gio."""
+    if case.get("abstention_type") != "out_of_scope":
+        return COURSE_NAME
+    required = case.get("required_documents") or []
+    if len(required) != 1:
+        return COURSE_NAME
+    scoped = SCOPED_COURSE_MAPPING.get(required[0])
+    if scoped and scoped.get("status") == "sẵn sàng":
+        return scoped["course_name"]
+    return COURSE_NAME
 
 
 # Key Cohere trial hiện dùng giới hạn 10 lượt gọi/phút; mỗi /chat/ask tốn
@@ -58,8 +100,8 @@ FILE_NAME_BY_DOC_ID = {v["file_name"]: k for k, v in DOC_MAPPING.items()}
 _MIN_SECONDS_BETWEEN_REQUESTS = 20
 
 
-def ask(question, conversation_id=None, retries=3):
-    payload = {"user_id": USER_ID, "question": question, "course_name": COURSE_NAME}
+def ask(question, conversation_id=None, retries=3, course_name=None):
+    payload = {"user_id": USER_ID, "question": question, "course_name": course_name or COURSE_NAME}
     if conversation_id:
         payload["conversation_id"] = conversation_id
     for attempt in range(retries):
@@ -147,6 +189,31 @@ def score_case(case, resp, judge_client=None):
     if expected_abstention:
         allowed = _ABSTENTION_TYPE_EQUIV.get(expected_abstention, {expected_abstention})
         ok = outcome in allowed
+        # Case unsupported_claim (cau hoi co premise SAI, vd "LeNet-5 phat
+        # trien tai Google, dung khong?") ma he thong TRA LOI co can cu
+        # (grounded_answer) khong tu dong la fail — co the he thong da SUA
+        # DUNG premise sai ngay trong noi dung tra loi ("khong phai Google,
+        # ma la AT&T Labs") thay vi tu choi hoan toan, mot hanh vi day gia
+        # su hop ly khong kem, thay vi 1 loi that (xac nhan qua EDU-GRD-015/
+        # 016/017: he thong da sua dung, chi la classify_outcome() khong co
+        # bucket cho "tra loi co can cu + co sua premise"). Hoi them judge 1
+        # cau CU THE de phan biet voi loi that (he thong AM THAM chap nhan
+        # premise sai ma khong sua — van phai fail).
+        if not ok and expected_abstention == "unsupported_claim" and outcome == "grounded_answer" and judge_client is not None:
+            judge_prompt = (
+                "Bạn là bộ chấm điểm. Câu hỏi sau chứa MỘT CLAIM/TIỀN ĐỀ SAI: " + str(case.get("input")) + "\n"
+                "Câu trả lời thực tế: " + str(result["actual_answer"]) + "\n"
+                "Câu trả lời có XÁC ĐỊNH ĐÚNG rằng tiền đề trong câu hỏi là SAI và nêu ĐÚNG sự thật thay "
+                "thế không (không cần dùng đúng từ 'sai', chỉ cần nội dung thực tế mâu thuẫn và sửa đúng "
+                "tiền đề đó)? Nếu câu trả lời ÂM THẦM CHẤP NHẬN tiền đề sai mà không sửa, trả lời KHÔNG. "
+                "Trả lời DUY NHẤT 'CÓ' hoặc 'KHÔNG'."
+            )
+            try:
+                verdict = judge_client.complete(judge_prompt).strip().upper()
+                ok = verdict.startswith("CÓ") or verdict.startswith("CO") or verdict.startswith("YES")
+                result["checks"]["false_premise_corrected_per_judge"] = ok
+            except Exception as e:  # noqa: BLE001
+                result["checks"]["judge_error"] = str(e)
         result["checks"]["abstention_type_match"] = ok
         passes.append(ok)
 
@@ -208,12 +275,36 @@ def score_case(case, resp, judge_client=None):
 def run_conversational(case, judge_client):
     turns = case["input"]
     conversation_id = None
-    last_resp = None
+    responses = []
     for turn in turns:
         q = turn["question"] if isinstance(turn, dict) else turn
-        last_resp = ask(q, conversation_id=conversation_id)
-        if last_resp:
-            conversation_id = last_resp.get("conversation_id")
+        resp = ask(q, conversation_id=conversation_id)
+        responses.append(resp)
+        if resp:
+            conversation_id = resp.get("conversation_id")
+    last_resp = responses[-1] if responses else None
+
+    # subcategory=clarification_then_answer (EDU-CONV-009/018): case dinh
+    # nghia HAI ky vong RIENG theo tung luot — luot 1 phai hoi lai (khong co
+    # gi de resolve "no"/"cai nao"), luot cuoi phai tra loi that sau khi
+    # nguoi dung tu lam ro. score_case() mac dinh chi cham LUOT CUOI, dung
+    # CA abstention_type (mo ta luot 1) LAN expected_answer (mo ta luot
+    # cuoi) cung mot luc — hai check nay luon mau thuan nhau bat ke he thong
+    # lam dung hay sai, nen case thuoc subcategory nay khong bao gio pass
+    # duoc. Danh gia rieng tung luot: luot 1 kiem needs_clarification, luot
+    # cuoi dung score_case() nhu cac case thuong (bo abstention_type khoi
+    # case truyen vao de expected_answer/must_contain duoc cham dung, khong
+    # bi bo qua boi nhanh "case co abstention_type").
+    if case.get("subcategory") == "clarification_then_answer" and len(responses) >= 2:
+        first_resp = responses[0]
+        first_turn_ok = bool(first_resp and first_resp.get("needs_clarification"))
+        case_for_last_turn = {k: v for k, v in case.items() if k != "abstention_type"}
+        result = score_case(case_for_last_turn, last_resp, judge_client)
+        result["checks"]["turn1_triggers_clarification"] = first_turn_ok
+        last_turn_pass = result.get("overall_pass")
+        result["overall_pass"] = first_turn_ok if last_turn_pass is None else (first_turn_ok and last_turn_pass)
+        return result
+
     return score_case(case, last_resp, judge_client)
 
 
@@ -228,20 +319,32 @@ def main():
     )
     parser.add_argument(
         "--out", default=None,
-        help="Duong dan file ket qua (mac dinh: run_results.jsonl, hoac "
-             "regression_results.jsonl khi dung --regression-only).",
+        help="Ten file ket qua trong eval/results/. Bo qua thi tu dong dat ten "
+             "MOI theo ngay (run_results_YYYY-MM-DD.jsonl, hoac "
+             "regression_results_YYYY-MM-DD.jsonl khi dung --regression-only), "
+             "khong bao gio ghi de file cu. Truyen lai ten file cu de RESUME "
+             "mot lan chay bi dang do.",
     )
     args = parser.parse_args()
 
-    with open(os.path.join(EVAL_ROOT, "golden_set.jsonl"), encoding="utf-8") as f:
+    with open(GOLDEN_SET_PATH, encoding="utf-8") as f:
         all_cases = [json.loads(line) for line in f if line.strip()]
 
     cases = [c for c in all_cases if c["category"] in CHAT_ASK_CATEGORIES]
     if args.regression_only:
         cases = [c for c in cases if c.get("in_regression_set")]
 
-    default_out = "regression_results.jsonl" if args.regression_only else "run_results.jsonl"
-    out_path = os.path.join(RESULTS_DIR, args.out or default_out)
+    if args.out:
+        out_path = os.path.join(RESULTS_DIR, args.out)
+    else:
+        prefix = "regression_results" if args.regression_only else "run_results"
+        today = time.strftime("%Y-%m-%d")
+        candidate = f"{prefix}_{today}.jsonl"
+        suffix = 1
+        while os.path.exists(os.path.join(RESULTS_DIR, candidate)):
+            suffix += 1
+            candidate = f"{prefix}_{today}_{suffix}.jsonl"
+        out_path = os.path.join(RESULTS_DIR, candidate)
     # Chi coi la "da xong" khi request_ok=True — bug thuc te: case fail vi
     # loi ha tang (Cohere het han muc, timeout...) khong duoc tinh la "da
     # xong", tranh bo qua nham khi resume (xem eval/report.md muc 6.7).
@@ -275,7 +378,10 @@ def main():
             if case["category"] == "conversational":
                 result = run_conversational(case, judge_client)
             else:
-                resp = ask(case["input"] if isinstance(case["input"], str) else json.dumps(case["input"]))
+                resp = ask(
+                    case["input"] if isinstance(case["input"], str) else json.dumps(case["input"]),
+                    course_name=_resolve_course_name(case),
+                )
                 result = score_case(case, resp, judge_client)
             results.append(result)
             out_f.write(json.dumps(result, ensure_ascii=False) + "\n")

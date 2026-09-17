@@ -22,7 +22,9 @@ Nguyên tắc (đã thống nhất qua thảo luận thiết kế trong phiên):
 - Topic dùng trong kịch bản liên-tính-năng phải là tên THẬT lấy từ tài liệu
   đã upload (đi qua đúng filter_topic_titles), không tự đặt tên tuỳ ý.
 
-Output: eval/results/stateful_results.jsonl (1 dòng/case).
+Output: eval/results/stateful_results_<ngày>[_N].jsonl (1 dòng/case) — mỗi
+lần chạy tự đặt tên file MỚI theo ngày, không ghi đè kết quả lần chạy
+trước; xem eval/results/baseline/ cho lần đo đầu tiên (mốc so sánh gốc).
 """
 import json
 import os
@@ -33,10 +35,18 @@ from datetime import datetime, timedelta
 
 import requests
 
+# Console Windows mac dinh dung codepage cp1252 khi stdout bi redirect (vd
+# chay nen/ghi log ra file) — print() chua tieng Viet (vd "ọ") se crash
+# voi UnicodeEncodeError. Ep UTF-8 truoc khi print bat ky dong nao.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Script nay nam o eval/scripts/ — EVAL_ROOT la eval/ (thu muc cha), noi
-# chua run_doc_mapping.json va thu muc results/.
+# chua golden_set/sources/run_doc_mapping.json va thu muc results/.
 HERE = os.path.dirname(__file__)
 EVAL_ROOT = os.path.join(HERE, "..")
+DOC_MAPPING_PATH = os.path.join(EVAL_ROOT, "golden_set", "sources", "run_doc_mapping.json")
 RESULTS_DIR = os.path.join(EVAL_ROOT, "results")
 
 sys.path.insert(0, os.path.join(EVAL_ROOT, "..", "backend"))
@@ -45,7 +55,7 @@ BASE_URL = "http://127.0.0.1:8000"
 USER_ID = "golden-eval-user"
 COURSE_NAME = "GoldenSetEval"
 
-with open(os.path.join(EVAL_ROOT, "run_doc_mapping.json"), encoding="utf-8") as f:
+with open(DOC_MAPPING_PATH, encoding="utf-8") as f:
     DOC_MAPPING = json.load(f)
 # Tài liệu dùng làm "topic thật" cho kịch bản liên tính năng — Cây quyết định
 # có nội dung rõ ràng, tên file ngắn gọn dùng làm topic_name mặc định hợp lý.
@@ -419,7 +429,14 @@ def run_study_plan_scenarios():
 
     if plan_ok:
         all_topics_in_plan = [t for day in r_plan.json()["days"] for t in day.get("topics", [])]
-        record("EDU-PLAN-decision_tree_topic_appears_in_plan", "study_plan", DECISION_TREE_DOC_NAME in all_topics_in_plan, f"topics_sample={all_topics_in_plan[:5]}")
+        # Bug that: so sanh nham string ten file voi list dict topic (luon
+        # False) — phai lay ra truong "name" cua tung topic roi so sanh.
+        topic_names_in_plan = [t.get("name") for t in all_topics_in_plan]
+        record(
+            "EDU-PLAN-decision_tree_topic_appears_in_plan", "study_plan",
+            DECISION_TREE_DOC_NAME in topic_names_in_plan,
+            f"topics_sample={all_topics_in_plan[:5]}",
+        )
 
     far_exam_date = (datetime.utcnow().date() + timedelta(days=9999)).isoformat()
     course2 = f"EvalDaysLeftClampCourse-{uuid.uuid4().hex[:6]}"
@@ -447,7 +464,13 @@ def main():
     run_flashcard_scenarios()
     run_study_plan_scenarios()
 
-    out_path = os.path.join(RESULTS_DIR, "stateful_results.jsonl")
+    today = time.strftime("%Y-%m-%d")
+    candidate = f"stateful_results_{today}.jsonl"
+    suffix = 1
+    while os.path.exists(os.path.join(RESULTS_DIR, candidate)):
+        suffix += 1
+        candidate = f"stateful_results_{today}_{suffix}.jsonl"
+    out_path = os.path.join(RESULTS_DIR, candidate)
     with open(out_path, "w", encoding="utf-8") as f:
         for r in _results:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -456,6 +479,7 @@ def main():
     passed = sum(1 for r in _results if r["pass"])
     print(f"\nDONE. total_scenarios={total} passed={passed} failed={total-passed}")
     print(f"api_calls={_api_call_count} llm_generation_calls={_llm_call_count}")
+    print(f"results written to {out_path}")
 
 
 if __name__ == "__main__":
