@@ -15,7 +15,8 @@ from app.llm.client_factory import get_llm_client
 from app.llm.quiz_generator import generate_quiz
 from app.llm.rag import RetrievedChunk
 from app.memory.service import record_event
-from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
+from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic, User
+from app.routers.auth import get_current_user
 from app.services.generation_mode import VALID_GENERATION_MODES
 from app.services.learner_context import build_learner_context
 from app.services.mastery import Attempt as MasteryAttempt, compute_mastery
@@ -35,7 +36,6 @@ def _prioritize_core_content(chunks: list[RetrievedChunk]) -> list[RetrievedChun
 
 
 class GenerateQuizRequest(BaseModel):
-    user_id: str
     document_id: str | None = None
     document_ids: list[str] | None = None  # TC13 — sinh quiz tổng hợp từ nhiều tài liệu/chương
     topic_name: str | None = None
@@ -47,7 +47,12 @@ class GenerateQuizRequest(BaseModel):
 
 
 @router.post("/generate")
-def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
+def generate(
+    req: GenerateQuizRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.id
     requested_ids = req.document_ids or ([req.document_id] if req.document_id else [])
     if not requested_ids:
         raise HTTPException(400, "Cần cung cấp document_id hoặc document_ids.")
@@ -56,7 +61,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
 
     docs = (
         db.query(Document)
-        .filter(Document.id.in_(requested_ids), Document.user_id == req.user_id, Document.status == "sẵn sàng")
+        .filter(Document.id.in_(requested_ids), Document.user_id == user_id, Document.status == "sẵn sàng")
         .all()
     )
     if not docs:
@@ -65,7 +70,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     # Lấy chunk từ TỪNG tài liệu bằng một câu hỏi tổng quát làm query truy hồi, để quiz
     # tổng hợp (TC13) không bị dồn hết câu hỏi vào một tài liệu/chương duy nhất.
     # Đơn giản hoá cho MVP: retrieval theo tên tài liệu, chưa tối ưu lấy "đại diện" nội dung.
-    store = PgVectorStore(db=db, user_id=req.user_id)
+    store = PgVectorStore(db=db, user_id=user_id)
     retrieved_chunks: list[RetrievedChunk] = []
     for doc in docs:
         query_vector = embed_query(doc.file_name)
@@ -92,7 +97,7 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
 
     # KHÔNG truyền `query` — sinh quiz không cần truy hồi ký ức theo câu hỏi,
     # tránh tốn một lượt embed vô ích.
-    learner = build_learner_context(db, req.user_id, requested_level=req.difficulty)
+    learner = build_learner_context(db, user_id, requested_level=req.difficulty)
     effective_difficulty = learner.effective_level
 
     llm_client = get_llm_client()
@@ -118,21 +123,21 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
     topic = (
         db.query(Topic)
         .filter(
-            Topic.user_id == req.user_id,
+            Topic.user_id == user_id,
             Topic.course_name == docs[0].course_name,
             Topic.name == topic_name,
         )
         .first()
     )
     if not topic:
-        topic = Topic(user_id=req.user_id, name=topic_name, course_name=docs[0].course_name)
+        topic = Topic(user_id=user_id, name=topic_name, course_name=docs[0].course_name)
         db.add(topic)
         db.commit()
 
     # Quiz.document_id giữ 1 FK (không đổi schema) — với quiz đa tài liệu, lưu tài liệu
     # đầu tiên làm tham chiếu chính; nguồn thật của TỪNG câu hỏi vẫn đúng qua
     # QuizItem.source_document/source_position (lấy từ chunk tương ứng).
-    quiz = Quiz(user_id=req.user_id, document_id=docs[0].id, generation_mode=req.generation_mode)
+    quiz = Quiz(user_id=user_id, document_id=docs[0].id, generation_mode=req.generation_mode)
     db.add(quiz)
     db.commit()
 
@@ -177,23 +182,27 @@ def generate(req: GenerateQuizRequest, db: Session = Depends(get_db)):
 
 
 class SubmitAttemptRequest(BaseModel):
-    user_id: str
     quiz_item_id: str
     selected_answer: str
 
 
 @router.post("/submit")
-def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
-    # Join sang Quiz để xác nhận quiz_item_id THUỘC VỀ req.user_id — trước đây
+def submit_attempt(
+    req: SubmitAttemptRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.id
+    # Join sang Quiz để xác nhận quiz_item_id THUỘC VỀ user_id — trước đây
     # tra thẳng theo id, không lọc user_id nào (khác review() ở flashcard.py,
     # vốn lọc đúng theo FlashcardSet.user_id cho cùng một việc). Không có kiểm
     # tra này, một request nộp bài với quiz_item_id của người khác vẫn ghi
-    # được Attempt gắn cho req.user_id — đầu độc mastery/ký ức của tài khoản
+    # được Attempt gắn cho user_id — đầu độc mastery/ký ức của tài khoản
     # gửi request bằng câu hỏi không phải của họ.
     quiz_item = (
         db.query(QuizItem)
         .join(Quiz, QuizItem.quiz_id == Quiz.id)
-        .filter(QuizItem.id == req.quiz_item_id, Quiz.user_id == req.user_id)
+        .filter(QuizItem.id == req.quiz_item_id, Quiz.user_id == user_id)
         .first()
     )
     if not quiz_item:
@@ -202,7 +211,7 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
     is_correct = req.selected_answer.strip() == quiz_item.correct_answer.strip()
 
     attempt = Attempt(
-        user_id=req.user_id,
+        user_id=user_id,
         quiz_item_id=quiz_item.id,
         topic_id=quiz_item.topic_id,
         is_correct=is_correct,
@@ -220,7 +229,7 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
         history = (
             db.query(Attempt, QuizItem)
             .join(QuizItem, Attempt.quiz_item_id == QuizItem.id)
-            .filter(Attempt.user_id == req.user_id, Attempt.topic_id == quiz_item.topic_id)
+            .filter(Attempt.user_id == user_id, Attempt.topic_id == quiz_item.topic_id)
             .all()
         )
         mastery_attempts = [
@@ -243,7 +252,7 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
             # 2 transaction thật sự chạy đồng thời, DB tự đảm bảo chỉ một
             # dòng tồn tại, không cần khoá ở tầng ứng dụng.
             upsert = insert(MasteryScore).values(
-                user_id=req.user_id, topic_id=quiz_item.topic_id, score=new_score
+                user_id=user_id, topic_id=quiz_item.topic_id, score=new_score
             )
             upsert = upsert.on_conflict_do_update(
                 constraint="uq_mastery_scores_user_topic",
@@ -261,7 +270,7 @@ def submit_attempt(req: SubmitAttemptRequest, db: Session = Depends(get_db)):
 
     record_event(
         db,
-        user_id=req.user_id,
+        user_id=user_id,
         event_type="quiz_right" if is_correct else "quiz_wrong",
         content=(
             f"Trả lời {'đúng' if is_correct else 'sai'} câu quiz: \"{question_preview}\""
