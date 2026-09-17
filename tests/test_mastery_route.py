@@ -60,6 +60,15 @@ class MasteryRouteTest(unittest.TestCase):
             db.add(item)
             db.flush()
             db.add(Attempt(user_id=self.user_id, quiz_item_id=item.id, topic_id=topic.id, is_correct=False, selected_answer="B"))
+
+            # Chủ đề + điểm mastery của NGƯỜI DÙNG KHÁC — thiếu 2 dòng này thì
+            # test isolation phía dưới pass ngay cả khi filter user_id bị xoá
+            # hoàn toàn, vì chẳng có gì của other_user_id để lộ ra (final
+            # review Fix 9).
+            other_topic = Topic(user_id=self.other_user_id, name="Chủ đề của người khác", course_name="CSDL")
+            db.add(other_topic)
+            db.flush()
+            db.add(MasteryScore(user_id=self.other_user_id, topic_id=other_topic.id, score=0.9, updated_at=datetime.utcnow()))
             db.commit()
         finally:
             db.close()

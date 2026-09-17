@@ -203,6 +203,14 @@ CI (`.github/workflows/ci.yml`) dựng đúng hai dịch vụ này tự động 
 
 Kiến trúc stateless (không SQLite/FAISS/file local nào) cho phép deploy backend lên host **free tier không có đĩa bền vững**. Toàn bộ dịch vụ dưới đây đều có gói miễn phí.
 
+> ## CẢNH BÁO — Migration phá huỷ dữ liệu chạy TỰ ĐỘNG mỗi lần deploy
+>
+> `docker-entrypoint.sh` chạy `alembic upgrade head` KHÔNG có điều kiện mỗi lần container khởi động, trước khi server nhận request nào. Trong đó có migration `22985ddfc278_add_password_hash_to_users` chạy thẳng `TRUNCATE TABLE users CASCADE` để thêm cột `password_hash NOT NULL` (xem `docs/auth-spec.md` mục 9) — lệnh này **xoá vĩnh viễn, không thể hoàn tác** toàn bộ bảng `users` VÀ mọi bảng có khoá ngoại trỏ tới nó (documents, conversations, quiz, flashcard, mastery score...).
+>
+> **Trước khi deploy nhánh này (hoặc bất kỳ nhánh nào chứa migration `22985ddfc278`) lên một môi trường đã có dữ liệu thật: sao lưu database trước.** Không có bước duyệt thủ công nào chặn migration này chạy tự động trong pipeline hiện tại.
+>
+> `JWT_SECRET_KEY` phải được set trong môi trường deploy TRƯỚC khi bấm deploy, không phải sau: `app/services/auth_service.py` fail-fast (raise ngay lúc import) nếu thiếu biến này — nhưng migration TRUNCATE ở trên chạy TRƯỚC bước app khởi động/kiểm tra đó. Thiếu `JWT_SECRET_KEY` vẫn làm dữ liệu bị xoá xong app mới báo lỗi không khởi động được, không phải app từ chối chạy trước khi kịp xoá gì.
+
 ### 1. Neon — Postgres + pgvector
 
 1. Tạo tài khoản tại https://neon.tech, tạo một project mới.

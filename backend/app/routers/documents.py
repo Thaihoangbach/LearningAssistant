@@ -189,10 +189,9 @@ async def upload_document(
 
     # Kiểm giới hạn dung lượng TRONG lúc ĐỌC (chưa tới 30MB nên gom hẳn vào bộ
     # nhớ trước khi upload R2 một lần — không cần multipart upload), không
-    # phải sau khi đã nhận hết toàn bộ payload rồi mới kiểm: một client
-    # (không xác thực — CURRENT_USER_ID cố định ở frontend, xem README) gửi
-    # payload nhiều GB vẫn phải dừng SỚM, không được đọc hết vào RAM/đĩa rồi
-    # mới từ chối.
+    # phải sau khi đã nhận hết toàn bộ payload rồi mới kiểm: một client đã
+    # đăng nhập vẫn có thể gửi payload nhiều GB, phải dừng SỚM, không được
+    # đọc hết vào RAM/đĩa rồi mới từ chối.
     max_bytes = MAX_FILE_MB * 1024 * 1024
     buffer = bytearray()
     while True:

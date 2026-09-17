@@ -516,7 +516,7 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph cum1["Cụm 1 - Người dùng, tài liệu, và hồ sơ cá nhân hóa"]
-        USER["USER<br/>Hiện chỉ 1 user cố định (demo-user)"]
+        USER["USER<br/>Xác thực qua email/mật khẩu, JWT trong cookie"]
         DOCUMENT["DOCUMENT<br/>Versioning qua version + is_latest"]
         PROFILE["LEARNING_PROFILE<br/>preferred_level + learning_goal, cá nhân hóa TĨNH<br/>tách biệt với tiến độ suy ra ở Cụm 3"]
     end
