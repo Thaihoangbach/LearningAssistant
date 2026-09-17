@@ -645,10 +645,10 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph cum1["Cụm 1 - Người dùng, tài liệu, và hồ sơ cá nhân hoá"]
-        USER["USER"]
+        USER["USER<br/>Xác thực qua email/mật khẩu, JWT trong cookie"]
         DOCUMENT["DOCUMENT<br/>Versioning qua version + is_latest, dedup qua content_hash"]
         DOCTOPIC["DOCUMENT_TOPIC<br/>Outline trích ở ingestion, gắn section_index"]
-        PROFILE["LEARNING_PROFILE<br/>Lớp 1 cá nhân hoá - preferred_level + learning_goal"]
+        PROFILE["LEARNING_PROFILE<br/>preferred_level + learning_goal, cá nhân hóa TĨNH<br/>tách biệt với tiến độ suy ra ở Cụm 3"]
     end
 
     subgraph cum2["Cụm 2 - Hội thoại, ký ức, và tri thức đã sinh"]

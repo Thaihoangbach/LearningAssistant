@@ -43,7 +43,7 @@ class BuildStudyPlanResultRedirectTest(unittest.TestCase):
         self.db = self.SessionLocal()
         self.addCleanup(self.db.close)
         self.user_id = str(uuid.uuid4())
-        self.db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Fiona"))
+        self.db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Fiona"))
         self.db.flush()
         self.db.add(Document(user_id=self.user_id, file_name="a.pdf", course_name="CSDL", status="sẵn sàng"))
         self.db.add(Document(user_id=self.user_id, file_name="b.pdf", course_name="Mạng máy tính", status="sẵn sàng"))

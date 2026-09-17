@@ -1,10 +1,24 @@
-import { Menu, Moon, Sun, UserCog } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { LogOut, Menu, Moon, Sun, UserCog } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import { cn } from "../../lib/cn";
 
 export default function Topbar({ title, onMenuClick }) {
   const { isDark, toggle } = useDarkMode();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    // logout() ném lỗi nếu phiên đã hết hạn (POST /auth/logout cũng cần
+    // auth) — vẫn phải điều hướng về /login, vì ý định người dùng ("đăng
+    // xuất") đã đạt được ngay khi phiên không còn hợp lệ (final review Fix 5).
+    try {
+      await logout();
+    } finally {
+      navigate("/login");
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur sm:px-6">
@@ -37,6 +51,14 @@ export default function Topbar({ title, onMenuClick }) {
       >
         <UserCog className="h-5 w-5" />
       </NavLink>
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Đăng xuất"
+      >
+        <LogOut className="h-5 w-5" />
+      </button>
     </header>
   );
 }

@@ -21,6 +21,8 @@ services:
         sync: false
       - key: COHERE_API_KEY
         sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
       - key: STORAGE_ENDPOINT_URL
         sync: false
       - key: STORAGE_ACCESS_KEY_ID

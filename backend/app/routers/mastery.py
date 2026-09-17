@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic
+from app.models import Attempt, Document, MasteryScore, Quiz, QuizItem, Topic, User
+from app.routers.auth import get_current_user
 from app.services.flashcard import count_due
 from app.services.mastery import classify_mastery, decay_unpractised
 
@@ -33,7 +34,8 @@ def _to_naive(value: datetime) -> datetime:
 
 
 @router.get("")
-def get_mastery(user_id: str, db: Session = Depends(get_db)):
+def get_mastery(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = current_user.id
     scores = (
         db.query(MasteryScore, Topic)
         .join(Topic, MasteryScore.topic_id == Topic.id)
@@ -110,12 +112,17 @@ def get_mastery(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/mistakes")
-def get_mistakes(user_id: str, limit: int = MAX_MISTAKES_RETURNED, db: Session = Depends(get_db)):
+def get_mistakes(
+    limit: int = MAX_MISTAKES_RETURNED,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Kho câu đã trả lời sai.
 
     Với người tự học, đây là dữ liệu giá trị nhất mà hệ thống đang vứt đi sau
     mỗi lần làm quiz: câu hỏi, đáp án đúng, giải thích và nguồn đều đã lưu
     trong QuizItem, chỉ chưa bao giờ được đưa trở lại cho người dùng."""
+    user_id = current_user.id
     rows = (
         db.query(Attempt, QuizItem)
         .join(QuizItem, Attempt.quiz_item_id == QuizItem.id)

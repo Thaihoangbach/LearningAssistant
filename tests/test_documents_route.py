@@ -25,6 +25,7 @@ from app.database import get_db
 from app.main import app
 from app.models import Document, User
 from app.routers import documents as documents_router
+from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -59,9 +60,17 @@ class UploadSizeLimitTest(unittest.TestCase):
         seed_db = TestingSessionLocal()
         seed_db.query(Document).filter(Document.user_id == "alice").delete()
         seed_db.query(User).filter(User.id == "alice").delete()
-        seed_db.add(User(id="alice", email="alice@test.local", display_name="Alice"))
+        seed_db.add(User(id="alice", email="alice@test.local", password_hash="x", display_name="Alice"))
         seed_db.commit()
         seed_db.close()
+
+        # Object dùng để override get_current_user PHẢI là instance riêng,
+        # KHÔNG BAO GIỜ tái sử dụng object đã db.add() ở trên — object đã add
+        # bị SQLAlchemy expire sau commit (truy cập lại thuộc tính sau khi
+        # session đóng sẽ lỗi), còn ở đây ta chỉ cần một User "giả" mang đúng
+        # id/email để router đọc current_user.id.
+        self.current_user = User(id="alice", email="alice@test.local", password_hash="x", display_name="Alice")
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
 
         save_patcher = patch.object(documents_router.storage, "save_file")
         self.save_file_mock = save_patcher.start()
@@ -77,7 +86,6 @@ class UploadSizeLimitTest(unittest.TestCase):
 
         res = self.client.post(
             "/documents",
-            params={"user_id": "alice"},
             files={"file": ("bai-giang.pdf", oversized, "application/pdf")},
         )
 
@@ -92,7 +100,6 @@ class UploadSizeLimitTest(unittest.TestCase):
 
         res = self.client.post(
             "/documents",
-            params={"user_id": "alice"},
             files={"file": ("bai-giang.pdf", io.BytesIO(content), "application/pdf")},
         )
 
@@ -112,7 +119,6 @@ class UploadSizeLimitTest(unittest.TestCase):
         # nào trước đó.
         res = self.client.post(
             "/documents",
-            params={"user_id": "alice"},
             files={"file": ("", io.BytesIO(b"data"), "application/pdf")},
         )
 
@@ -145,9 +151,12 @@ class UploadDisplayNameTest(unittest.TestCase):
         seed_db = TestingSessionLocal()
         seed_db.query(Document).filter(Document.user_id == "bob").delete()
         seed_db.query(User).filter(User.id == "bob").delete()
-        seed_db.add(User(id="bob", email="bob@test.local", display_name="Bob"))
+        seed_db.add(User(id="bob", email="bob@test.local", password_hash="x", display_name="Bob"))
         seed_db.commit()
         seed_db.close()
+
+        self.current_user = User(id="bob", email="bob@test.local", password_hash="x", display_name="Bob")
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
 
         save_patcher = patch.object(documents_router.storage, "save_file")
         self.save_file_mock = save_patcher.start()
@@ -156,12 +165,12 @@ class UploadDisplayNameTest(unittest.TestCase):
     def test_upload_stores_custom_display_name(self):
         res = self.client.post(
             "/documents",
-            params={"user_id": "bob", "display_name": "Chương 3 - Chuẩn hoá dữ liệu"},
+            params={"display_name": "Chương 3 - Chuẩn hoá dữ liệu"},
             files={"file": ("slide_ch3_v2_final.pdf", io.BytesIO(b"%PDF-1.4 noi dung"), "application/pdf")},
         )
         self.assertEqual(res.status_code, 200)
 
-        listed = self.client.get("/documents", params={"user_id": "bob"})
+        listed = self.client.get("/documents")
         docs = listed.json()
         self.assertEqual(len(docs), 1)
         self.assertEqual(docs[0]["display_name"], "Chương 3 - Chuẩn hoá dữ liệu")
@@ -170,12 +179,11 @@ class UploadDisplayNameTest(unittest.TestCase):
     def test_upload_without_display_name_leaves_it_null(self):
         res = self.client.post(
             "/documents",
-            params={"user_id": "bob"},
             files={"file": ("notes.pdf", io.BytesIO(b"%PDF-1.4 noi dung"), "application/pdf")},
         )
         self.assertEqual(res.status_code, 200)
 
-        listed = self.client.get("/documents", params={"user_id": "bob"})
+        listed = self.client.get("/documents")
         self.assertIsNone(listed.json()[0]["display_name"])
 
 
@@ -201,7 +209,7 @@ class TopicCourseScopingTest(unittest.TestCase):
         self.db.query(Topic).delete()
         self.db.query(Document).filter(Document.user_id == "carol").delete()
         self.db.query(User).filter(User.id == "carol").delete()
-        self.db.add(User(id="carol", email="carol@test.local", display_name="Carol"))
+        self.db.add(User(id="carol", email="carol@test.local", password_hash="x", display_name="Carol"))
         self.db.commit()
 
     def test_same_heading_in_different_courses_creates_separate_topics(self):

@@ -1,6 +1,9 @@
 import { BrowserRouter, Route, Routes, Outlet, useLocation } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
 import ChatPage from "./pages/ChatPage";
@@ -38,14 +41,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/documents" element={<UploadPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/quiz" element={<QuizPage />} />
-          <Route path="/flashcards" element={<FlashcardsPage />} />
-          <Route path="/study-plan" element={<StudyPlanPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/documents" element={<UploadPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/study-plan" element={<StudyPlanPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

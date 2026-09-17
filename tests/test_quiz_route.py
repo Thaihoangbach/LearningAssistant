@@ -30,6 +30,7 @@ from fastapi.testclient import TestClient
 from app.database import get_db
 from app.main import app
 from app.models import Document, QuizItem, Quiz, Topic, User
+from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -61,8 +62,6 @@ class QuizSubmitRouteTest(unittest.TestCase):
                 db.close()
 
         app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
 
         embed_patcher = patch("app.ingestion.embedder.embed_query", side_effect=_fake_embed_query)
         embed_patcher.start()
@@ -78,8 +77,8 @@ class QuizSubmitRouteTest(unittest.TestCase):
 
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.alice_id, email=f"{self.alice_id}@test.local", display_name="Alice"))
-            db.add(User(id=self.bob_id, email=f"{self.bob_id}@test.local", display_name="Bob"))
+            db.add(User(id=self.alice_id, email=f"{self.alice_id}@test.local", password_hash="x", display_name="Alice"))
+            db.add(User(id=self.bob_id, email=f"{self.bob_id}@test.local", password_hash="x", display_name="Bob"))
             # flush() TRUNG GIAN — SQLAlchemy không tự sắp thứ tự INSERT đúng
             # khi một dòng phụ thuộc HAI FK khác nhau (Quiz -> users VÀ
             # documents) trong CÙNG một flush với cả hai bảng cha; đo được
@@ -109,10 +108,29 @@ class QuizSubmitRouteTest(unittest.TestCase):
         finally:
             db.close()
 
+        # Object dùng để override get_current_user PHẢI là instance riêng,
+        # KHÔNG BAO GIỜ tái sử dụng object đã db.add() ở trên — object đã add
+        # bị SQLAlchemy expire sau commit (truy cập lại thuộc tính sau khi
+        # session đóng sẽ lỗi), còn ở đây ta chỉ cần một User "giả" mang đúng
+        # id/email để router đọc current_user.id.
+        self.current_user = User(
+            id=self.alice_id, email=f"{self.alice_id}@test.local", password_hash="x", display_name="Alice"
+        )
+        self.other_current_user = User(
+            id=self.bob_id, email=f"{self.bob_id}@test.local", password_hash="x", display_name="Bob"
+        )
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def test_submitting_someone_elses_quiz_item_is_rejected(self):
+        # Đăng nhập là Bob, nộp bài bằng quiz_item_id của Alice — router phải
+        # từ chối (404) thay vì âm thầm ghi Attempt gắn cho Bob.
+        app.dependency_overrides[get_current_user] = lambda: self.other_current_user
+
         res = self.client.post(
             "/quiz/submit",
-            json={"user_id": self.bob_id, "quiz_item_id": self.alice_item_id, "selected_answer": "2"},
+            json={"quiz_item_id": self.alice_item_id, "selected_answer": "2"},
         )
 
         self.assertEqual(res.status_code, 404)
@@ -120,7 +138,7 @@ class QuizSubmitRouteTest(unittest.TestCase):
     def test_owner_can_submit_their_own_quiz_item(self):
         res = self.client.post(
             "/quiz/submit",
-            json={"user_id": self.alice_id, "quiz_item_id": self.alice_item_id, "selected_answer": "2"},
+            json={"quiz_item_id": self.alice_item_id, "selected_answer": "2"},
         )
 
         self.assertEqual(res.status_code, 200)
@@ -133,7 +151,7 @@ class QuizSubmitRouteTest(unittest.TestCase):
         từng được trả về ở /submit)."""
         res = self.client.post(
             "/quiz/submit",
-            json={"user_id": self.alice_id, "quiz_item_id": self.alice_item_id, "selected_answer": "2"},
+            json={"quiz_item_id": self.alice_item_id, "selected_answer": "2"},
         )
 
         self.assertEqual(res.status_code, 200)
@@ -155,7 +173,7 @@ class QuizSubmitRouteTest(unittest.TestCase):
         for _ in range(5):
             res = self.client.post(
                 "/quiz/submit",
-                json={"user_id": self.alice_id, "quiz_item_id": self.alice_item_id, "selected_answer": "2"},
+                json={"quiz_item_id": self.alice_item_id, "selected_answer": "2"},
             )
             self.assertEqual(res.status_code, 200)
 
@@ -192,13 +210,11 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
                 db.close()
 
         app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
 
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Grace"))
+            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Grace"))
             db.flush()
             self.doc_csdl = Document(user_id=self.user_id, file_name="a.pdf", course_name="CSDL", status="sẵn sàng")
             self.doc_mmt = Document(user_id=self.user_id, file_name="b.pdf", course_name="Mạng máy tính", status="sẵn sàng")
@@ -218,6 +234,13 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             db.commit()
         finally:
             db.close()
+
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Grace"
+        )
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
 
     def test_same_topic_name_in_different_course_does_not_reuse_other_courses_topic(self):
         # generate() gọi TRỰC TIẾP các tên đã import vào module app.routers.quiz
@@ -255,7 +278,6 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/quiz/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "topic_name": "Bài tập",
                     "num_questions": 1,
@@ -303,7 +325,6 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/quiz/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "num_questions": 1,
                     "generation_mode": "weak_topics",
@@ -350,7 +371,6 @@ class QuizTopicCourseScopingTest(unittest.TestCase):
             res = self.client.post(
                 "/quiz/generate",
                 json={
-                    "user_id": self.user_id,
                     "document_id": self.doc_mmt_id,
                     "num_questions": 1,
                     "generation_mode": "not-a-real-mode",

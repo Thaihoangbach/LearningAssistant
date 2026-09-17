@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from app.database import get_db
 from app.main import app
 from app.models import LearningProfile, MasteryScore, Topic, User
+from app.routers.auth import get_current_user
 from pg_test_helpers import fresh_test_session_factory
 
 
@@ -41,20 +42,31 @@ class ProfileRouteTest(unittest.TestCase):
             finally:
                 db.close()
 
-        app.dependency_overrides[get_db] = override_get_db
-        self.client = TestClient(app)
-        self.addCleanup(app.dependency_overrides.clear)
-
         self.user_id = str(uuid.uuid4())
         db = self.SessionLocal()
         try:
-            db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Dana"))
+            db.add(
+                User(
+                    id=self.user_id,
+                    email=f"{self.user_id}@test.local",
+                    password_hash="x",
+                    display_name="Dana",
+                )
+            )
             db.commit()
         finally:
             db.close()
 
+        self.current_user = User(
+            id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Dana"
+        )
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: self.current_user
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
     def test_get_profile_without_data_returns_all_none(self):
-        res = self.client.get("/profile", params={"user_id": self.user_id})
+        res = self.client.get("/profile")
         self.assertEqual(res.status_code, 200)
         body = res.json()
         self.assertIsNone(body["preferred_level"])
@@ -63,7 +75,7 @@ class ProfileRouteTest(unittest.TestCase):
         self.assertIsNone(body["effective_level_source"])
 
     def test_get_profile_no_longer_returns_weak_or_mastered_topics(self):
-        res = self.client.get("/profile", params={"user_id": self.user_id})
+        res = self.client.get("/profile")
         body = res.json()
         self.assertNotIn("weak_topics", body)
         self.assertNotIn("mastered_topics", body)
@@ -76,7 +88,7 @@ class ProfileRouteTest(unittest.TestCase):
         finally:
             db.close()
 
-        res = self.client.get("/profile", params={"user_id": self.user_id})
+        res = self.client.get("/profile")
         body = res.json()
         self.assertEqual(body["preferred_level"], "advanced")
         self.assertEqual(body["effective_level"], "advanced")
@@ -100,7 +112,7 @@ class ProfileRouteTest(unittest.TestCase):
         finally:
             db.close()
 
-        res = self.client.get("/profile", params={"user_id": self.user_id})
+        res = self.client.get("/profile")
         body = res.json()
         self.assertIsNone(body["preferred_level"])
         self.assertEqual(body["effective_level"], "beginner")
@@ -118,16 +130,16 @@ class ProfileRouteTest(unittest.TestCase):
         finally:
             db.close()
 
-        res = self.client.delete("/profile", params={"user_id": self.user_id})
+        res = self.client.delete("/profile")
         self.assertEqual(res.status_code, 200)
 
-        res = self.client.get("/profile", params={"user_id": self.user_id})
+        res = self.client.get("/profile")
         body = res.json()
         self.assertIsNone(body["preferred_level"])
         self.assertIsNone(body["learning_goal"])
 
     def test_delete_profile_without_existing_profile_is_a_noop(self):
-        res = self.client.delete("/profile", params={"user_id": self.user_id})
+        res = self.client.delete("/profile")
         self.assertEqual(res.status_code, 200)
 
     def test_delete_profile_does_not_touch_mastery_score(self):
@@ -142,7 +154,7 @@ class ProfileRouteTest(unittest.TestCase):
         finally:
             db.close()
 
-        self.client.delete("/profile", params={"user_id": self.user_id})
+        self.client.delete("/profile")
 
         db = self.SessionLocal()
         try:

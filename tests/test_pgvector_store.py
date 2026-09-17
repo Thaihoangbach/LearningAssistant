@@ -55,7 +55,7 @@ class PgVectorStoreTestCase(unittest.TestCase):
         self.db = self.SessionLocal()
         self.addCleanup(self.db.close)
         self.user_id = str(uuid.uuid4())
-        self.db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", display_name="Test User"))
+        self.db.add(User(id=self.user_id, email=f"{self.user_id}@test.local", password_hash="x", display_name="Test User"))
         self.document_id = str(uuid.uuid4())
         self.db.add(Document(id=self.document_id, user_id=self.user_id, file_name="a.pdf", status="sẵn sàng"))
         self.db.commit()
@@ -94,7 +94,7 @@ class TestAddAndSearch(PgVectorStoreTestCase):
         self.store.add(np.array([_embedding(3)]), [chunk])
 
         other_user_id = str(uuid.uuid4())
-        self.db.add(User(id=other_user_id, email=f"{other_user_id}@test.local", display_name="Other"))
+        self.db.add(User(id=other_user_id, email=f"{other_user_id}@test.local", password_hash="x", display_name="Other"))
         self.db.commit()
         other_store = PgVectorStore(db=self.db, user_id=other_user_id)
 

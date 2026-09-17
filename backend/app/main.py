@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 logger = logging.getLogger("edututor")
 
 from app.routers import (
+    auth,
     chat,
     courses,
     documents,
@@ -69,6 +70,7 @@ app.add_middleware(
 # Routers
 # ============================================================
 
+app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(quiz.router)

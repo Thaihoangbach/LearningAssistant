@@ -1,0 +1,160 @@
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+sys.path.insert(0, os.path.dirname(__file__))
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-do-not-use-in-prod")
+
+from fastapi.testclient import TestClient
+
+from app.database import get_db
+from app.main import app
+from pg_test_helpers import fresh_test_session_factory
+
+
+class RegisterRouteTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+
+    def test_register_with_new_email_returns_201_and_sets_cookie(self):
+        res = self.client.post(
+            "/auth/register",
+            json={"email": "Bach@Example.com", "password": "matkhau123", "display_name": "Bách"},
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["email"], "bach@example.com")
+        self.assertNotIn("password_hash", res.json())
+        self.assertIn("access_token", res.cookies)
+
+    def test_register_with_duplicate_email_returns_409(self):
+        payload = {"email": "dup@example.com", "password": "matkhau123", "display_name": "A"}
+        self.client.post("/auth/register", json=payload)
+        res = self.client.post("/auth/register", json=payload)
+        self.assertEqual(res.status_code, 409)
+
+    def test_register_with_short_password_returns_422(self):
+        res = self.client.post(
+            "/auth/register",
+            json={"email": "short@example.com", "password": "abc", "display_name": "A"},
+        )
+        self.assertEqual(res.status_code, 422)
+
+
+class LoginRouteTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+        self.client.post(
+            "/auth/register",
+            json={"email": "login@example.com", "password": "matkhau123", "display_name": "A"},
+        )
+        self.client.cookies.clear()
+
+    def test_login_with_correct_credentials_returns_200_and_sets_cookie(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "login@example.com", "password": "matkhau123"}
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("access_token", res.cookies)
+
+    def test_login_with_wrong_password_returns_401_generic_message(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "login@example.com", "password": "sai-mat-khau"}
+        )
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.json()["detail"], "Email hoặc mật khẩu không đúng")
+
+    def test_login_with_nonexistent_email_returns_same_401_message(self):
+        res = self.client.post(
+            "/auth/login", json={"email": "khong-ton-tai@example.com", "password": "matkhau123"}
+        )
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.json()["detail"], "Email hoặc mật khẩu không đúng")
+
+
+class MeAndLogoutRouteTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine, cls.SessionLocal = fresh_test_session_factory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.engine.dispose()
+
+    def setUp(self):
+        def override_get_db():
+            db = self.SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_get_db
+        self.client = TestClient(app)
+        self.addCleanup(app.dependency_overrides.clear)
+        # Email đơn nhất theo tên test: các test method trong class này dùng
+        # chung 1 DB (setUpClass không reset giữa các test), và unittest chạy
+        # các method theo thứ tự bảng chữ cái nên đăng ký cùng 1 email cố
+        # định ở mọi test sẽ bị 409 (duplicate) từ test thứ 2 trở đi, khiến
+        # cookie không được set. Dùng email riêng theo self._testMethodName
+        # để mỗi test luôn đăng ký thành công độc lập với thứ tự chạy.
+        self.email = f"me-{self._testMethodName}@example.com"
+        self.client.post(
+            "/auth/register",
+            json={"email": self.email, "password": "matkhau123", "display_name": "A"},
+        )
+
+    def test_me_without_cookie_returns_401(self):
+        self.client.cookies.clear()
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 401)
+
+    def test_me_with_valid_cookie_returns_current_user(self):
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["email"], self.email)
+
+    def test_logout_then_me_returns_401(self):
+        logout_res = self.client.post("/auth/logout")
+        self.assertEqual(logout_res.status_code, 204)
+
+        res = self.client.get("/auth/me")
+        self.assertEqual(res.status_code, 401)
+
+
+if __name__ == "__main__":
+    unittest.main()
